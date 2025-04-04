@@ -222,25 +222,44 @@ class _ActivityScreenState extends State<ActivityScreen> {
               children: [
                 // Tarih seçici
                 Container(
-                  padding: const EdgeInsets.all(16.0),
-                  color: Theme.of(context).brightness == Brightness.dark ? AppTheme.cardColor : Theme.of(context).scaffoldBackgroundColor,
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                  color: Theme.of(context).cardColor,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Önceki gün
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios),
-                        onPressed: _previousDay,
+                        icon: Icon(Icons.arrow_back_ios, size: 18),
+                        onPressed: () {
+                          _changeDate(-1);
+                        },
                       ),
-                      Text(
-                        DateFormat('d MMMM y', 'tr_TR').format(_selectedDate),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      
+                      // Seçilen tarih gösterimi
+                      GestureDetector(
+                        onTap: _selectDate,
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      
+                      // Sonraki gün
                       IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        onPressed: _nextDay,
+                        icon: Icon(Icons.arrow_forward_ios, size: 18),
+                        onPressed: () {
+                          _changeDate(1);
+                        },
                       ),
                     ],
                   ),
@@ -465,33 +484,24 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  void _selectDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(Duration(days: 7)),
-    );
-    
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-      Provider.of<ActivityProvider>(context, listen: false).setSelectedDate(_selectedDate);
-    }
-  }
-  
-  void _previousDay() {
+  void _changeDate(int days) {
     setState(() {
-      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+      _selectedDate = _selectedDate.add(Duration(days: days));
     });
     Provider.of<ActivityProvider>(context, listen: false).setSelectedDate(_selectedDate);
   }
-  
-  void _nextDay() {
-    if (_selectedDate.isBefore(DateTime.now())) {
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    
+    if (picked != null && picked != _selectedDate) {
       setState(() {
-        _selectedDate = _selectedDate.add(const Duration(days: 1));
+        _selectedDate = picked;
       });
       Provider.of<ActivityProvider>(context, listen: false).setSelectedDate(_selectedDate);
     }

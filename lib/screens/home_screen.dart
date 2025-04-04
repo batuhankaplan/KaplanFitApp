@@ -211,21 +211,11 @@ class _HomeScreenState extends State<HomeScreen> {
               // Başlık kısmı - tema uyumlu
               Container(
                 padding: const EdgeInsets.all(16.0),
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? Theme.of(context).scaffoldBackgroundColor // Ana ekranın arka planıyla aynı rengi kullan
-                    : Theme.of(context).scaffoldBackgroundColor,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Merhaba${user != null ? ' ${user.name}' : ''}!',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Ayağa kalk ve harekete geç!',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
+                    _buildGreetingCard(),
                   ],
                 ),
               ),
@@ -613,32 +603,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
-  // Sabah egzersizini kaydet
-  void _recordMorningExercise(BuildContext context) {
+  // Sabah Egzersizi kaydı
+  Future<void> _recordMorningExercise(BuildContext context) async {
     final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-    final today = DateTime.now();
     
-    // Sabah egzersizi için aktivite kaydı ekle
+    // Bugün için egzersiz kaydı ekle
+    final now = DateTime.now();
+    final durationMinutes = 30; // Varsayılan süre
+    
     final morningActivity = ActivityRecord(
-      type: FitActivityType.walking, // Yürüyüş aktivitesi
-      durationMinutes: 30, // 30 dakika süre
-      date: DateTime(today.year, today.month, today.day, 8, 0), // Sabah 8:00
-      notes: 'Sabah tempolu yürüyüş',
+      type: FitActivityType.walking,
+      durationMinutes: durationMinutes,
+      date: now,
+      notes: 'Sabah egzersizi tamamlandı',
     );
     
-    activityProvider.addActivity(morningActivity).then((id) {
-      setState(() {
-        morningExerciseId = id;
-        _savingTaskStates(); // Durumu kaydet
-      });
-    });
+    morningExerciseId = await activityProvider.addActivity(morningActivity);
+    
+    // Görev durumunu kaydet
+    _savingTaskStates();
   }
   
   // Sabah egzersizini sil
-  void _removeMorningExercise(BuildContext context) {
+  Future<void> _removeMorningExercise(BuildContext context) async {
     if (morningExerciseId != null) {
       final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-      activityProvider.deleteActivity(morningExerciseId!);
+      await activityProvider.deleteActivity(morningExerciseId!);
       setState(() {
         morningExerciseId = null;
         _savingTaskStates(); // Durumu kaydet
@@ -646,32 +636,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   
-  // Öğle yemeğini kaydet
-  void _recordLunch(BuildContext context) {
+  // Öğle yemeği kaydı
+  Future<void> _recordLunch(BuildContext context) async {
     final nutritionProvider = Provider.of<NutritionProvider>(context, listen: false);
-    final today = DateTime.now();
     
-    // Öğle yemeği için öğün kaydı ekle
+    // Bugün için öğle yemeği kaydı ekle
+    final now = DateTime.now();
+    final calories = 600; // Varsayılan kalori miktarı
+    
     final lunchMeal = MealRecord(
       type: FitMealType.lunch,
-      foods: ['Tavuk', 'Pilav', 'Salata', 'Yoğurt'],
-      date: DateTime(today.year, today.month, today.day, 13, 0), // Öğle 13:00
-      calories: 550,
+      foods: ['Protein', 'Karbonhidrat', 'Sebze'],
+      date: now,
+      calories: calories,
+      notes: 'Öğle yemeği tamamlandı',
     );
     
-    nutritionProvider.addMeal(lunchMeal).then((id) {
-      setState(() {
-        lunchMealId = id;
-        _savingTaskStates(); // Durumu kaydet
-      });
-    });
+    lunchMealId = await nutritionProvider.addMeal(lunchMeal);
+    
+    // Görev durumunu kaydet
+    _savingTaskStates();
   }
   
   // Öğle yemeğini sil
-  void _removeLunch(BuildContext context) {
+  Future<void> _removeLunch(BuildContext context) async {
     if (lunchMealId != null) {
       final nutritionProvider = Provider.of<NutritionProvider>(context, listen: false);
-      nutritionProvider.deleteMeal(lunchMealId!);
+      await nutritionProvider.deleteMeal(lunchMealId!);
       setState(() {
         lunchMealId = null;
         _savingTaskStates(); // Durumu kaydet
@@ -679,32 +670,32 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   
-  // Akşam egzersizini kaydet
-  void _recordEveningExercise(BuildContext context) {
+  // Akşam Egzersizi kaydı
+  Future<void> _recordEveningExercise(BuildContext context) async {
     final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-    final today = DateTime.now();
     
-    // Akşam egzersizi için aktivite kaydı ekle
+    // Bugün için egzersiz kaydı ekle
+    final now = DateTime.now();
+    final durationMinutes = 45; // Varsayılan süre
+    
     final eveningActivity = ActivityRecord(
-      type: FitActivityType.weightTraining, // Ağırlık aktivitesi
-      durationMinutes: 45, // 45 dakika süre
-      date: DateTime(today.year, today.month, today.day, 18, 0), // Akşam 18:00
-      notes: 'Ağırlık antrenmanı',
+      type: FitActivityType.weightTraining,
+      durationMinutes: durationMinutes,
+      date: now,
+      notes: 'Akşam egzersizi tamamlandı',
     );
     
-    activityProvider.addActivity(eveningActivity).then((id) {
-      setState(() {
-        eveningExerciseId = id;
-        _savingTaskStates(); // Durumu kaydet
-      });
-    });
+    eveningExerciseId = await activityProvider.addActivity(eveningActivity);
+    
+    // Görev durumunu kaydet
+    _savingTaskStates();
   }
   
   // Akşam egzersizini sil
-  void _removeEveningExercise(BuildContext context) {
+  Future<void> _removeEveningExercise(BuildContext context) async {
     if (eveningExerciseId != null) {
       final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-      activityProvider.deleteActivity(eveningExerciseId!);
+      await activityProvider.deleteActivity(eveningExerciseId!);
       setState(() {
         eveningExerciseId = null;
         _savingTaskStates(); // Durumu kaydet
@@ -712,32 +703,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
   
-  // Akşam yemeğini kaydet
-  void _recordDinner(BuildContext context) {
+  // Akşam yemeği kaydı
+  Future<void> _recordDinner(BuildContext context) async {
     final nutritionProvider = Provider.of<NutritionProvider>(context, listen: false);
-    final today = DateTime.now();
     
-    // Akşam yemeği için öğün kaydı ekle
+    // Bugün için akşam yemeği kaydı ekle
+    final now = DateTime.now();
+    final calories = 450; // Varsayılan kalori miktarı
+    
     final dinnerMeal = MealRecord(
       type: FitMealType.dinner,
-      foods: ['Hafif protein', 'Sebze', 'Tahıl'],
-      date: DateTime(today.year, today.month, today.day, 19, 0), // Akşam 19:00
-      calories: 450,
+      foods: ['Protein', 'Sebze', 'Salatalar'],
+      date: now,
+      calories: calories,
+      notes: 'Akşam yemeği tamamlandı',
     );
     
-    nutritionProvider.addMeal(dinnerMeal).then((id) {
-      setState(() {
-        dinnerMealId = id;
-        _savingTaskStates(); // Durumu kaydet
-      });
-    });
+    dinnerMealId = await nutritionProvider.addMeal(dinnerMeal);
+    
+    // Görev durumunu kaydet
+    _savingTaskStates();
   }
   
   // Akşam yemeğini sil
-  void _removeDinner(BuildContext context) {
+  Future<void> _removeDinner(BuildContext context) async {
     if (dinnerMealId != null) {
       final nutritionProvider = Provider.of<NutritionProvider>(context, listen: false);
-      nutritionProvider.deleteMeal(dinnerMealId!);
+      await nutritionProvider.deleteMeal(dinnerMealId!);
       setState(() {
         dinnerMealId = null;
         _savingTaskStates(); // Durumu kaydet
@@ -870,5 +862,59 @@ class _HomeScreenState extends State<HomeScreen> {
       default:
         return Icons.check_circle;
     }
+  }
+
+  Widget _buildGreetingCard() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    final user = Provider.of<UserProvider>(context).user;
+    
+    String greeting;
+    if (hour < 12) {
+      greeting = 'Günaydın';
+    } else if (hour < 18) {
+      greeting = 'İyi günler';
+    } else {
+      greeting = 'İyi akşamlar';
+    }
+    
+    if (user != null) {
+      greeting += ' ${user.name}!';
+    } else {
+      greeting += '!';
+    }
+    
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              greeting,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Bugün için sağlıklı bir şeyler yapın',
+              style: TextStyle(
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 } 

@@ -122,7 +122,7 @@ class MyApp extends StatelessWidget {
       supportedLocales: [
         const Locale('tr', 'TR'),
       ],
-      home: const MainScreen(),
+      home: SplashScreen(nextScreen: MainScreen()),
     );
   }
 }

@@ -25,53 +25,49 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'kaplanfit.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
+      onOpen: _onOpen,
     );
   }
 
+  Future<Database> _onOpen(Database db) async {
+    final version = await db.getVersion();
+    if (version < 4) {
+      await _onUpgrade(db, version, 4);
+    }
+    return db;
+  }
+
   Future<void> _createDB(Database db, int version) async {
-    // Kullanıcı tablosu
     await db.execute('''
-      CREATE TABLE users(
+      CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         age INTEGER NOT NULL,
         height REAL NOT NULL,
         weight REAL NOT NULL,
         profileImagePath TEXT,
-        createdAt INTEGER,
-        lastWeightUpdate INTEGER
+        createdAt INTEGER NOT NULL,
+        lastWeightUpdate INTEGER NOT NULL,
+        email TEXT,
+        phoneNumber TEXT
       )
     ''');
-
-    // Kilo geçmişi tablosu
+    
     await db.execute('''
-      CREATE TABLE weight_records(
+      CREATE TABLE IF NOT EXISTS weight_records(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         weight REAL NOT NULL,
         date INTEGER NOT NULL,
-        user_id INTEGER,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        userId INTEGER,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
-
-    // Günlük görevler tablosu
+    
     await db.execute('''
-      CREATE TABLE daily_tasks(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        description TEXT NOT NULL,
-        date INTEGER NOT NULL,
-        isCompleted INTEGER DEFAULT 0,
-        type INTEGER DEFAULT 0
-      )
-    ''');
-
-    // Aktivite tablosu
-    await db.execute('''
-      CREATE TABLE activities(
+      CREATE TABLE IF NOT EXISTS activities(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         type INTEGER NOT NULL,
         durationMinutes INTEGER NOT NULL,
@@ -80,29 +76,39 @@ class DatabaseService {
         taskId INTEGER
       )
     ''');
-
-    // Yemek kaydı tablosu
+    
     await db.execute('''
-      CREATE TABLE meals(
+      CREATE TABLE IF NOT EXISTS meals(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         type INTEGER NOT NULL,
         foods TEXT NOT NULL,
         date INTEGER NOT NULL,
         calories INTEGER,
-        taskId INTEGER
+        taskId INTEGER,
+        notes TEXT
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS tasks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        type INTEGER NOT NULL,
+        isCompleted INTEGER NOT NULL DEFAULT 0,
+        date INTEGER NOT NULL
       )
     ''');
   }
 
-  // Veritabanı sürümünü güncelleme işlemi
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // users tablosuna yeni sütunlar ekle
-      await db.execute('ALTER TABLE users ADD COLUMN profileImagePath TEXT;');
-      await db.execute('ALTER TABLE users ADD COLUMN createdAt INTEGER;');
-      
-      // daily_tasks tablosuna type sütunu ekle
-      await db.execute('ALTER TABLE daily_tasks ADD COLUMN type INTEGER DEFAULT 0;');
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
+      await db.execute('ALTER TABLE users ADD COLUMN phoneNumber TEXT;');
+    }
+    
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE meals ADD COLUMN notes TEXT;');
     }
   }
 
@@ -141,7 +147,7 @@ class DatabaseService {
   Future<int> insertWeightRecord(WeightRecord record, int userId) async {
     final db = await database;
     Map<String, dynamic> map = record.toMap();
-    map['user_id'] = userId;
+    map['userId'] = userId;
     return await db.insert('weight_records', map);
   }
 
@@ -149,7 +155,7 @@ class DatabaseService {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'weight_records',
-      where: 'user_id = ?',
+      where: 'userId = ?',
       whereArgs: [userId],
       orderBy: 'date DESC',
     );
@@ -160,7 +166,7 @@ class DatabaseService {
   Future<int> insertTask(DailyTask task) async {
     final db = await database;
     return await db.insert(
-      'daily_tasks',
+      'tasks',
       task.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -169,7 +175,7 @@ class DatabaseService {
   Future<void> updateTask(DailyTask task) async {
     final db = await database;
     await db.update(
-      'daily_tasks',
+      'tasks',
       task.toMap(),
       where: 'id = ?',
       whereArgs: [task.id],
@@ -182,7 +188,7 @@ class DatabaseService {
     final endOfDay = startOfDay.add(Duration(days: 1));
     
     final List<Map<String, dynamic>> maps = await db.query(
-      'daily_tasks',
+      'tasks',
       where: 'date >= ? AND date < ?',
       whereArgs: [startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch],
     );
@@ -230,19 +236,25 @@ class DatabaseService {
       whereArgs: [startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch],
     );
     
-    return List.generate(maps.length, (i) => ActivityRecord.fromMap(maps[i]));
+    return List.generate(maps.length, (i) {
+      return ActivityRecord.fromMap(maps[i]);
+    });
   }
 
   Future<List<ActivityRecord>> getActivitiesInRange(DateTime start, DateTime end) async {
     final db = await database;
+    final startDate = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day).add(Duration(days: 1));
     
     final List<Map<String, dynamic>> maps = await db.query(
       'activities',
       where: 'date >= ? AND date < ?',
-      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
+      whereArgs: [startDate.millisecondsSinceEpoch, endDate.millisecondsSinceEpoch],
     );
     
-    return List.generate(maps.length, (i) => ActivityRecord.fromMap(maps[i]));
+    return List.generate(maps.length, (i) {
+      return ActivityRecord.fromMap(maps[i]);
+    });
   }
 
   // TaskId ile ilgili aktiviteyi bul ve sil
@@ -305,18 +317,24 @@ class DatabaseService {
       whereArgs: [startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch],
     );
     
-    return List.generate(maps.length, (i) => MealRecord.fromMap(maps[i]));
+    return List.generate(maps.length, (i) {
+      return MealRecord.fromMap(maps[i]);
+    });
   }
 
   Future<List<MealRecord>> getMealsInRange(DateTime start, DateTime end) async {
     final db = await database;
+    final startDate = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day).add(Duration(days: 1));
     
     final List<Map<String, dynamic>> maps = await db.query(
       'meals',
       where: 'date >= ? AND date < ?',
-      whereArgs: [start.millisecondsSinceEpoch, end.millisecondsSinceEpoch],
+      whereArgs: [startDate.millisecondsSinceEpoch, endDate.millisecondsSinceEpoch],
     );
     
-    return List.generate(maps.length, (i) => MealRecord.fromMap(maps[i]));
+    return List.generate(maps.length, (i) {
+      return MealRecord.fromMap(maps[i]);
+    });
   }
 } 

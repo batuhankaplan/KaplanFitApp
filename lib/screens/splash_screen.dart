@@ -48,6 +48,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
+    // İlk anda çalıştırmak yerine bir miktar bekleyip sonra verileri yükle
+    Future.delayed(Duration(milliseconds: 200), () {
+      _loadData();
+    });
+
+    // Splash ekran bittikten sonra ana ekrana geç
     Timer(Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -60,21 +66,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInitialized) {
-      _loadAppData();
-      _isInitialized = true;
-    }
+    // Veri yükleme işlemi artık initState'de yapılıyor
+    _isInitialized = true;
   }
 
-  Future<void> _loadAppData() async {
+  Future<void> _loadData() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-    final nutritionProvider = Provider.of<NutritionProvider>(context, listen: false);
     
-    await userProvider.loadUser();
-    await activityProvider.loadTasksForSelectedDate();
-    await activityProvider.loadActivitiesForSelectedDate();
-    await nutritionProvider.loadMealsForSelectedDate();
+    // Verileri yükle
+    Provider.of<ActivityProvider>(context, listen: false).refreshActivities();
+    Provider.of<NutritionProvider>(context, listen: false).refreshMeals();
   }
 
   @override

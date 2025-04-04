@@ -46,39 +46,49 @@ class _NutritionScreenState extends State<NutritionScreen> {
         children: [
           // Tarih seçici
           Container(
-            padding: const EdgeInsets.all(16),
-            color: isDarkMode ? AppTheme.cardColor : Theme.of(context).scaffoldBackgroundColor,
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            color: Theme.of(context).cardColor,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Önceki gün
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios),
+                  icon: Icon(Icons.arrow_back_ios, size: 18),
                   onPressed: () {
-                    setState(() {
-                      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
-                    });
-                    provider.setSelectedDate(_selectedDate);
+                    _changeDate(-1);
                   },
                 ),
-                Text(
-                  DateFormat.yMMMEd('tr_TR').format(_selectedDate),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                
+                // Seçilen tarih gösterimi
+                GestureDetector(
+                  onTap: _selectDate,
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                
+                // Sonraki gün
                 IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios),
+                  icon: Icon(Icons.arrow_forward_ios, size: 18),
                   onPressed: () {
-                    setState(() {
-                      _selectedDate = _selectedDate.add(const Duration(days: 1));
-                    });
-                    provider.setSelectedDate(_selectedDate);
+                    _changeDate(1);
                   },
                 ),
               ],
             ),
           ),
+          const Divider(),
           
           // Calorie summary
           if (meals.isNotEmpty) 
@@ -194,15 +204,22 @@ class _NutritionScreenState extends State<NutritionScreen> {
     );
   }
   
-  void _selectDate() async {
-    final picked = await showDatePicker(
+  void _changeDate(int days) {
+    setState(() {
+      _selectedDate = _selectedDate.add(Duration(days: days));
+    });
+    Provider.of<NutritionProvider>(context, listen: false).setSelectedDate(_selectedDate);
+  }
+  
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(Duration(days: 7)),
+      lastDate: DateTime.now(),
     );
     
-    if (picked != null) {
+    if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });

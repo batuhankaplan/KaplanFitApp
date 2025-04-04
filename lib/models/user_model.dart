@@ -5,6 +5,8 @@ class UserModel {
   final double height; // cm cinsinden
   final double weight; // kg cinsinden
   final String? profileImagePath;
+  final String? email; // E-posta adresi
+  final String? phoneNumber; // Telefon numarası
   final DateTime? createdAt;
   DateTime? lastWeightUpdate;
   List<WeightRecord> weightHistory;
@@ -16,6 +18,8 @@ class UserModel {
     required this.height,
     required this.weight,
     this.profileImagePath,
+    this.email,
+    this.phoneNumber,
     this.createdAt,
     this.lastWeightUpdate,
     this.weightHistory = const [],
@@ -29,6 +33,8 @@ class UserModel {
       'height': height,
       'weight': weight,
       'profileImagePath': profileImagePath,
+      'email': email,
+      'phoneNumber': phoneNumber,
       'createdAt': createdAt?.millisecondsSinceEpoch,
       'lastWeightUpdate': lastWeightUpdate?.millisecondsSinceEpoch,
     };
@@ -42,6 +48,8 @@ class UserModel {
       height: map['height'],
       weight: map['weight'],
       profileImagePath: map['profileImagePath'],
+      email: map['email'],
+      phoneNumber: map['phoneNumber'],
       createdAt: map['createdAt'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(map['createdAt']) 
           : null,
@@ -79,6 +87,8 @@ class UserModel {
     double? height,
     double? weight,
     String? profileImagePath,
+    String? email,
+    String? phoneNumber,
     DateTime? createdAt,
     DateTime? lastWeightUpdate,
     List<WeightRecord>? weightHistory,
@@ -90,6 +100,8 @@ class UserModel {
       height: height ?? this.height,
       weight: weight ?? this.weight,
       profileImagePath: profileImagePath ?? this.profileImagePath,
+      email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       createdAt: createdAt ?? this.createdAt,
       lastWeightUpdate: lastWeightUpdate ?? this.lastWeightUpdate,
       weightHistory: weightHistory ?? this.weightHistory,

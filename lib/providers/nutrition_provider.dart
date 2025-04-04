@@ -3,112 +3,178 @@ import '../models/task_model.dart';
 import '../services/database_service.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
+import 'package:flutter/foundation.dart';
 
-class NutritionProvider extends ChangeNotifier {
-  final DatabaseService _databaseService = DatabaseService();
+class NutritionProvider with ChangeNotifier {
+  final DatabaseService _db = DatabaseService();
   List<MealRecord> _meals = [];
+  List<MealRecord> _allMeals = []; // Tüm öğünler
   bool _isLoading = false;
   DateTime _selectedDate = DateTime.now();
+  DateTime? _startDate; // Tarih aralığı başlangıcı
+  DateTime? _endDate; // Tarih aralığı sonu
 
   List<MealRecord> get meals => _meals;
   bool get isLoading => _isLoading;
   DateTime get selectedDate => _selectedDate;
 
   NutritionProvider() {
-    loadMealsForSelectedDate();
+    refreshMeals();
+  }
+
+  Future<void> refreshMeals() async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      // Seçili gün için öğünleri veritabanından çek
+      _meals = await _db.getMealsForDay(_selectedDate);
+      notifyListeners();
+      
+      // Tüm öğünleri de çekelim istatistikler için
+      await _loadAllMeals();
+    } catch (e) {
+      print('Öğünleri yenilerken hata: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadAllMeals() async {
+    try {
+      // Eğer başlangıç ve bitiş tarihleri belirlenmişse aralıktaki verileri al
+      if (_startDate != null && _endDate != null) {
+        _allMeals = await _db.getMealsInRange(_startDate!, _endDate!);
+      } else {
+        // Bir yıllık geçmiş verileri al (varsayılan)
+        final endDate = DateTime.now();
+        final startDate = endDate.subtract(Duration(days: 365));
+        _allMeals = await _db.getMealsInRange(startDate, endDate);
+      }
+    } catch (e) {
+      print('Tüm öğünleri yüklerken hata: $e');
+    }
+  }
+
+  void setDateRange(DateTime startDate, DateTime endDate) {
+    _startDate = startDate;
+    _endDate = endDate;
+    _loadAllMeals(); // Yeni tarih aralığına göre verileri yükle
+  }
+
+  List<MealRecord> getAllMeals() {
+    return _allMeals;
   }
 
   void setSelectedDate(DateTime date) {
     _selectedDate = date;
-    loadMealsForSelectedDate();
-  }
-
-  Future<void> loadMealsForSelectedDate() async {
-    _isLoading = true;
-    notifyListeners();
-
-    final startOfDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-    final endOfDay = startOfDay.add(Duration(days: 1));
-    
-    final db = await _databaseService.database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'meals',
-      where: 'date >= ? AND date < ?',
-      whereArgs: [startOfDay.millisecondsSinceEpoch, endOfDay.millisecondsSinceEpoch],
-    );
-    
-    _meals = List.generate(maps.length, (i) {
-      return MealRecord.fromMap(maps[i]);
-    });
-    
-    _isLoading = false;
-    notifyListeners();
+    refreshMeals();
   }
 
   Future<int?> addMeal(MealRecord meal) async {
     _isLoading = true;
     notifyListeners();
     
-    final db = await _databaseService.database;
-    final id = await db.insert('meals', meal.toMap());
-    
-    final newMeal = MealRecord(
-      id: id,
-      type: meal.type,
-      foods: meal.foods,
-      date: meal.date,
-      calories: meal.calories,
-      taskId: meal.taskId,
-    );
-    
-    _meals.add(newMeal);
-    
-    _isLoading = false;
-    notifyListeners();
-    
-    return id;
+    try {
+      final id = await _db.insertMeal(meal);
+      final newMeal = MealRecord(
+        id: id,
+        type: meal.type,
+        foods: meal.foods,
+        date: meal.date,
+        calories: meal.calories,
+        notes: meal.notes,
+        taskId: meal.taskId,
+      );
+      
+      // Eklenen öğün bugüne aitse listeye ekle
+      if (_isSameDay(meal.date, _selectedDate)) {
+        _meals.add(newMeal);
+      }
+      
+      // Tüm öğünlere ekle
+      _allMeals.add(newMeal);
+      
+      notifyListeners();
+      return id;
+    } catch (e) {
+      print('Öğün eklerken hata: $e');
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-  
+
   Future<void> updateMeal(MealRecord meal) async {
+    if (meal.id == null) return;
+    
     _isLoading = true;
     notifyListeners();
-
-    await _databaseService.updateMeal(meal);
-    await loadMealsForSelectedDate();
+    
+    try {
+      await _db.updateMeal(meal);
+      
+      // Düzenlenen öğün seçili günde ise güncelle
+      final index = _meals.indexWhere((m) => m.id == meal.id);
+      if (index != -1) {
+        _meals[index] = meal;
+      }
+      
+      // Tüm öğünlerde güncelle
+      final allIndex = _allMeals.indexWhere((m) => m.id == meal.id);
+      if (allIndex != -1) {
+        _allMeals[allIndex] = meal;
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      print('Öğün güncellerken hata: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
-  
+
   Future<void> deleteMeal(int id) async {
     _isLoading = true;
     notifyListeners();
     
-    final db = await _databaseService.database;
-    await db.delete(
-      'meals',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    
-    _meals.removeWhere((meal) => meal.id == id);
-    
-    _isLoading = false;
-    notifyListeners();
+    try {
+      await _db.deleteMeal(id);
+      _meals.removeWhere((meal) => meal.id == id);
+      _allMeals.removeWhere((meal) => meal.id == id);
+      notifyListeners();
+    } catch (e) {
+      print('Öğün silerken hata: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
+  }
+  
   Future<void> deleteMealByTaskId(int? taskId) async {
     if (taskId == null) return;
     
-    final db = await _databaseService.database;
+    final db = await _db.database;
     await db.delete(
       'meals',
       where: 'taskId = ?',
       whereArgs: [taskId],
     );
     
-    await loadMealsForSelectedDate();
+    await refreshMeals();
   }
   
   Future<int> getTotalCaloriesForDay(DateTime date) async {
-    final meals = await _databaseService.getMealsForDay(date);
+    final meals = await _db.getMealsForDay(date);
     return meals.fold<int>(0, (sum, meal) => sum + (meal.calories ?? 0));
   }
   
@@ -214,14 +280,6 @@ class NutritionProvider extends ChangeNotifier {
     await addMeal(breakfast);
     await addMeal(lunch);
     await addMeal(dinner);
-  }
-
-  Future<List<MealRecord>> getAllMeals() async {
-    final db = await _databaseService.database;
-    final List<Map<String, dynamic>> maps = await db.query('meals');
-    return List.generate(maps.length, (i) {
-      return MealRecord.fromMap(maps[i]);
-    });
   }
 
   Future<List<MealRecord>> getMealsInRange(DateTime startDate, DateTime endDate) async {

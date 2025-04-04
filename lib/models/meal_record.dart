@@ -7,6 +7,7 @@ class MealRecord {
   final DateTime date;
   final int? calories;
   final int? taskId;
+  final String? notes;
 
   MealRecord({
     this.id,
@@ -15,6 +16,7 @@ class MealRecord {
     required this.date,
     this.calories,
     this.taskId,
+    this.notes,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +27,7 @@ class MealRecord {
       'date': date.millisecondsSinceEpoch,
       'calories': calories,
       'taskId': taskId,
+      'notes': notes,
     };
   }
 
@@ -36,6 +39,7 @@ class MealRecord {
       date: DateTime.fromMillisecondsSinceEpoch(map['date']),
       calories: map['calories'],
       taskId: map['taskId'],
+      notes: map['notes'],
     );
   }
 } 

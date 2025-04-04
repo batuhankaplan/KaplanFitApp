@@ -18,8 +18,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   String? _profileImagePath;
   bool _isLoading = false;
+  double _bmi = 0;
+  String _bmiCategory = '';
 
   @override
   void initState() {
@@ -33,6 +37,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _ageController.dispose();
     _heightController.dispose();
     _weightController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -45,7 +51,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _ageController.text = user.age.toString();
         _heightController.text = user.height.toString();
         _weightController.text = user.weight.toString();
+        _emailController.text = user.email ?? '';
+        _phoneController.text = user.phoneNumber ?? '';
         _profileImagePath = user.profileImagePath;
+        _bmi = user.bmi;
+        _bmiCategory = user.bmiCategory;
       });
     }
   }
@@ -58,6 +68,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _profileImagePath = pickedFile.path;
       });
+    }
+  }
+
+  void _calculateBMI() {
+    try {
+      final weight = double.parse(_weightController.text);
+      final height = double.parse(_heightController.text);
+      
+      if (weight > 0 && height > 0) {
+        final bmi = weight / ((height / 100) * (height / 100));
+        setState(() {
+          _bmi = bmi;
+          _bmiCategory = _getBMICategory(bmi);
+        });
+      }
+    } catch (e) {
+      // Geçersiz değerler için hesaplama yapma
+    }
+  }
+  
+  String _getBMICategory(double bmi) {
+    if (bmi < 18.5) {
+      return "Zayıf";
+    } else if (bmi < 25) {
+      return "Normal";
+    } else if (bmi < 30) {
+      return "Fazla Kilolu";
+    } else if (bmi < 35) {
+      return "Obez (Sınıf I)";
+    } else if (bmi < 40) {
+      return "Obez (Sınıf II)";
+    } else {
+      return "Aşırı Obez (Sınıf III)";
     }
   }
 
@@ -79,6 +122,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final int age = int.parse(_ageController.text);
       final double height = double.parse(_heightController.text);
       final double weight = double.parse(_weightController.text);
+      final String email = _emailController.text.trim();
+      final String phoneNumber = _phoneController.text.trim();
       
       UserModel updatedUser;
       
@@ -89,6 +134,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           age: age,
           height: height,
           weight: weight,
+          email: email.isNotEmpty ? email : null,
+          phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
           profileImagePath: _profileImagePath,
           lastWeightUpdate: DateTime.now(),
         );
@@ -99,6 +146,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           age: age,
           height: height,
           weight: weight,
+          email: email.isNotEmpty ? email : null,
+          phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
           profileImagePath: _profileImagePath,
           lastWeightUpdate: DateTime.now(),
           createdAt: DateTime.now(),
@@ -138,12 +187,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(user == null ? 'Profil Oluştur' : 'Profil Düzenle'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.save),
-            onPressed: _isLoading ? null : _saveUserData,
-          ),
-        ],
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
@@ -256,6 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       }
                       return null;
                     },
+                    onChanged: (_) => _calculateBMI(),
                   ),
                   const SizedBox(height: 16),
                   
@@ -277,6 +321,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         }
                       } catch (e) {
                         return 'Geçerli bir sayı girin';
+                      }
+                      return null;
+                    },
+                    onChanged: (_) => _calculateBMI(),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // BMI gösterimi
+                  if (_bmi > 0)
+                    Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Vücut Kitle İndeksi (BMI)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${_bmi.toStringAsFixed(1)}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _bmiCategory,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  
+                  // E-posta alanı
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'E-posta (opsiyonel)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        // Basit bir e-posta validasyonu
+                        if (!value.contains('@') || !value.contains('.')) {
+                          return 'Geçerli bir e-posta adresi girin';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Telefon numarası alanı
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Telefon Numarası (opsiyonel)',
+                      border: OutlineInputBorder(),
+                      hintText: '05XX XXX XX XX',
+                    ),
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        // Basit bir telefon numarası validasyonu
+                        if (value.replaceAll(' ', '').length < 10) {
+                          return 'Geçerli bir telefon numarası girin';
+                        }
                       }
                       return null;
                     },
