@@ -23,6 +23,8 @@ import 'providers/nutrition_provider.dart';
 import 'models/providers/database_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_size/window_size.dart';
+import 'services/program_service.dart';
+import 'utils/animations.dart';
 
 // Tema sağlayıcı sınıfı
 class ThemeProvider with ChangeNotifier {
@@ -93,6 +95,10 @@ void main() async {
     // veya başka bir çözüm kullanılmalı
   }
   
+  // Program servisini başlat
+  final programService = ProgramService();
+  await programService.initialize();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -101,6 +107,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => NutritionProvider()),
         ChangeNotifierProvider(create: (_) => DatabaseProvider()),
+        Provider<ProgramService>.value(value: programService),
       ],
       child: const MyApp(),
     ),
@@ -174,7 +181,22 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.05, 0), 
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: _screens[_selectedIndex],
+      ),
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(
           canvasColor: AppTheme.navBarColor, // Tema dosyasından navigasyon barı rengi

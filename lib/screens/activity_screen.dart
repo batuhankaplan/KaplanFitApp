@@ -9,6 +9,7 @@ import '../models/activity_record.dart';
 import '../models/task_type.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme.dart';
+import '../utils/animations.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({Key? key}) : super(key: key);
@@ -31,6 +32,34 @@ class _ActivityScreenState extends State<ActivityScreen> {
   double _distanceInMeters = 0;
   int _elapsedTimeInSeconds = 0;
   late Location _location;
+  
+  // Sabit stil tanımları
+  static const _titleStyle = TextStyle(
+    fontWeight: FontWeight.bold,
+    fontSize: 16,
+  );
+  
+  static const _subtitleStyle = TextStyle(
+    color: Colors.grey,
+    fontSize: 14,
+  );
+  
+  static const _emptyStateTextStyle = TextStyle(
+    fontSize: 18,
+    color: Colors.grey,
+  );
+  
+  static const _buttonTextStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
+  
+  static const _cardShape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.all(Radius.circular(16)),
+  );
+  
+  static const _contentPadding = EdgeInsets.all(16.0);
   
   @override
   void initState() {
@@ -211,47 +240,48 @@ class _ActivityScreenState extends State<ActivityScreen> {
           : Column(
               children: [
                 // Tarih seçici
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                  color: Theme.of(context).cardColor,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Önceki gün
-                      IconButton(
-                        icon: Icon(Icons.arrow_back_ios, size: 18),
-                        onPressed: () {
-                          _changeDate(-1);
-                        },
-                      ),
-                      
-                      // Seçilen tarih gösterimi
-                      GestureDetector(
-                        onTap: _selectDate,
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_today, size: 16),
-                            SizedBox(width: 8),
-                            Text(
-                              DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
+                KFAnimatedSlide(
+                  offsetBegin: const Offset(0, -0.2),
+                  duration: const Duration(milliseconds: 500),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    color: Theme.of(context).cardColor,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Önceki gün
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios, size: 18),
+                          onPressed: () {
+                            _changeDate(-1);
+                          },
                         ),
-                      ),
-                      
-                      // Sonraki gün
-                      IconButton(
-                        icon: Icon(Icons.arrow_forward_ios, size: 18),
-                        onPressed: () {
-                          _changeDate(1);
-                        },
-                      ),
-                    ],
+                        
+                        // Seçilen tarih gösterimi
+                        GestureDetector(
+                          onTap: _selectDate,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 16),
+                              const SizedBox(width: 8),
+                              Text(
+                                DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
+                                style: _titleStyle,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Sonraki gün
+                        IconButton(
+                          icon: const Icon(Icons.arrow_forward_ios, size: 18),
+                          onPressed: () {
+                            _changeDate(1);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const Divider(),
@@ -262,21 +292,33 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Icons.directions_run,
-                                size: 80,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Bugün için aktivite yok',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
+                              KFAnimatedSlide(
+                                offsetBegin: const Offset(0, 0.2),
+                                child: Column(
+                                  children: [
+                                    KFWaveAnimation(
+                                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                      height: 100,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    const Icon(
+                                      Icons.directions_run,
+                                      size: 80,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Bugün için aktivite yok',
+                                      style: _emptyStateTextStyle,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    KFPulseAnimation(
+                                      maxScale: 1.05,
+                                      child: _buildAddActivityButton(),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 24),
-                              _buildAddActivityButton(),
                             ],
                           ),
                         )
@@ -285,12 +327,18 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           itemBuilder: (context, index) {
                             if (index == provider.activities.length) {
                               return Center(
-                                child: _buildAddActivityButton(),
+                                child: KFPulseAnimation(
+                                  maxScale: 1.05,
+                                  child: _buildAddActivityButton(),
+                                ),
                               );
                             }
                             
                             final activity = provider.activities[index];
-                            return _buildActivityCard(activity);
+                            return KFAnimatedItem(
+                              index: index,
+                              child: _buildActivityCard(activity),
+                            );
                           },
                         ),
                 ),
@@ -349,14 +397,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
       child: Card(
         elevation: 2,
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: _cardShape,
         child: InkWell(
           onTap: () => _showEditActivityDialog(activity),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: _contentPadding,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -389,10 +435,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             ),
                             Text(
                               formattedDate,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
+                              style: _subtitleStyle,
                             ),
                           ],
                         ),
@@ -418,10 +461,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   const SizedBox(height: 12),
                   Text(
                     'Notlar:',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                    ),
+                    style: _subtitleStyle,
                   ),
                   Text(
                     activity.notes!,
@@ -442,31 +482,27 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget _buildAddActivityButton() {
     return Container(
       width: 200,
-      margin: EdgeInsets.symmetric(vertical: 16),
+      margin: const EdgeInsets.symmetric(vertical: 16),
       child: ElevatedButton(
         onPressed: _showAddActivityDialog,
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
             ? AppTheme.primaryColor
             : AppTheme.primaryColor,
-          padding: EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add, color: Colors.white),
-            SizedBox(width: 8),
+            const Icon(Icons.add, color: Colors.white),
+            const SizedBox(width: 8),
             Text(
               'Aktivite Ekle',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              style: _buttonTextStyle,
             ),
           ],
         ),
@@ -512,56 +548,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Aktivite türü seçici
-                DropdownButtonFormField<FitActivityType>(
-                  value: _selectedActivityType,
-                  decoration: const InputDecoration(
-                    labelText: 'Aktivite Türü',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    FitActivityType.walking,
-                    FitActivityType.running,
-                    FitActivityType.swimming,
-                    FitActivityType.weightTraining,
-                    FitActivityType.cycling,
-                    FitActivityType.yoga,
-                    FitActivityType.other,
-                  ].map((type) {
-                    return DropdownMenuItem<FitActivityType>(
-                      value: type,
-                      child: Text(_getActivityTypeName(type)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedActivityType = value;
-                      });
-                    }
-                  },
-                ),
+                _buildActivityTypeDropdown(),
                 const SizedBox(height: 16),
                 
                 // Süre girişi
-                TextField(
-                  controller: _durationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Süre (dakika)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
+                _buildDurationTextField(),
                 const SizedBox(height: 16),
                 
                 // Notlar
-                TextField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notlar',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
+                _buildNotesTextField(),
               ],
             ),
           ),
@@ -663,56 +658,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Aktivite türü seçici
-                DropdownButtonFormField<FitActivityType>(
-                  value: _selectedActivityType,
-                  decoration: const InputDecoration(
-                    labelText: 'Aktivite Türü',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    FitActivityType.walking,
-                    FitActivityType.running,
-                    FitActivityType.swimming,
-                    FitActivityType.weightTraining,
-                    FitActivityType.cycling,
-                    FitActivityType.yoga,
-                    FitActivityType.other,
-                  ].map((type) {
-                    return DropdownMenuItem<FitActivityType>(
-                      value: type,
-                      child: Text(_getActivityTypeName(type)),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        _selectedActivityType = value;
-                      });
-                    }
-                  },
-                ),
+                _buildActivityTypeDropdown(),
                 const SizedBox(height: 16),
                 
                 // Süre girişi
-                TextField(
-                  controller: _durationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Süre (dakika)',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
+                _buildDurationTextField(),
                 const SizedBox(height: 16),
                 
                 // Notlar
-                TextField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notlar',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
+                _buildNotesTextField(),
               ],
             ),
           ),
@@ -771,6 +725,78 @@ class _ActivityScreenState extends State<ActivityScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // Dialog'ta görünen DropdownButtonFormField widget'ı
+  DropdownButtonFormField<FitActivityType> _buildActivityTypeDropdown() {
+    return DropdownButtonFormField<FitActivityType>(
+      value: _selectedActivityType,
+      decoration: const InputDecoration(
+        labelText: 'Aktivite Türü',
+        border: OutlineInputBorder(),
+      ),
+      items: const [
+        DropdownMenuItem(
+          value: FitActivityType.walking,
+          child: Text('Yürüyüş'),
+        ),
+        DropdownMenuItem(
+          value: FitActivityType.running,
+          child: Text('Koşu'),
+        ),
+        DropdownMenuItem(
+          value: FitActivityType.swimming,
+          child: Text('Yüzme'),
+        ),
+        DropdownMenuItem(
+          value: FitActivityType.weightTraining,
+          child: Text('Ağırlık Antrenmanı'),
+        ),
+        DropdownMenuItem(
+          value: FitActivityType.cycling,
+          child: Text('Bisiklet'),
+        ),
+        DropdownMenuItem(
+          value: FitActivityType.yoga,
+          child: Text('Yoga'),
+        ),
+        DropdownMenuItem(
+          value: FitActivityType.other,
+          child: Text('Diğer'),
+        ),
+      ],
+      onChanged: (value) {
+        if (value != null) {
+          setState(() {
+            _selectedActivityType = value;
+          });
+        }
+      },
+    );
+  }
+  
+  // Süre girişi için TextField
+  TextField _buildDurationTextField() {
+    return TextField(
+      controller: _durationController,
+      decoration: const InputDecoration(
+        labelText: 'Süre (dakika)',
+        border: OutlineInputBorder(),
+      ),
+      keyboardType: TextInputType.number,
+    );
+  }
+  
+  // Notlar için TextField
+  TextField _buildNotesTextField() {
+    return TextField(
+      controller: _notesController,
+      decoration: const InputDecoration(
+        labelText: 'Notlar',
+        border: OutlineInputBorder(),
+      ),
+      maxLines: 2,
     );
   }
 } 

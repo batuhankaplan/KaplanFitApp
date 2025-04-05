@@ -12,6 +12,7 @@ import '../models/activity_record.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import 'package:intl/intl.dart';
+import '../utils/animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -267,204 +268,216 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               
               // Sabah Egzersizi kartı
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isMorningExerciseDone = !isMorningExerciseDone;
-                  });
-                  
-                  if (isMorningExerciseDone) {
-                    _recordMorningExercise(context);
-                  } else {
-                    _removeMorningExercise(context);
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: isMorningExerciseDone 
-                        ? AppTheme.completedTaskColor 
-                        : AppTheme.morningExerciseColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.wb_sunny, 
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Sabah Egzersizi',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  decoration: isMorningExerciseDone 
-                                      ? TextDecoration.lineThrough 
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                morningProgram,
-                                style: TextStyle(
-                                  color: isMorningExerciseDone 
-                                      ? Colors.white.withOpacity(0.7) 
-                                      : Colors.white,
-                                  fontSize: 16,
-                                  decoration: isMorningExerciseDone 
-                                      ? TextDecoration.lineThrough 
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                            ],
+              KFAnimatedItem(
+                index: 0,
+                delay: const Duration(milliseconds: 150),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isMorningExerciseDone = !isMorningExerciseDone;
+                    });
+                    
+                    if (isMorningExerciseDone) {
+                      _recordMorningExercise(context);
+                    } else {
+                      _removeMorningExercise(context);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    decoration: BoxDecoration(
+                      color: isMorningExerciseDone 
+                          ? AppTheme.completedTaskColor 
+                          : AppTheme.morningExerciseColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.wb_sunny, 
+                            color: Colors.white,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sabah Egzersizi',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    decoration: isMorningExerciseDone 
+                                        ? TextDecoration.lineThrough 
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  morningProgram,
+                                  style: TextStyle(
+                                    color: isMorningExerciseDone 
+                                        ? Colors.white.withOpacity(0.7) 
+                                        : Colors.white,
+                                    fontSize: 16,
+                                    decoration: isMorningExerciseDone 
+                                        ? TextDecoration.lineThrough 
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
               
               // Öğle Yemeği kartı
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isLunchDone = !isLunchDone;
-                  });
-                  
-                  if (isLunchDone) {
-                    _recordLunch(context);
-                  } else {
-                    _removeLunch(context);
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: isLunchDone 
-                        ? AppTheme.completedTaskColor 
-                        : AppTheme.lunchColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lunch_dining,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Öğle Yemeği',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  decoration: isLunchDone 
-                                      ? TextDecoration.lineThrough 
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                lunchMenu,
-                                style: TextStyle(
-                                  color: isLunchDone 
-                                      ? Colors.white.withOpacity(0.7) 
-                                      : Colors.white,
-                                  fontSize: 16,
-                                  decoration: isLunchDone 
-                                      ? TextDecoration.lineThrough 
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                            ],
+              KFAnimatedItem(
+                index: 1,
+                delay: const Duration(milliseconds: 150),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isLunchDone = !isLunchDone;
+                    });
+                    
+                    if (isLunchDone) {
+                      _recordLunch(context);
+                    } else {
+                      _removeLunch(context);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    decoration: BoxDecoration(
+                      color: isLunchDone 
+                          ? AppTheme.completedTaskColor 
+                          : AppTheme.lunchColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lunch_dining,
+                            color: Colors.white,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Öğle Yemeği',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    decoration: isLunchDone 
+                                        ? TextDecoration.lineThrough 
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  lunchMenu,
+                                  style: TextStyle(
+                                    color: isLunchDone 
+                                        ? Colors.white.withOpacity(0.7) 
+                                        : Colors.white,
+                                    fontSize: 16,
+                                    decoration: isLunchDone 
+                                        ? TextDecoration.lineThrough 
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
               
               // Akşam Egzersizi kartı
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isEveningExerciseDone = !isEveningExerciseDone;
-                  });
-                  
-                  if (isEveningExerciseDone) {
-                    _recordEveningExercise(context);
-                  } else {
-                    _removeEveningExercise(context);
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: isEveningExerciseDone 
-                        ? AppTheme.completedTaskColor 
-                        : AppTheme.eveningExerciseColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.directions_run,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Akşam Egzersizi',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  decoration: isEveningExerciseDone 
-                                      ? TextDecoration.lineThrough 
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                eveningProgram,
-                                style: TextStyle(
-                                  color: isEveningExerciseDone 
-                                      ? Colors.white.withOpacity(0.7) 
-                                      : Colors.white,
-                                  fontSize: 16,
-                                  decoration: isEveningExerciseDone 
-                                      ? TextDecoration.lineThrough 
-                                      : TextDecoration.none,
-                                ),
-                              ),
-                            ],
+              KFAnimatedItem(
+                index: 2,
+                delay: const Duration(milliseconds: 150),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isEveningExerciseDone = !isEveningExerciseDone;
+                    });
+                    
+                    if (isEveningExerciseDone) {
+                      _recordEveningExercise(context);
+                    } else {
+                      _removeEveningExercise(context);
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    decoration: BoxDecoration(
+                      color: isEveningExerciseDone 
+                          ? AppTheme.completedTaskColor 
+                          : AppTheme.eveningExerciseColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.fitness_center,
+                            color: Colors.white,
+                            size: 18,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Akşam Egzersizi',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    decoration: isEveningExerciseDone 
+                                        ? TextDecoration.lineThrough 
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  eveningProgram,
+                                  style: TextStyle(
+                                    color: isEveningExerciseDone 
+                                        ? Colors.white.withOpacity(0.7) 
+                                        : Colors.white,
+                                    fontSize: 16,
+                                    decoration: isEveningExerciseDone 
+                                        ? TextDecoration.lineThrough 
+                                        : TextDecoration.none,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -896,58 +909,87 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGreetingCard() {
-    final now = DateTime.now();
-    final hour = now.hour;
     final user = Provider.of<UserProvider>(context).user;
+    final today = DateTime.now();
     
-    String greeting;
-    if (hour >= 6 && hour < 12) {
-      greeting = 'Günaydın';
-    } else if (hour >= 12 && hour < 19) {
-      greeting = 'Hoşgeldin';
-    } else if ((hour >= 19 && hour <= 23) || hour == 0) {
-      greeting = 'İyi Akşamlar';
-    } else {
-      greeting = 'İyi Geceler';
-    }
-    
-    if (user != null) {
-      greeting += ' ${user.name}!';
-    } else {
-      greeting += '!';
-    }
-    
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              greeting,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Karşılama başlığı
+        KFAnimatedSlide(
+          offsetBegin: const Offset(-0.1, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Merhaba, ${user?.name.split(' ').first ?? 'Kaplan'}',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _selectedMotivationalMessage,
-              style: const TextStyle(
-                fontSize: 16,
+              Text(
+                DateFormat('d MMMM yyyy, EEEE', 'tr_TR').format(today),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+        
+        const SizedBox(height: 16),
+        
+        // Motivasyon mesajı
+        KFAnimatedSlide(
+          offsetBegin: const Offset(0, 0.2),
+          delay: const Duration(milliseconds: 200),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Theme.of(context).primaryColor,
+                  Theme.of(context).primaryColor.withOpacity(0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  spreadRadius: 0,
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.wb_sunny,
+                  color: Colors.white,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selectedMotivationalMessage,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 } 

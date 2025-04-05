@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import '../models/program/daily_program.dart';
+import '../models/program/program_item.dart';
+import '../services/program_service.dart';
+import '../utils/animations.dart';
 
 class ProgramScreen extends StatefulWidget {
   const ProgramScreen({Key? key}) : super(key: key);
@@ -13,6 +18,33 @@ class ProgramScreen extends StatefulWidget {
 class _ProgramScreenState extends State<ProgramScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedDayIndex = 0;
+  bool _isLoading = false;
+  
+  // Animasyon değişkenleri
+  final List<GlobalKey<AnimatedListState>> _listKeys = List.generate(7, (_) => GlobalKey<AnimatedListState>());
+  
+  // Sabit stil tanımları
+  static const _titleTextStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
+  
+  static const _subtitleTextStyle = TextStyle(
+    fontSize: 16,
+    color: Colors.white70,
+  );
+  
+  static const _tipTitleTextStyle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+  );
+  
+  static const _tipTextStyle = TextStyle(
+    fontSize: 16,
+    color: Colors.white,
+  );
 
   @override
   void initState() {
@@ -45,16 +77,12 @@ class _ProgramScreenState extends State<ProgramScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     initializeDateFormatting('tr_TR');
     
-    // Tab isimleri
-    final List<String> weekDays = [
-      'Pazartesi',
-      'Salı',
-      'Çarşamba',
-      'Perşembe',
-      'Cuma',
-      'Cumartesi',
-      'Pazar'
-    ];
+    // Provider üzerinden program servisini al
+    final programService = Provider.of<ProgramService>(context);
+    
+    // Program servisi üzerinden gün isimlerini al
+    final List<String> weekDays = programService.getCurrentProgram()?.dailyPrograms.map((p) => p.dayName).toList() ?? 
+        const ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
 
     return Scaffold(
       body: Column(
@@ -75,94 +103,39 @@ class _ProgramScreenState extends State<ProgramScreen> with SingleTickerProvider
             ),
           ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildDayProgramPage(0), // Pazartesi
-                _buildDayProgramPage(1), // Salı
-                _buildDayProgramPage(2), // Çarşamba
-                _buildDayProgramPage(3), // Perşembe
-                _buildDayProgramPage(4), // Cuma
-                _buildDayProgramPage(5), // Cumartesi
-                _buildDayProgramPage(6), // Pazar
-              ],
-            ),
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  // Animasyonlu scroll için bouncing fizik ekle
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildDayProgramPage(context, 0), // Pazartesi
+                    _buildDayProgramPage(context, 1), // Salı
+                    _buildDayProgramPage(context, 2), // Çarşamba
+                    _buildDayProgramPage(context, 3), // Perşembe
+                    _buildDayProgramPage(context, 4), // Cuma
+                    _buildDayProgramPage(context, 5), // Cumartesi
+                    _buildDayProgramPage(context, 6), // Pazar
+                  ],
+                ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDayProgramPage(int dayIndex) {
-    // dayIndex: 0 = Pazartesi, 6 = Pazar
+  Widget _buildDayProgramPage(BuildContext context, int dayIndex) {
+    // Program servisinden günlük programı al
+    final programService = Provider.of<ProgramService>(context);
+    final dailyProgram = programService.getDailyProgram(dayIndex);
     
-    // Her günün sabah ve akşam programları ve yemekleri
-    final List<String> titles = [];
-    final List<String> descriptions = [];
-    final List<IconData> icons = [];
-    final List<Color> colors = [];
-    
-    // Sabah Programı, Öğle Yemeği, Akşam Egzersizi, Akşam Yemeği
-    icons.add(Icons.sunny);
-    icons.add(Icons.lunch_dining);
-    icons.add(Icons.fitness_center);
-    icons.add(Icons.dinner_dining);
-    
-    colors.add(AppTheme.morningExerciseColor);
-    colors.add(AppTheme.lunchColor);
-    colors.add(AppTheme.eveningExerciseColor);
-    colors.add(AppTheme.dinnerColor);
-    
-    titles.add('Sabah Programı');
-    titles.add('Öğle Yemeği');
-    titles.add('Akşam Egzersizi');
-    titles.add('Akşam Yemeği');
-    
-    switch (dayIndex) {
-      case 0: // Pazartesi
-        descriptions.add('🏊‍♂️ Havuz kapalı. Dinlen veya evde esneme yap.');
-        descriptions.add('🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz, badem/ceviz');
-        descriptions.add('🛑 Spor salonu kapalı. Dinlen veya hafif yürüyüş.');
-        descriptions.add('🥗 Ton balıklı salata, yoğurt, 🥖 tahıllı ekmek');
-        break;
-      case 1: // Salı
-        descriptions.add('🏊‍♂️ 08:45 - 09:15 yüzme');
-        descriptions.add('🥣 Yulaf + süt + muz veya Pazartesi menüsü');
-        descriptions.add('(18:00 - 18:45 Ağırlık): Squat, Leg Press, Bench Press, Lat Pull-Down');
-        descriptions.add('🍗 Izgara tavuk veya 🐟 ton balıklı salata, yoğurt');
-        break;
-      case 2: // Çarşamba
-        descriptions.add('🏊‍♂️ 08:45 - 09:15 yüzme');
-        descriptions.add('🥣 Yulaf + süt + muz veya Pazartesi menüsü');
-        descriptions.add('(18:00 - 18:45 Ağırlık): Row, Goblet Squat, Core Çalışmaları');
-        descriptions.add('🐔 Tavuk veya 🐟 ton balık, 🥗 yağlı salata, yoğurt');
-        break;
-      case 3: // Perşembe
-        descriptions.add('🏊‍♂️ 08:45 - 09:15 yüzme');
-        descriptions.add('🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz, badem/ceviz veya yulaf alternatifi');
-        descriptions.add('(18:00 - 18:45 Ağırlık): 🔄 Salı antrenmanı tekrarı');
-        descriptions.add('🐔 Tavuk veya 🐟 ton balık, 🥗 salata, yoğurt');
-        break;
-      case 4: // Cuma
-        descriptions.add('🚶‍♂️ İsteğe bağlı yüzme veya yürüyüş');
-        descriptions.add('🥚 Tavuk, haşlanmış yumurta, 🥗 yoğurt, salata, kuruyemiş');
-        descriptions.add('🤸‍♂️ Dinlenme veya esneme');
-        descriptions.add('🍳 Menemen, 🥗 ton balıklı salata, yoğurt');
-        break;
-      case 5: // Cumartesi
-        descriptions.add('🚶‍♂️ Hafif yürüyüş, esneme veya yüzme');
-        descriptions.add('🐔 Tavuk, yumurta, pilav, salata');
-        descriptions.add('⚡️ İsteğe bağlı egzersiz');
-        descriptions.add('🍽️ Sağlıklı serbest menü');
-        break;
-      case 6: // Pazar
-        descriptions.add('🧘‍♂️ Tam dinlenme veya 20-30 dk yürüyüş');
-        descriptions.add('🔄 Hafta içi prensipteki öğünler');
-        descriptions.add('💤 Dinlenme');
-        descriptions.add('🍴 Hafif ve dengeli öğün');
-        break;
+    if (dailyProgram == null) {
+      return const Center(
+        child: Text('Bu gün için program bulunamadı'),
+      );
     }
-
+    
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,117 +143,96 @@ class _ProgramScreenState extends State<ProgramScreen> with SingleTickerProvider
           // Program kartları
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: titles.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  elevation: 3,
-                  margin: EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: colors[index],
-                    ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.all(16),
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.white24,
-                        child: Icon(icons[index], color: Colors.white),
-                      ),
-                      title: Text(
-                        titles[index],
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      subtitle: Text(
-                        descriptions[index],
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          
-          // Genel Tavsiyeler kartı
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Card(
-              elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  gradient: LinearGradient(
-                    colors: [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '🔖 Genel Tavsiyeler',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    _buildTipItem('💧 Günde en az 2-3 litre su iç.'),
-                    _buildTipItem('❌ Şekerli içeceklerden uzak dur.'),
-                    _buildTipItem('🍽️ Egzersiz yemekten önce, akşam yemeği hafif ve dengeli olsun.'),
-                    _buildTipItem('🍌 Her gün 1 muz tüket (potasyum kaynağı).'),
-                    _buildTipItem('🥄 Zeytinyağı 1-2 yemek kaşığı yeterlidir.'),
-                    _buildTipItem('🏋️‍♂️ Ağırlık antrenmanları: Salı, Çarşamba, Perşembe günleri.'),
-                    _buildTipItem('🥣 Yulaf + süt + muz mükemmel bir kahvaltıdır.'),
-                    _buildTipItem('🧂 Pirinç pilavında çok fazla tereyağı ve bulyon kullanma.'),
-                    _buildTipItem('💤 Sekiz saatlik kaliteli uyku çok önemlidir.'),
-                    _buildTipItem('🧂 Tuzu azaltmaya çalış.'),
-                  ],
-                ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 500),
+              child: ListView.builder(
+                key: ValueKey<int>(dayIndex), // AnimatedSwitcher için her tab için unique key
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: dailyProgram.items.length,
+                itemBuilder: (context, index) {
+                  // Her kart için sıralı gecikme ekleyerek animasyon
+                  return _buildProgramItemCard(dailyProgram.items[index]);
+                },
               ),
             ),
           ),
           
-          SizedBox(height: 20),
+          // Genel Tavsiyeler kartı
+          if (dailyProgram.tips.isNotEmpty)
+            _buildTipsCard(dailyProgram.tips),
         ],
       ),
     );
   }
   
-  Widget _buildTipItem(String tip) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.check_circle, color: Colors.white, size: 20),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tip,
+  /// Kademeli animasyon efekti için widget
+  Widget _buildProgramItemCard(ProgramItem item) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+      ),
+      child: InkWell(
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        onTap: () {
+          // Dokunma efekti ekleyerek kartın etkileşimli olduğunu gösterelim
+          // (Gelecekte detay sayfası açılabilir)
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
+            color: item.color,
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: CircleAvatar(
+              backgroundColor: Colors.white24,
+              child: Icon(item.icon, color: Colors.white),
+            ),
+            title: Text(
+              item.title,
+              style: _titleTextStyle,
+            ),
+            subtitle: Text(
+              item.description,
+              style: item.description.length > 50 
+                  ? _subtitleTextStyle 
+                  : _subtitleTextStyle.copyWith(height: 1.5),
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTipsCard(List<String> tips) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.0),
+      ),
+      elevation: 4,
+      color: AppTheme.primaryColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Günün İpuçları",
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 20, 
+                fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            ...tips.map((tip) => KFAnimatedTip(tip: tip)).toList(),
+          ],
+        ),
       ),
     );
   }

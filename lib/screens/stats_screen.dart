@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../models/activity_record.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
+import '../utils/animations.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({Key? key}) : super(key: key);
@@ -252,7 +253,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.local_fire_department, color: Colors.white, size: 32),
+                                      Icon(Icons.calendar_today, color: Colors.white, size: 32),
                                       SizedBox(height: 8),
                                       Text(
                                         'Günlük Ortalama',
@@ -262,7 +263,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                                         ),
                                       ),
                                       Text(
-                                        '$avgCalories kcal/gün',
+                                        '$avgCalories kcal',
                                         style: TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
@@ -279,14 +280,19 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                         
                         SizedBox(height: 24),
                         Text(
-                          'Öğün Türlerine Göre Kaloriler',
+                          'Kalori Alımı',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         SizedBox(height: 8),
-                        Container(
-                          height: 300,
-                          padding: EdgeInsets.all(8),
-                          child: _buildNutritionLineChart(mealDataByDate, isDarkMode),
+                        KFAnimatedSlide(
+                          offsetBegin: const Offset(0, 0.3),
+                          child: Container(
+                            height: 300,
+                            padding: EdgeInsets.all(8),
+                            child: filteredMeals.isEmpty
+                                ? Center(child: Text('Veri bulunamadı'))
+                                : _buildNutritionLineChart(mealDataByDate, isDarkMode),
+                          ),
                         ),
                       ],
                     ),
@@ -311,7 +317,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(16),
                                     gradient: LinearGradient(
-                                      colors: [Color(0xFF26A69A), Color(0xFF80CBC4)],
+                                      colors: [Color(0xFF66BB6A), Color(0xFFA5D6A7)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
@@ -389,10 +395,13 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         SizedBox(height: 8),
-                        Container(
-                          height: 300,
-                          padding: EdgeInsets.all(8),
-                          child: _buildActivityLineChart(activityDataByDate, isDarkMode),
+                        KFAnimatedSlide(
+                          offsetBegin: const Offset(0, 0.3),
+                          child: Container(
+                            height: 300,
+                            padding: EdgeInsets.all(8),
+                            child: _buildActivityLineChart(activityDataByDate, isDarkMode),
+                          ),
                         ),
                       ],
                     ),
@@ -502,10 +511,13 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         SizedBox(height: 8),
-                        Container(
-                          height: 300,
-                          padding: EdgeInsets.all(8),
-                          child: _buildWeightChart(filteredWeightHistory, isDarkMode),
+                        KFAnimatedSlide(
+                          offsetBegin: const Offset(0, 0.3),
+                          child: Container(
+                            height: 300,
+                            padding: EdgeInsets.all(8),
+                            child: _buildWeightChart(filteredWeightHistory, isDarkMode),
+                          ),
                         ),
                       ],
                     ),

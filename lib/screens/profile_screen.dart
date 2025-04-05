@@ -4,6 +4,7 @@ import '../providers/user_provider.dart';
 import '../models/user_model.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import '../utils/animations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -104,6 +105,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // BMI kategorisine göre renk belirle
+  Color _getBMIColor(double bmi) {
+    if (bmi <= 0) {
+      return Colors.grey;
+    } else if (bmi < 18.5) {
+      return Colors.blue;
+    } else if (bmi < 25) {
+      return Colors.green;
+    } else if (bmi < 30) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
   Future<void> _saveUserData() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -198,234 +214,293 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Profil resmi seçme
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 60,
-                          backgroundColor: Colors.grey.shade200,
-                          backgroundImage: _profileImagePath != null
-                              ? FileImage(File(_profileImagePath!))
-                              : null,
-                          child: _profileImagePath == null
-                              ? Icon(
-                                  Icons.person,
-                                  size: 60,
-                                  color: Colors.grey.shade600,
-                                )
-                              : null,
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
+                  KFAnimatedSlide(
+                    offsetBegin: const Offset(0, -0.2),
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: Stack(
+                        children: [
+                          KFPulseAnimation(
+                            duration: const Duration(milliseconds: 2000),
+                            maxScale: 1.05,
+                            child: CircleAvatar(
+                              radius: 60,
+                              backgroundColor: Colors.grey.shade200,
+                              backgroundImage: _profileImagePath != null
+                                  ? FileImage(File(_profileImagePath!))
+                                  : null,
+                              child: _profileImagePath == null
+                                  ? Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: Colors.grey.shade600,
+                                    )
+                                  : null,
                             ),
-                            child: const Icon(
-                              Icons.edit,
-                              color: Colors.white,
-                              size: 20,
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  // Form alanları - animasyonlu liste olarak gösterelim
+                  KFAnimatedList(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Ad Soyad',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen adınızı ve soyadınızı girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      TextFormField(
+                        controller: _ageController,
+                        decoration: const InputDecoration(
+                          labelText: 'Yaş',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen yaşınızı girin';
+                          }
+                          if (int.tryParse(value) == null) {
+                            return 'Geçerli bir yaş girin';
+                          }
+                          return null;
+                        },
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      TextFormField(
+                        controller: _heightController,
+                        decoration: const InputDecoration(
+                          labelText: 'Boy (cm)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen boyunuzu girin';
+                          }
+                          try {
+                            final height = double.parse(value);
+                            if (height <= 0 || height > 250) {
+                              return 'Geçerli bir boy girin (1-250 cm)';
+                            }
+                          } catch (e) {
+                            return 'Geçerli bir sayı girin';
+                          }
+                          return null;
+                        },
+                        onChanged: (_) => _calculateBMI(),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      TextFormField(
+                        controller: _weightController,
+                        decoration: const InputDecoration(
+                          labelText: 'Kilo (kg)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Lütfen kilonuzu girin';
+                          }
+                          try {
+                            final weight = double.parse(value);
+                            if (weight <= 0 || weight > 300) {
+                              return 'Geçerli bir kilo girin (1-300 kg)';
+                            }
+                          } catch (e) {
+                            return 'Geçerli bir sayı girin';
+                          }
+                          return null;
+                        },
+                        onChanged: (_) => _calculateBMI(),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // BMI göstergesi
+                      const SizedBox(height: 32),
+
+                      // BMI göstergesi animasyonlu olarak
+                      KFAnimatedSlide(
+                        offsetBegin: const Offset(0, 0.3),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            gradient: LinearGradient(
+                              colors: [
+                                _getBMIColor(_bmi).withOpacity(0.7),
+                                _getBMIColor(_bmi).withOpacity(0.4),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Vücut Kitle İndeksi (BMI)',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  Column(
+                                    children: [
+                                      Text(
+                                        _bmi.toStringAsFixed(1),
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'BMI',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        _bmiCategory,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Kategori',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      // E-posta alanı
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'E-posta (opsiyonel)',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            // Basit bir e-posta validasyonu
+                            if (!value.contains('@') || !value.contains('.')) {
+                              return 'Geçerli bir e-posta adresi girin';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Telefon numarası alanı
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Telefon Numarası (opsiyonel)',
+                          border: OutlineInputBorder(),
+                          hintText: '05XX XXX XX XX',
+                        ),
+                        keyboardType: TextInputType.phone,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            // Basit bir telefon numarası validasyonu
+                            if (value.replaceAll(' ', '').length < 10) {
+                              return 'Geçerli bir telefon numarası girin';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      
+                      const SizedBox(height: 32),
+                      
+                      // Kaydet butonu
+                      KFAnimatedSlide(
+                        offsetBegin: const Offset(0, 0.5),
+                        duration: const Duration(milliseconds: 600),
+                        delay: const Duration(milliseconds: 300),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _saveUserData,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'KAYDET',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Form alanları
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Ad Soyad',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen adınızı ve soyadınızı girin';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  TextFormField(
-                    controller: _ageController,
-                    decoration: const InputDecoration(
-                      labelText: 'Yaş',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen yaşınızı girin';
-                      }
-                      try {
-                        final age = int.parse(value);
-                        if (age <= 0 || age > 120) {
-                          return 'Geçerli bir yaş girin (1-120)';
-                        }
-                      } catch (e) {
-                        return 'Geçerli bir sayı girin';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  TextFormField(
-                    controller: _heightController,
-                    decoration: const InputDecoration(
-                      labelText: 'Boy (cm)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen boyunuzu girin';
-                      }
-                      try {
-                        final height = double.parse(value);
-                        if (height <= 0 || height > 250) {
-                          return 'Geçerli bir boy girin (1-250 cm)';
-                        }
-                      } catch (e) {
-                        return 'Geçerli bir sayı girin';
-                      }
-                      return null;
-                    },
-                    onChanged: (_) => _calculateBMI(),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  TextFormField(
-                    controller: _weightController,
-                    decoration: const InputDecoration(
-                      labelText: 'Kilo (kg)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Lütfen kilonuzu girin';
-                      }
-                      try {
-                        final weight = double.parse(value);
-                        if (weight <= 0 || weight > 300) {
-                          return 'Geçerli bir kilo girin (1-300 kg)';
-                        }
-                      } catch (e) {
-                        return 'Geçerli bir sayı girin';
-                      }
-                      return null;
-                    },
-                    onChanged: (_) => _calculateBMI(),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // BMI gösterimi
-                  if (_bmi > 0)
-                    Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Vücut Kitle İndeksi (BMI)',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${_bmi.toStringAsFixed(1)}',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _bmiCategory,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  
-                  // E-posta alanı
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'E-posta (opsiyonel)',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value != null && value.isNotEmpty) {
-                        // Basit bir e-posta validasyonu
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Geçerli bir e-posta adresi girin';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Telefon numarası alanı
-                  TextFormField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(
-                      labelText: 'Telefon Numarası (opsiyonel)',
-                      border: OutlineInputBorder(),
-                      hintText: '05XX XXX XX XX',
-                    ),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) {
-                      if (value != null && value.isNotEmpty) {
-                        // Basit bir telefon numarası validasyonu
-                        if (value.replaceAll(' ', '').length < 10) {
-                          return 'Geçerli bir telefon numarası girin';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Kaydet butonu
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveUserData,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: const Text(
-                        'KAYDET',
-                        style: TextStyle(
-                          fontSize: 18, 
-                          fontWeight: FontWeight.bold
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
