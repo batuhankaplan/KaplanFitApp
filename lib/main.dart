@@ -166,11 +166,9 @@ class _MainScreenState extends State<MainScreen> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     await userProvider.loadUser();
     
-    if (userProvider.user == null) {
-      setState(() {
-        _selectedIndex = 0; // Anasayfanın indeksi
-      });
-    }
+    setState(() {
+      _selectedIndex = 0; // Anasayfanın indeksi
+    });
   }
 
   @override

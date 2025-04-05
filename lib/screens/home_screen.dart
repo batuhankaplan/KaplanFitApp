@@ -34,6 +34,28 @@ class _HomeScreenState extends State<HomeScreen> {
   int? eveningExerciseId;
   int? dinnerMealId;
   
+  // Motivasyon mesajları
+  final List<String> _motivationalMessages = [
+    'Bugün için sağlıklı bir şeyler yapın',
+    'Her gün biraz daha iyiye',
+    'Daha güçlü, daha sağlıklı bir hayat için',
+    'Kendinize yatırım yapın',
+    'Sağlık en büyük zenginliktir',
+    'Küçük adımlar, büyük değişimler',
+    'Yarının sağlığı bugünün seçimlerinde',
+    'Kendine iyi bak, daha iyi hisset',
+    'Sağlıklı vücut, sağlıklı zihin',
+    'Bugün kendini aş',
+    'Limit yok, sadece potansiyel var',
+    'Harekette bereket var',
+    'Başarı her gün biraz daha iyisini yapmaktır',
+    'Kendi sınırlarını zorla',
+    'Sağlıklı yaşam bir maraton, sprint değil',
+  ];
+  
+  // Seçilen motivasyon mesajı
+  late String _selectedMotivationalMessage;
+  
   // Sayfa kontrolcüsü
   late PageController _pageController;
 
@@ -43,6 +65,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _pageController = PageController();
     _initTasks();
     _loadSavedTaskStates();
+    
+    // Rastgele bir motivasyon mesajı seç
+    _selectedMotivationalMessage = _getRandomMotivationalMessage();
+  }
+  
+  // Rastgele motivasyon mesajı getiren fonksiyon
+  String _getRandomMotivationalMessage() {
+    _motivationalMessages.shuffle();
+    return _motivationalMessages.first;
   }
   
   @override
@@ -908,9 +939,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Bugün için sağlıklı bir şeyler yapın',
-              style: TextStyle(
+            Text(
+              _selectedMotivationalMessage,
+              style: const TextStyle(
                 fontSize: 16,
               ),
             ),

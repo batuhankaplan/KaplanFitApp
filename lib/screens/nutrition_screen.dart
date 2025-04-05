@@ -33,15 +33,6 @@ class _NutritionScreenState extends State<NutritionScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Beslenme Takibi'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: _selectDate,
-          ),
-        ],
-      ),
       body: Column(
         children: [
           // Tarih seçici

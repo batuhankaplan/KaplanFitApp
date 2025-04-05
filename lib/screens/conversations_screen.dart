@@ -129,22 +129,30 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AI Koç'),
-        backgroundColor: Theme.of(context).primaryColor,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _createNewConversation,
-            tooltip: 'Yeni Sohbet',
-          ),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _conversations.isEmpty
               ? _buildEmptyState()
-              : _buildConversationsList(),
+              : Column(
+                  children: [
+                    Expanded(
+                      child: _buildConversationsList(),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ElevatedButton.icon(
+                        onPressed: _createNewConversation,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Yeni Sohbet'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(200, 45),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 

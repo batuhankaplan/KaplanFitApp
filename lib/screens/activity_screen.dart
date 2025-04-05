@@ -206,16 +206,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final isLoading = provider.isLoading;
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Spor Aktivitelerim'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: _selectDate,
-          ),
-        ],
-      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

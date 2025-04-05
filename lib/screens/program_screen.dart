@@ -57,29 +57,37 @@ class _ProgramScreenState extends State<ProgramScreen> with SingleTickerProvider
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Haftalık Program'),
-        centerTitle: true,
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withOpacity(0.7),
-          indicatorColor: Colors.white,
-          tabs: weekDays.map((day) => Tab(text: day)).toList(),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildDayProgramPage(0), // Pazartesi
-          _buildDayProgramPage(1), // Salı
-          _buildDayProgramPage(2), // Çarşamba
-          _buildDayProgramPage(3), // Perşembe
-          _buildDayProgramPage(4), // Cuma
-          _buildDayProgramPage(5), // Cumartesi
-          _buildDayProgramPage(6), // Pazar
+          Container(
+            color: const Color(0xFF303030), // NavigationBar ile aynı renk
+            width: double.infinity,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              padding: const EdgeInsets.only(left: 0), // Sol tarafta sıfır padding
+              tabAlignment: TabAlignment.start, // Tab'ları sola hizala
+              labelPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+              labelColor: Theme.of(context).primaryColor, // Seçili sekme turuncu
+              unselectedLabelColor: Colors.white.withOpacity(0.7),
+              indicatorColor: Theme.of(context).primaryColor, // İndikatör turuncu
+              tabs: weekDays.map((day) => Tab(text: day)).toList(),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDayProgramPage(0), // Pazartesi
+                _buildDayProgramPage(1), // Salı
+                _buildDayProgramPage(2), // Çarşamba
+                _buildDayProgramPage(3), // Perşembe
+                _buildDayProgramPage(4), // Cuma
+                _buildDayProgramPage(5), // Cumartesi
+                _buildDayProgramPage(6), // Pazar
+              ],
+            ),
+          ),
         ],
       ),
     );

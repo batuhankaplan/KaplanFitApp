@@ -57,9 +57,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = userProvider.user;
     
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Ayarlar'),
-      ),
       body: SingleChildScrollView(
         child: Column(
           children: [
