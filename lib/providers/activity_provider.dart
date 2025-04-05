@@ -260,6 +260,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Günün sabah spor aktivitesini yapın',
       date: now,
       type: TaskType.morningExercise,
+      isCompleted: false,
     );
     
     final ogleProgrami = DailyTask(
@@ -267,6 +268,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Programınıza uygun öğle yemeğinizi yiyin',
       date: now,
       type: TaskType.lunch,
+      isCompleted: false,
     );
     
     final aksamProgrami = DailyTask(
@@ -274,6 +276,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Programınıza uygun akşam yemeğinizi yiyin',
       date: now,
       type: TaskType.dinner,
+      isCompleted: false,
     );
     
     final aksamSporu = DailyTask(
@@ -281,6 +284,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Programınıza uygun akşam sporu yapın',
       date: now,
       type: TaskType.eveningExercise,
+      isCompleted: false,
     );
 
     await addTask(sabahSporu);
@@ -299,6 +303,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Günün sabah spor aktivitesini yapın',
       date: today,
       type: TaskType.morningExercise,
+      isCompleted: false,
     );
     
     final ogleProgrami = DailyTask(
@@ -306,6 +311,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Programınıza uygun öğle yemeğinizi yiyin',
       date: today,
       type: TaskType.lunch,
+      isCompleted: false,
     );
     
     final aksamProgrami = DailyTask(
@@ -313,6 +319,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Programınıza uygun akşam yemeğinizi yiyin',
       date: today,
       type: TaskType.dinner,
+      isCompleted: false,
     );
     
     final aksamSporu = DailyTask(
@@ -320,6 +327,7 @@ class ActivityProvider with ChangeNotifier {
       description: 'Programınıza uygun akşam sporu yapın',
       date: today,
       type: TaskType.eveningExercise,
+      isCompleted: false,
     );
 
     await addTask(sabahSporu);

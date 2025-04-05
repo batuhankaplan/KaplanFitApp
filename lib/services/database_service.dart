@@ -5,6 +5,7 @@ import '../models/task_model.dart';
 import '../models/activity_record.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
+import '../models/chat_model.dart';
 import 'package:intl/intl.dart';
 
 class DatabaseService {
@@ -25,7 +26,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'kaplanfit.db');
     return await openDatabase(
       path,
-      version: 4,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onOpen: _onOpen,
@@ -34,9 +35,30 @@ class DatabaseService {
 
   Future<Database> _onOpen(Database db) async {
     final version = await db.getVersion();
-    if (version < 4) {
-      await _onUpgrade(db, version, 4);
+    if (version < 6) {
+      await _onUpgrade(db, version, 6);
     }
+    
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_conversations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        createdAt INTEGER NOT NULL,
+        lastMessageAt INTEGER
+      )
+    ''');
+    
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversationId INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        isUser INTEGER NOT NULL,
+        timestamp INTEGER NOT NULL,
+        FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
+      )
+    ''');
+    
     return db;
   }
 
@@ -109,6 +131,39 @@ class DatabaseService {
     
     if (oldVersion < 4) {
       await db.execute('ALTER TABLE meals ADD COLUMN notes TEXT;');
+    }
+    
+    if (oldVersion < 5) {
+      // Sohbet konuşmaları için tablo
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS chat_conversations(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          createdAt INTEGER NOT NULL,
+          lastMessageAt INTEGER
+        )
+      ''');
+      
+      // Sohbet mesajları için tablo
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS chat_messages(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversationId INTEGER NOT NULL,
+          text TEXT NOT NULL,
+          isUser INTEGER NOT NULL,
+          timestamp INTEGER NOT NULL,
+          FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
+        )
+      ''');
+    }
+    
+    if (oldVersion < 6) {
+      // Sohbet tabloları zaten onOpen'da oluşturuluyor
+      // Burada başka değişiklikler yapılabilir
+      
+      // Önceki tabloları silip yeniden oluşturmak için (veri kaybı olur)
+      // await db.execute('DROP TABLE IF EXISTS chat_conversations');
+      // await db.execute('DROP TABLE IF EXISTS chat_messages');
     }
   }
 
@@ -336,5 +391,77 @@ class DatabaseService {
     return List.generate(maps.length, (i) {
       return MealRecord.fromMap(maps[i]);
     });
+  }
+
+  // Chat Conversations CRUD Operations
+  Future<int> createChatConversation(ChatConversation conversation) async {
+    final db = await database;
+    return await db.insert('chat_conversations', conversation.toMap());
+  }
+
+  Future<List<ChatConversation>> getAllChatConversations() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'chat_conversations',
+      orderBy: 'lastMessageAt DESC, createdAt DESC',
+    );
+    return List.generate(maps.length, (i) => ChatConversation.fromMap(maps[i]));
+  }
+
+  Future<ChatConversation?> getChatConversation(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'chat_conversations',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    return ChatConversation.fromMap(maps.first);
+  }
+
+  Future<void> updateChatConversation(ChatConversation conversation) async {
+    final db = await database;
+    await db.update(
+      'chat_conversations',
+      conversation.toMap(),
+      where: 'id = ?',
+      whereArgs: [conversation.id],
+    );
+  }
+
+  Future<void> deleteChatConversation(int id) async {
+    final db = await database;
+    await db.delete(
+      'chat_conversations',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Chat Messages CRUD Operations
+  Future<int> createChatMessage(ChatMessage message) async {
+    final db = await database;
+    final messageId = await db.insert('chat_messages', message.toMap());
+    
+    // Konuşmanın son mesaj zamanını güncelle
+    final conversation = await getChatConversation(message.conversationId);
+    if (conversation != null) {
+      await updateChatConversation(
+        conversation.copyWith(lastMessageAt: message.timestamp),
+      );
+    }
+    
+    return messageId;
+  }
+
+  Future<List<ChatMessage>> getMessagesForConversation(int conversationId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'chat_messages',
+      where: 'conversationId = ?',
+      whereArgs: [conversationId],
+      orderBy: 'timestamp ASC',
+    );
+    return List.generate(maps.length, (i) => ChatMessage.fromMap(maps[i]));
   }
 } 

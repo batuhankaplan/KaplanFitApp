@@ -15,9 +15,12 @@ import 'screens/stats_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/program_screen.dart';
+import 'screens/ai_coach_screen.dart';
+import 'screens/conversations_screen.dart';
 import 'providers/user_provider.dart';
 import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
+import 'models/providers/database_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_size/window_size.dart';
 
@@ -97,6 +100,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => NutritionProvider()),
+        ChangeNotifierProvider(create: (_) => DatabaseProvider()),
       ],
       child: const MyApp(),
     ),
@@ -144,6 +148,7 @@ class _MainScreenState extends State<MainScreen> {
     ActivityScreen(),
     NutritionScreen(),
     StatsScreen(),
+    ConversationsScreen(),
     SettingsScreen(),
   ];
 
@@ -163,7 +168,7 @@ class _MainScreenState extends State<MainScreen> {
     
     if (userProvider.user == null) {
       setState(() {
-        _selectedIndex = 5; // Ayarlar ekranının indeksi
+        _selectedIndex = 0; // Anasayfanın indeksi
       });
     }
   }
@@ -206,6 +211,10 @@ class _MainScreenState extends State<MainScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart),
               label: 'İstatistik',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat),
+              label: 'AI Koç',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),

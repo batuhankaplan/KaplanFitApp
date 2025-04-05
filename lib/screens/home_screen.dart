@@ -870,12 +870,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = Provider.of<UserProvider>(context).user;
     
     String greeting;
-    if (hour < 12) {
+    if (hour >= 6 && hour < 12) {
       greeting = 'Günaydın';
-    } else if (hour < 18) {
-      greeting = 'İyi günler';
+    } else if (hour >= 12 && hour < 19) {
+      greeting = 'Hoşgeldin';
+    } else if ((hour >= 19 && hour <= 23) || hour == 0) {
+      greeting = 'İyi Akşamlar';
     } else {
-      greeting = 'İyi akşamlar';
+      greeting = 'İyi Geceler';
     }
     
     if (user != null) {

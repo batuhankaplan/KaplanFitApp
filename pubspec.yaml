@@ -49,6 +49,7 @@ dependencies:
   geolocator: ^10.1.0
   permission_handler: ^11.0.1
   window_size: ^0.1.0
+  google_generative_ai: ^0.4.6
 
 dev_dependencies:
   flutter_test:
