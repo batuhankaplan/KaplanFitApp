@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/activity_provider.dart';
 import '../providers/nutrition_provider.dart';
+import '../utils/animations.dart';
+import '../theme.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;
@@ -88,51 +90,119 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFF0A1A2F),
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 180,
-                      height: 180,
-                      child: Image.asset('assets/images/kaplan_logo.png'),
-                    ),
-                    SizedBox(height: 24),
-                    Text(
-                      'KAPLANFIT',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFF08721),
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'SPORT & NUTRITION',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    SizedBox(height: 50),
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF08721)),
-                    ),
-                  ],
-                ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Gradient arka plan
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0A1A2F),
+                  Color(0xFF152642),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          ),
+          
+          // Dalga animasyonu
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: KFWaveAnimation(
+              color: AppTheme.primaryColor.withOpacity(0.2),
+              height: 120,
+            ),
+          ),
+          
+          // İçerik
+          Center(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryColor.withOpacity(0.3),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                            ],
+                          ),
+                          child: Image.asset('assets/images/kaplan_logo.png',
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.fitness_center,
+                                size: 80,
+                                color: AppTheme.primaryColor,
+                              );
+                            },
+                          ),
+                        ),
+                        SizedBox(height: 24),
+                        ShaderMask(
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: [
+                              Color(0xFFF08721),
+                              Color(0xFFFFAB40),
+                            ],
+                          ).createShader(bounds),
+                          child: Text(
+                            'KAPLANFIT',
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 2,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  offset: Offset(2, 2),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'SPORT & NUTRITION',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        SizedBox(height: 50),
+                        KFPulseAnimation(
+                          maxScale: 1.2,
+                          duration: Duration(milliseconds: 1500),
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF08721)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
