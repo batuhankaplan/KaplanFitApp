@@ -50,17 +50,32 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    // İlk anda çalıştırmak yerine bir miktar bekleyip sonra verileri yükle
-    Future.delayed(Duration(milliseconds: 200), () {
-      _loadData();
+    // Daha uzun süre göster ve hatalardan kaçın
+    Future.delayed(Duration(milliseconds: 500), () {
+      try {
+        _loadData();
+      } catch (e) {
+        print('Veri yükleme hatası: $e');
+      }
     });
 
-    // Splash ekran bittikten sonra ana ekrana geç
-    Timer(Duration(seconds: 3), () {
-      if (mounted) {
+    // Splash ekranını daha uzun süre göster
+    Timer(Duration(seconds: 5), () {
+      if (!mounted) return;
+      
+      try {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => widget.nextScreen),
         );
+      } catch (e) {
+        print('Ekran geçiş hatası: $e');
+        
+        // Hata durumunda basit bir geçiş deneyelim
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => widget.nextScreen),
+          );
+        }
       }
     });
   }
@@ -143,14 +158,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               ),
                             ],
                           ),
-                          child: Image.asset('assets/images/kaplan_logo.png',
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.fitness_center,
-                                size: 80,
-                                color: AppTheme.primaryColor,
-                              );
-                            },
+                          child: KFPulseAnimation(
+                            maxScale: 1.1,
+                            duration: Duration(milliseconds: 1500),
+                            child: ClipOval(
+                              child: Image.asset('assets/images/kaplan_logo.png',
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.fitness_center,
+                                    size: 80,
+                                    color: AppTheme.primaryColor,
+                                  );
+                                },
+                              ),
+                            ),
                           ),
                         ),
                         SizedBox(height: 24),
@@ -188,13 +209,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           ),
                         ),
                         SizedBox(height: 50),
-                        KFPulseAnimation(
-                          maxScale: 1.2,
-                          duration: Duration(milliseconds: 1500),
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF08721)),
-                          ),
-                        ),
                       ],
                     ),
                   ),

@@ -7,6 +7,8 @@ import '../providers/user_provider.dart';
 import '../theme.dart';
 import '../main.dart';
 import 'profile_screen.dart';
+import 'notification_settings_screen.dart';
+import 'faq_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -107,7 +109,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icons.notifications, 
               Colors.orange,
               () {
-                _showNotImplementedDialog(context, 'Bildirimler');
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                );
               },
             ),
             
@@ -117,7 +122,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icons.help, 
               Colors.green,
               () {
-                _showNotImplementedDialog(context, 'Yardım ve Destek');
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => const FAQScreen()),
+                );
               },
             ),
             
@@ -246,22 +254,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   
   void _showLogoutDialog(BuildContext context) {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Çıkış Yap'),
-        content: Text('Uygulamadan çıkış yapmak istediğinize emin misiniz?'),
+        content: Text('Hesabınızdan çıkış yapmak istediğinize emin misiniz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('İptal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              // Burada çıkış işlemi yapılabilir
+            onPressed: () async {
+              // Kullanıcı profil bilgilerini sıfırla
+              await userProvider.clearUser();
+              
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Çıkış yapılıyor...')),
+                SnackBar(content: Text('Hesabınızdan çıkış yapıldı')),
               );
             },
             child: Text('Çıkış Yap'),

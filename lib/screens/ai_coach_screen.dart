@@ -4,6 +4,7 @@ import '../services/ai_coach_service.dart';
 import '../models/providers/database_provider.dart';
 import '../models/chat_model.dart';
 import 'conversations_screen.dart';
+import '../widgets/kaplan_loading.dart';
 
 class AICoachScreen extends StatefulWidget {
   final int? conversationId; // Sohbet kimliği, null ise yeni sohbet başlatılır
@@ -262,7 +263,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
           if (_showApiKeyInput) _buildApiKeyInput(),
           Expanded(
             child: _isLoading && _messages.isEmpty
-                ? const Center(child: CircularProgressIndicator())
+                ? const KaplanLoading()
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(8.0),
@@ -276,9 +277,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
           if (_isLoading && _messages.isNotEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: KaplanLoading(size: 40.0),
             ),
           _buildMessageInput(),
         ],

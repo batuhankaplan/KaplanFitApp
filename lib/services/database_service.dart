@@ -29,40 +29,42 @@ class DatabaseService {
       version: 6,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
-      onOpen: _onOpen,
+      onOpen: (db) async {
+        // Foreign key kısıtlamalarını etkinleştir
+        await db.execute('PRAGMA foreign_keys = ON');
+        
+        // Tablo oluşturma işlemlerini manuel çağıralım
+        final version = await db.getVersion();
+        if (version < 6) {
+          await _onUpgrade(db, version, 6);
+        }
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS chat_conversations(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            createdAt INTEGER NOT NULL,
+            lastMessageAt INTEGER
+          )
+        ''');
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS chat_messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversationId INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            isUser INTEGER NOT NULL,
+            timestamp INTEGER NOT NULL,
+            FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
+          )
+        ''');
+        
+        // void dönen callback olduğu için burada return olmayacak
+      },
     );
   }
 
-  Future<Database> _onOpen(Database db) async {
-    final version = await db.getVersion();
-    if (version < 6) {
-      await _onUpgrade(db, version, 6);
-    }
-    
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS chat_conversations(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        createdAt INTEGER NOT NULL,
-        lastMessageAt INTEGER
-      )
-    ''');
-    
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS chat_messages(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        conversationId INTEGER NOT NULL,
-        text TEXT NOT NULL,
-        isUser INTEGER NOT NULL,
-        timestamp INTEGER NOT NULL,
-        FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
-      )
-    ''');
-    
-    return db;
-  }
-
-  Future<void> _createDB(Database db, int version) async {
+  Future<Database> _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,9 +123,11 @@ class DatabaseService {
         date INTEGER NOT NULL
       )
     ''');
+    
+    return db;
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future<Database> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE users ADD COLUMN email TEXT;');
       await db.execute('ALTER TABLE users ADD COLUMN phoneNumber TEXT;');
@@ -165,6 +169,8 @@ class DatabaseService {
       // await db.execute('DROP TABLE IF EXISTS chat_conversations');
       // await db.execute('DROP TABLE IF EXISTS chat_messages');
     }
+    
+    return db;
   }
 
   // Kullanıcı işlemleri

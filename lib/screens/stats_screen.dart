@@ -138,14 +138,14 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     return Scaffold(
       body: Column(
         children: [
-          // Tab Bar bölümü - navigasyon bar ile uyumlu
+          // Tab Bar bölümü - navigasyon bar ile uyumlu (AppBar'ın altına yerleştiriyoruz)
           Container(
-            color: const Color(0xFF303030), // NavigationBar ile aynı renk
+            color: isDarkMode ? const Color(0xFF303030) : AppTheme.primaryColor.withOpacity(0.8),
             child: TabBar(
               controller: _tabController,
-              labelColor: Theme.of(context).primaryColor, // Seçili tab turuncu
-              unselectedLabelColor: Colors.white.withOpacity(0.7),
-              indicatorColor: Theme.of(context).primaryColor, // İndikatör turuncu
+              labelColor: isDarkMode ? Theme.of(context).primaryColor : Colors.white, // Seçili tab turuncu/beyaz
+              unselectedLabelColor: isDarkMode ? Colors.white.withOpacity(0.7) : Colors.white.withOpacity(0.7),
+              indicatorColor: isDarkMode ? Theme.of(context).primaryColor : Colors.white, // İndikatör rengi
               tabs: [
                 Tab(text: 'Beslenme'),
                 Tab(text: 'Aktivite'),

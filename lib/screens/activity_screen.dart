@@ -10,6 +10,7 @@ import '../models/task_type.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme.dart';
 import '../utils/animations.dart';
+import '../widgets/kaplan_loading.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({Key? key}) : super(key: key);
@@ -236,7 +237,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     
     return Scaffold(
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const KaplanLoading()
           : Column(
               children: [
                 // Tarih seçici
@@ -494,17 +495,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
             borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.add, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(
-              'Aktivite Ekle',
-              style: _buttonTextStyle,
-            ),
-          ],
+        child: Text(
+          'Aktivite Ekle',
+          style: _buttonTextStyle,
         ),
       ),
     );

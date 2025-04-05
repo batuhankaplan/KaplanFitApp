@@ -13,6 +13,7 @@ import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import 'package:intl/intl.dart';
 import '../utils/animations.dart';
+import '../models/providers/database_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -34,6 +35,12 @@ class _HomeScreenState extends State<HomeScreen> {
   int? lunchMealId;
   int? eveningExerciseId;
   int? dinnerMealId;
+  
+  // Program içerikleri
+  String morningProgram = '';
+  String lunchMenu = '';
+  String eveningProgram = '';
+  String dinnerMenu = '';
   
   // Motivasyon mesajları
   final List<String> _motivationalMessages = [
@@ -79,6 +86,10 @@ class _HomeScreenState extends State<HomeScreen> {
   
   @override
   void dispose() {
+    // Listener'ı temizle
+    final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
+    databaseProvider.removeListener(_refreshProgram);
+    
     _pageController.dispose();
     super.dispose();
   }
@@ -164,77 +175,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final today = DateTime.now();
     final dayName = DateFormat('EEEE', 'tr_TR').format(today);
     
-    // Plan.txt içeriğinden haftanın gününe göre program içeriğini al
-    String morningProgram = '';
-    String lunchMenu = '';
-    String eveningProgram = '';
-    String dinnerMenu = '';
-    
-    // Haftanın gününe göre program bilgilerini ekle
-    switch (today.weekday) {
-      case DateTime.monday: // Pazartesi
-        morningProgram = '🏊‍♂️ Havuz kapalı. Dinlen veya evde esneme yap.';
-        lunchMenu = '🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz, badem/ceviz';
-        eveningProgram = '🛑 Spor salonu kapalı. Dinlen veya hafif yürüyüş.';
-        dinnerMenu = '🥗 Ton balıklı salata, yoğurt, 🥖 tahıllı ekmek';
-        break;
-      case DateTime.tuesday: // Salı
-        morningProgram = '🏊‍♂️ 08:45 - 09:15 yüzme';
-        lunchMenu = '🥣 Yulaf + süt + muz veya Pazartesi menüsü';
-        eveningProgram = '(18:00 - 18:45 Ağırlık): Squat, Leg Press, Bench Press, Lat Pull-Down';
-        dinnerMenu = '🍗 Izgara tavuk veya 🐟 ton balıklı salata, yoğurt';
-        break;
-      case DateTime.wednesday: // Çarşamba
-        morningProgram = '🏊‍♂️ 08:45 - 09:15 yüzme';
-        lunchMenu = '🥣 Yulaf + süt + muz veya Pazartesi menüsü';
-        eveningProgram = '(18:00 - 18:45 Ağırlık): Row, Goblet Squat, Core Çalışmaları';
-        dinnerMenu = '🐔 Tavuk veya 🐟 ton balık, 🥗 yağlı salata, yoğurt';
-        break;
-      case DateTime.thursday: // Perşembe
-        morningProgram = '🏊‍♂️ 08:45 - 09:15 yüzme';
-        lunchMenu = '🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz, badem/ceviz veya yulaf alternatifi';
-        eveningProgram = '(18:00 - 18:45 Ağırlık): 🔄 Salı antrenmanı tekrarı';
-        dinnerMenu = '🐔 Tavuk veya 🐟 ton balık, 🥗 salata, yoğurt';
-        break;
-      case DateTime.friday: // Cuma
-        morningProgram = '🚶‍♂️ İsteğe bağlı yüzme veya yürüyüş';
-        lunchMenu = '🥚 Tavuk, haşlanmış yumurta, 🥗 yoğurt, salata, kuruyemiş';
-        eveningProgram = '🤸‍♂️ Dinlenme veya esneme';
-        dinnerMenu = '🍳 Menemen, 🥗 ton balıklı salata, yoğurt';
-        break;
-      case DateTime.saturday: // Cumartesi
-        morningProgram = '🚶‍♂️ Hafif yürüyüş, esneme veya yüzme';
-        lunchMenu = '🐔 Tavuk, yumurta, pilav, salata';
-        eveningProgram = '⚡️ İsteğe bağlı egzersiz';
-        dinnerMenu = '🍽️ Sağlıklı serbest menü';
-        break;
-      case DateTime.sunday: // Pazar
-        morningProgram = '🧘‍♂️ Tam dinlenme veya 20-30 dk yürüyüş';
-        lunchMenu = '🔄 Hafta içi prensipteki öğünler';
-        eveningProgram = '💤 Dinlenme';
-        dinnerMenu = '🍴 Hafif ve dengeli öğün';
-        break;
-    }
-    
     // Genel tavsiyeler
     final String additionalNote = '💧 Günde en az 2-3 litre su içmeyi unutmayın!\n'
         '❌ Şekerli içeceklerden uzak durun.\n'
         '🍌 Her gün 1 muz tüketin (potasyum kaynağı).';
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('KaplanFIT', 
-          style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            fontSize: 22,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? AppTheme.backgroundColor
-            : AppTheme.primaryColor,
-        elevation: 0,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -272,17 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: 0,
                 delay: const Duration(milliseconds: 150),
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isMorningExerciseDone = !isMorningExerciseDone;
-                    });
-                    
-                    if (isMorningExerciseDone) {
-                      _recordMorningExercise(context);
-                    } else {
-                      _removeMorningExercise(context);
-                    }
-                  },
+                  onTap: _toggleMorningExercise,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     decoration: BoxDecoration(
@@ -344,17 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: 1,
                 delay: const Duration(milliseconds: 150),
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isLunchDone = !isLunchDone;
-                    });
-                    
-                    if (isLunchDone) {
-                      _recordLunch(context);
-                    } else {
-                      _removeLunch(context);
-                    }
-                  },
+                  onTap: _toggleLunch,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     decoration: BoxDecoration(
@@ -367,10 +293,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.lunch_dining,
-                            color: Colors.white,
-                            size: 18,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.restaurant,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -416,17 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 index: 2,
                 delay: const Duration(milliseconds: 150),
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isEveningExerciseDone = !isEveningExerciseDone;
-                    });
-                    
-                    if (isEveningExerciseDone) {
-                      _recordEveningExercise(context);
-                    } else {
-                      _removeEveningExercise(context);
-                    }
-                  },
+                  onTap: _toggleEveningExercise,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     decoration: BoxDecoration(
@@ -485,17 +408,7 @@ class _HomeScreenState extends State<HomeScreen> {
               
               // Akşam Yemeği kartı
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    isDinnerDone = !isDinnerDone;
-                  });
-                  
-                  if (isDinnerDone) {
-                    _recordDinner(context);
-                  } else {
-                    _removeDinner(context);
-                  }
-                },
+                onTap: _toggleDinner,
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   decoration: BoxDecoration(
@@ -647,6 +560,78 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
   
+  Future<void> _toggleMorningExercise() async {
+    setState(() {
+      isMorningExerciseDone = !isMorningExerciseDone;
+    });
+    
+    if (isMorningExerciseDone) {
+      await _recordMorningExercise(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<ActivityProvider>(context, listen: false).refreshActivities();
+    } else {
+      await _removeMorningExercise(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<ActivityProvider>(context, listen: false).refreshActivities();
+    }
+  }
+  
+  Future<void> _toggleLunch() async {
+    setState(() {
+      isLunchDone = !isLunchDone;
+    });
+    
+    if (isLunchDone) {
+      await _recordLunch(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<NutritionProvider>(context, listen: false).refreshMeals();
+    } else {
+      await _removeLunch(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<NutritionProvider>(context, listen: false).refreshMeals();
+    }
+  }
+  
+  Future<void> _toggleEveningExercise() async {
+    setState(() {
+      isEveningExerciseDone = !isEveningExerciseDone;
+    });
+    
+    if (isEveningExerciseDone) {
+      await _recordEveningExercise(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<ActivityProvider>(context, listen: false).refreshActivities();
+    } else {
+      await _removeEveningExercise(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<ActivityProvider>(context, listen: false).refreshActivities();
+    }
+  }
+  
+  Future<void> _toggleDinner() async {
+    setState(() {
+      isDinnerDone = !isDinnerDone;
+    });
+    
+    if (isDinnerDone) {
+      await _recordDinner(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<NutritionProvider>(context, listen: false).refreshMeals();
+    } else {
+      await _removeDinner(context);
+      
+      // Hemen ana sayfadan etkilenen sağlayıcıları yenileyelim
+      await Provider.of<NutritionProvider>(context, listen: false).refreshMeals();
+    }
+  }
+  
   // Sabah Egzersizi kaydı
   Future<void> _recordMorningExercise(BuildContext context) async {
     final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
@@ -781,15 +766,55 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _initTasks() {
-    final now = DateTime.now();
-    final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-    
-    // Günlük görevleri oluştur veya var olanları getir
-    final String today = DateFormat('yyyy-MM-dd').format(now);
-    if (activityProvider.dailyTasksDate != today) {
-      activityProvider.resetDailyTasks(today);
+  Future<void> _initTasks() async {
+    try {
+      // ProgramService üzerinden günün programını al
+      final programService = Provider.of<DatabaseProvider>(context, listen: false).programService;
+      final today = DateTime.now().weekday - 1; // 0-Pazartesi, 6-Pazar
+      
+      final dailyProgram = await programService.getDailyProgram(today);
+      if (dailyProgram != null) {
+        setState(() {
+          // Günün programını açıklama metinlerine uygula
+          final morningExercise = dailyProgram.morningExercise;
+          final lunch = dailyProgram.lunch;
+          final eveningExercise = dailyProgram.eveningExercise;
+          final dinner = dailyProgram.dinner;
+          
+          if (morningExercise.description.isNotEmpty) {
+            morningProgram = morningExercise.description;
+          }
+          
+          if (lunch.description.isNotEmpty) {
+            lunchMenu = lunch.description;
+          }
+          
+          if (eveningExercise.description.isNotEmpty) {
+            eveningProgram = eveningExercise.description;
+          }
+          
+          if (dinner.description.isNotEmpty) {
+            dinnerMenu = dinner.description;
+          }
+        });
+      }
+    } catch (e) {
+      print('Program başlatma hatası: $e');
     }
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // DatabaseProvider değişikliklerini dinle
+    final databaseProvider = Provider.of<DatabaseProvider>(context);
+    databaseProvider.addListener(_refreshProgram);
+  }
+  
+  // Program güncellendiğinde çağrılacak metot
+  void _refreshProgram() {
+    _initTasks();
   }
 
   void _onTaskChanged(Task task, bool isCompleted) {
@@ -909,76 +934,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGreetingCard() {
-    final user = Provider.of<UserProvider>(context).user;
-    final today = DateTime.now();
+    final userName = Provider.of<UserProvider>(context).user?.name ?? 'Kaplan';
+    final formattedDate = DateFormat('d MMMM yyyy, EEEE', 'tr_TR').format(DateTime.now());
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Karşılama başlığı
-        KFAnimatedSlide(
-          offsetBegin: const Offset(-0.1, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Merhaba, ${user?.name.split(' ').first ?? 'Kaplan'}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                DateFormat('d MMMM yyyy, EEEE', 'tr_TR').format(today),
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
+        Text(
+          'Merhaba, $userName',
+          style: Theme.of(context).textTheme.headlineMedium,
         ),
-        
+        Text(
+          formattedDate,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 16),
-        
-        // Motivasyon mesajı
-        KFAnimatedSlide(
-          offsetBegin: const Offset(0, 0.2),
-          delay: const Duration(milliseconds: 200),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.grey.withOpacity(0.2),
-                width: 1,
+        _buildMotivationalBox(),
+      ],
+    );
+  }
+
+  Widget _buildMotivationalBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lightbulb_outline,
+            color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _selectedMotivationalMessage,
+              style: TextStyle(
+                fontSize: 15,
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.lightbulb_outline,
-                  color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _selectedMotivationalMessage,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontStyle: FontStyle.italic,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 } 

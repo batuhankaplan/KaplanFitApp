@@ -25,6 +25,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_size/window_size.dart';
 import 'services/program_service.dart';
 import 'utils/animations.dart';
+import 'widgets/kaplan_appbar.dart';
+import 'services/notification_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
 
 // Tema sağlayıcı sınıfı
 class ThemeProvider with ChangeNotifier {
@@ -75,12 +80,23 @@ class ThemeProvider with ChangeNotifier {
   }
 }
 
+// Bildirimler için global tanımlama
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // SQLite için FFI kullanılacak (Windows desteği için)
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
+  // Platform'a göre uygun SQLite yapılandırması
+  if (Platform.isAndroid || Platform.isIOS) {
+    // Mobil cihazlarda yerel SQLite kütüphanesini kullan
+    // Açık bir şekilde varsayılan yapılandırmayı kullan
+    // FFI kullanmaya gerek yok
+  } else {
+    // Windows, macOS, Linux vb. platformlarda FFI kullan
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
   
   await initializeDateFormatting('tr_TR', null);
   
@@ -95,9 +111,38 @@ void main() async {
     // veya başka bir çözüm kullanılmalı
   }
   
+  // Bildirim ayarları
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  
+  final DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+        requestSoundPermission: false,
+        requestBadgePermission: false,
+        requestAlertPermission: false, // Bildirim izinlerini sonradan isteyeceğiz
+      );
+  
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+  
+  try {
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+    );
+  } catch (e) {
+    print('Bildirim ayarları başlatılamadı: $e');
+    // Bildirim hatası olsa bile uygulamanın çalışmasına izin ver
+  }
+  
   // Program servisini başlat
   final programService = ProgramService();
   await programService.initialize();
+  
+  // Bildirimleri başlat
+  final notificationService = NotificationService();
+  await notificationService.initialize();
   
   runApp(
     MultiProvider(
@@ -133,7 +178,45 @@ class MyApp extends StatelessWidget {
       supportedLocales: [
         const Locale('tr', 'TR'),
       ],
-      home: SplashScreen(nextScreen: MainScreen()),
+      home: const PermissionHandlerScreen(),
+    );
+  }
+}
+
+class PermissionHandlerScreen extends StatefulWidget {
+  const PermissionHandlerScreen({Key? key}) : super(key: key);
+
+  @override
+  State<PermissionHandlerScreen> createState() => _PermissionHandlerScreenState();
+}
+
+class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
+  bool _isLoading = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Doğrudan splash screen'e gidip izinleri daha sonra isteyelim
+    _navigateToMainApp();
+  }
+  
+  void _navigateToMainApp() {
+    // Kısa bir gecikme ekleyerek splash ekranının daha uzun görünmesini sağlayalım
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => SplashScreen(nextScreen: MainScreen())),
+        );
+      }
+    });
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }
@@ -169,18 +252,29 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _initializeData() async {
-    // Kullanıcı bilgisi yoksa profil sayfasına yönlendir
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.loadUser();
-    
-    setState(() {
-      _selectedIndex = 0; // Anasayfanın indeksi
-    });
+    try {
+      // Kullanıcı bilgisi yoksa profil sayfasına yönlendir
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.loadUser();
+      
+      // Eğer uygulama ilk kez açılıyorsa özel bir işlem yapılabilir
+      
+      setState(() {
+        _selectedIndex = 0; // Anasayfanın indeksi
+      });
+    } catch (e) {
+      print('Veri yükleme hatası: $e');
+      // Hata durumunda varsayılan değerlere geri dön
+      setState(() {
+        _selectedIndex = 0;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: KaplanAppBar(),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {

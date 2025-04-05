@@ -7,6 +7,7 @@ import '../models/meal_record.dart';
 import 'package:intl/intl.dart';
 import '../utils/animations.dart';
 import '../utils/show_dialogs.dart';
+import '../widgets/kaplan_loading.dart';
 
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({Key? key}) : super(key: key);
@@ -123,7 +124,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
           // Meals list
           Expanded(
             child: provider.isLoading 
-              ? const Center(child: CircularProgressIndicator())
+              ? const KaplanLoading()
               : meals.isEmpty
                 ? Center(
                     child: Column(
@@ -152,7 +153,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                               const SizedBox(height: 24),
                               KFPulseAnimation(
                                 maxScale: 1.05,
-                                child: _buildAddMealButton(),
+                                child: _buildAddMealButton(context),
                               )
                             ],
                           ),
@@ -160,23 +161,32 @@ class _NutritionScreenState extends State<NutritionScreen> {
                       ],
                     ),
                   )
-                : Column(
+                : Stack(
                     children: [
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: meals.length,
-                          itemBuilder: (context, index) {
-                            final meal = meals[index];
-                            return KFAnimatedItem(
-                              index: index,
-                              child: _buildMealCard(meal),
-                            );
-                          },
-                        ),
+                      // Öğün listesi
+                      ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 100), // Altta buton için ekstra padding
+                        itemCount: meals.length,
+                        itemBuilder: (context, index) {
+                          final meal = meals[index];
+                          return KFAnimatedItem(
+                            index: index,
+                            child: _buildMealCard(meal),
+                          );
+                        },
                       ),
-                      KFPulseAnimation(
-                        maxScale: 1.05,
-                        child: _buildAddMealButton(),
+                      
+                      // Öğün ekle butonu (sabit pozisyonda)
+                      Positioned(
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: KFPulseAnimation(
+                            maxScale: 1.05,
+                            child: _buildAddMealButton(context),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -711,57 +721,28 @@ class _NutritionScreenState extends State<NutritionScreen> {
   }
 
   // Öğün ekle butonunu özelleştirilmiş tasarımla oluştur
-  Widget _buildAddMealButton() {
+  Widget _buildAddMealButton(BuildContext context) {
     return Container(
-      width: 220,
-      height: 56,
+      width: 200,
       margin: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
       child: ElevatedButton(
         onPressed: () => _showAddMealDialog(context),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.primaryColor
+            : AppTheme.primaryColor,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
-          elevation: 0,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.add,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Öğün Ekle',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
+        child: Text(
+          'Öğün Ekle',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );
@@ -789,7 +770,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
       case FitMealType.breakfast:
         return Icons.free_breakfast;
       case FitMealType.lunch:
-        return Icons.lunch_dining;
+        return Icons.restaurant;
       case FitMealType.dinner:
         return Icons.dinner_dining;
       case FitMealType.snack:

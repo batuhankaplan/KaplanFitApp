@@ -1,11 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../models/program/daily_program.dart';
-import '../models/program/program_item.dart';
-import '../models/program/weekly_program.dart';
-import '../theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import '../models/program_model.dart';
 
 /// Program verilerini sağlayan servis sınıfı
 class ProgramService {
+  static const String _programKey = 'weekly_program';
+  List<DailyProgram> _weeklyProgram = [];
+  
+  // Singleton yapı
   static final ProgramService _instance = ProgramService._internal();
   
   factory ProgramService() {
@@ -20,157 +24,290 @@ class ProgramService {
   /// Tüm haftalık programlar
   final List<WeeklyProgram> _allPrograms = [];
   
-  /// Başlangıçta program verilerini yükle
+  // Servis başlatma
   Future<void> initialize() async {
-    // Örnek program verileri
-    _allPrograms.add(_createDefaultWeeklyProgram());
-    _currentProgram = _allPrograms.first;
+    await _loadProgram();
   }
   
-  /// Varsayılan haftalık programı oluşturur
-  WeeklyProgram _createDefaultWeeklyProgram() {
-    // Gün adları
-    final List<String> weekDays = [
-      'Pazartesi',
-      'Salı',
-      'Çarşamba',
-      'Perşembe',
-      'Cuma',
-      'Cumartesi',
-      'Pazar'
-    ];
-    
-    // Genel tavsiyeler
-    final List<String> generalTips = [
-      '💧 Günde en az 2-3 litre su iç.',
-      '❌ Şekerli içeceklerden uzak dur.',
-      '🍽️ Egzersiz yemekten önce, akşam yemeği hafif ve dengeli olsun.',
-      '🍌 Her gün 1 muz tüket (potasyum kaynağı).',
-      '🥄 Zeytinyağı 1-2 yemek kaşığı yeterlidir.',
-      '🏋️‍♂️ Ağırlık antrenmanları: Salı, Çarşamba, Perşembe günleri.',
-    ];
-    
-    // Günlük programlar listesi
-    final List<DailyProgram> dailyPrograms = [];
-    
-    // Sabit tanımlar (program öğe başlıkları)
-    const List<String> activityTitles = [
-      'Sabah Programı',
-      'Öğle Yemeği',
-      'Akşam Egzersizi',
-      'Akşam Yemeği',
-    ];
-    
-    // Sabit ikonlar
-    const List<IconData> activityIcons = [
-      Icons.sunny,
-      Icons.lunch_dining,
-      Icons.fitness_center,
-      Icons.dinner_dining,
-    ];
-    
-    // Sabit renkler
-    const List<Color> activityColors = [
-      AppTheme.morningExerciseColor,
-      AppTheme.lunchColor,
-      AppTheme.eveningExerciseColor,
-      AppTheme.dinnerColor,
-    ];
-    
-    // Sabit zaman dilimleri
-    const List<ProgramTimeSlot> timeSlots = [
-      ProgramTimeSlot.morning,
-      ProgramTimeSlot.lunch,
-      ProgramTimeSlot.evening,
-      ProgramTimeSlot.dinner,
-    ];
-    
-    // Her gün için program tanımlamaları
-    final List<List<String>> dayDescriptions = [
-      // Pazartesi
-      [
-        '🏊‍♂️ Havuz kapalı. Dinlen veya evde esneme yap.',
-        '🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz, badem/ceviz',
-        '🛑 Spor salonu kapalı. Dinlen veya hafif yürüyüş.',
-        '🥗 Ton balıklı salata, yoğurt, 🥖 tahıllı ekmek',
-      ],
-      // Salı
-      [
-        '🏊‍♂️ 08:45 - 09:15 yüzme',
-        '🥣 Yulaf + süt + muz veya Pazartesi menüsü',
-        '(18:00 - 18:45 Ağırlık): Squat, Leg Press, Bench Press, Lat Pull-Down',
-        '🍗 Izgara tavuk veya 🐟 ton balıklı salata, yoğurt',
-      ],
-      // Çarşamba
-      [
-        '🏊‍♂️ 08:45 - 09:15 yüzme',
-        '🥣 Yulaf + süt + muz veya Pazartesi menüsü',
-        '(18:00 - 18:45 Ağırlık): Row, Goblet Squat, Core Çalışmaları',
-        '🐔 Tavuk veya 🐟 ton balık, 🥗 yağlı salata, yoğurt',
-      ],
-      // Perşembe
-      [
-        '🏊‍♂️ 08:45 - 09:15 yüzme',
-        '🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz, badem/ceviz veya yulaf alternatifi',
-        '(18:00 - 18:45 Ağırlık): 🔄 Salı antrenmanı tekrarı',
-        '🐔 Tavuk veya 🐟 ton balık, 🥗 salata, yoğurt',
-      ],
-      // Cuma
-      [
-        '🚶‍♂️ İsteğe bağlı yüzme veya yürüyüş',
-        '🥚 Tavuk, haşlanmış yumurta, 🥗 yoğurt, salata, kuruyemiş',
-        '🤸‍♂️ Dinlenme veya esneme',
-        '🍳 Menemen, 🥗 ton balıklı salata, yoğurt',
-      ],
-      // Cumartesi
-      [
-        '🚶‍♂️ Hafif yürüyüş, esneme veya yüzme',
-        '🐔 Tavuk, yumurta, pilav, salata',
-        '⚡️ İsteğe bağlı egzersiz',
-        '🍽️ Sağlıklı serbest menü',
-      ],
-      // Pazar
-      [
-        '🧘‍♂️ Tam dinlenme veya 20-30 dk yürüyüş',
-        '🔄 Hafta içi prensipteki öğünler',
-        '💤 Dinlenme',
-        '🍴 Hafif ve dengeli öğün',
-      ],
-    ];
-    
-    // Her gün için program oluştur
-    for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
-      // Bu gün için programlar listesi
-      List<ProgramItem> dayItems = [];
+  // Programı SharedPreferences'tan yükle
+  Future<void> _loadProgram() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final programJson = prefs.getString(_programKey);
       
-      // Her program öğesi için
-      for (int itemIndex = 0; itemIndex < 4; itemIndex++) {
-        dayItems.add(ProgramItem(
-          title: activityTitles[itemIndex],
-          description: dayDescriptions[dayIndex][itemIndex],
-          icon: activityIcons[itemIndex],
-          color: activityColors[itemIndex],
-          timeSlot: timeSlots[itemIndex],
-        ));
+      // Eğer kayıtlı program yoksa varsayılan programı oluştur
+      if (programJson == null) {
+        _createDefaultProgram();
+        await _saveProgram();
+      } else {
+        // Kayıtlı programı yükle
+        final programMap = json.decode(programJson);
+        final List<dynamic> dailyProgramsJson = programMap['dailyPrograms'];
+        
+        _weeklyProgram = dailyProgramsJson
+            .map((json) => DailyProgram.fromJson(json))
+            .toList();
       }
-      
-      // Günlük programı oluştur
-      dailyPrograms.add(DailyProgram(
-        dayName: weekDays[dayIndex],
-        dayIndex: dayIndex,
-        items: dayItems,
-        tips: generalTips,
-      ));
+    } catch (e) {
+      print('Program yüklenirken hata: $e');
+      _createDefaultProgram();
     }
+  }
+  
+  // Programı SharedPreferences'a kaydet
+  Future<void> _saveProgram() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final programMap = {
+        'dailyPrograms': _weeklyProgram.map((program) => program.toJson()).toList(),
+      };
+      
+      await prefs.setString(_programKey, json.encode(programMap));
+    } catch (e) {
+      print('Program kaydedilirken hata: $e');
+    }
+  }
+  
+  /// Varsayılan haftalık programı oluştur
+  void _createDefaultProgram() {
+    final List<String> weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
     
-    // Haftalık programı oluştur ve döndür
-    return WeeklyProgram(
-      name: 'Sağlıklı Yaşam Programı',
-      weekNumber: 1,
-      dailyPrograms: dailyPrograms,
-      tips: generalTips,
-      startDate: DateTime.now(),
-    );
+    _weeklyProgram = List.generate(7, (index) {
+      final String dayName = weekDays[index];
+      
+      ProgramItem morningExercise;
+      ProgramItem lunch;
+      ProgramItem eveningExercise;
+      ProgramItem dinner;
+      
+      switch (index) {
+        case 0: // Pazartesi
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🏊‍♂️ Havuz kapalı. Dinlen veya evde esneme yap.',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '08:00',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '12:30',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '🛑 Spor salonu kapalı. Dinlen veya hafif yürüyüş.',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🥗 Ton balıklı salata, yoğurt, 🥖 tahıllı ekmek',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+          
+        case 1: // Salı
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🏊‍♂️ 08:45 - 09:15 yüzme',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '08:45',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🥣 Yulaf + süt + muz veya Pazartesi menüsü',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '12:30',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '(18:00 - 18:45 Ağırlık): Squat, Leg Press, Bench Press, Lat Pull-Down',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🍗 Izgara tavuk veya 🐟 ton balıklı salata, yoğurt',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+          
+        case 2: // Çarşamba
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🏊‍♂️ 08:45 - 09:15 yüzme',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '08:45',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🥣 Yulaf + süt + muz veya Pazartesi menüsü',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '12:30',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '(18:00 - 18:45 Ağırlık): Row, Goblet Squat, Core Çalışmaları',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🐔 Tavuk veya 🐟 ton balık, 🥗 yağlı salata, yoğurt',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+          
+        case 3: // Perşembe
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🏊‍♂️ 08:45 - 09:15 yüzme',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '08:45',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🍗 Izgara tavuk, 🍚 pirinç pilavı, 🥗 yağlı salata, 🥛 yoğurt, 🍌 muz',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '12:30',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '(18:00 - 18:45 Ağırlık): 🔄 Salı antrenmanı tekrarı',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🐔 Tavuk veya 🐟 ton balık, 🥗 salata, yoğurt',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+          
+        case 4: // Cuma
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🚶‍♂️ İsteğe bağlı yüzme veya yürüyüş',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '08:45',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🥚 Tavuk, haşlanmış yumurta, 🥗 yoğurt, salata, kuruyemiş',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '12:30',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '🤸‍♂️ Dinlenme veya esneme',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🍳 Menemen, 🥗 ton balıklı salata, yoğurt',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+          
+        case 5: // Cumartesi
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🚶‍♂️ Hafif yürüyüş, esneme veya yüzme',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '09:00',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🐔 Tavuk, yumurta, pilav, salata',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '13:00',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '⚡️ İsteğe bağlı egzersiz',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🍽️ Sağlıklı serbest menü',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+          
+        case 6: // Pazar
+        default:
+          morningExercise = ProgramItem(
+            title: 'Sabah Egzersizi',
+            description: '🧘‍♂️ Tam dinlenme veya 20-30 dk yürüyüş',
+            icon: Icons.wb_sunny,
+            color: Colors.orange,
+            time: '09:00',
+          );
+          lunch = ProgramItem(
+            title: 'Öğle Yemeği',
+            description: '🔄 Hafta içi prensipteki öğünler',
+            icon: Icons.restaurant,
+            color: const Color(0xFFA0C334),
+            time: '13:00',
+          );
+          eveningExercise = ProgramItem(
+            title: 'Akşam Egzersizi',
+            description: '💤 Dinlenme',
+            icon: Icons.fitness_center,
+            color: Colors.purple,
+            time: '18:00',
+          );
+          dinner = ProgramItem(
+            title: 'Akşam Yemeği',
+            description: '🍴 Hafif ve dengeli öğün',
+            icon: Icons.dinner_dining,
+            color: Colors.blue,
+            time: '19:30',
+          );
+          break;
+      }
+
+      return DailyProgram(
+        dayName: dayName,
+        morningExercise: morningExercise,
+        lunch: lunch,
+        eveningExercise: eveningExercise,
+        dinner: dinner,
+      );
+    });
   }
   
   /// Mevcut aktif programı döndürür
@@ -180,11 +317,39 @@ class ProgramService {
   
   /// Verilen güne ait program bilgilerini döndürür
   DailyProgram? getDailyProgram(int dayIndex) {
-    return _currentProgram?.getDailyProgram(dayIndex);
+    if (dayIndex < 0 || dayIndex >= _weeklyProgram.length) {
+      return null;
+    }
+    return _weeklyProgram[dayIndex];
   }
   
   /// Bugüne ait program bilgilerini döndürür
   DailyProgram? getTodayProgram() {
-    return _currentProgram?.getTodayProgram();
+    final today = DateTime.now().weekday - 1; // 0: Pazartesi, 6: Pazar
+    return getDailyProgram(today);
+  }
+  
+  /// Tüm haftalık programı al
+  Future<List<DailyProgram>> getWeeklyProgram() async {
+    if (_weeklyProgram.isEmpty) {
+      await _loadProgram();
+    }
+    return _weeklyProgram;
+  }
+  
+  // Günlük programı güncelle
+  Future<void> updateDailyProgram(int dayIndex, DailyProgram program) async {
+    if (dayIndex < 0 || dayIndex >= _weeklyProgram.length) {
+      return;
+    }
+    
+    _weeklyProgram[dayIndex] = program;
+    await _saveProgram();
+  }
+  
+  // Programı sıfırla
+  Future<void> resetProgram() async {
+    _createDefaultProgram();
+    await _saveProgram();
   }
 } 

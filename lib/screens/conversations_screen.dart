@@ -4,6 +4,7 @@ import '../models/chat_model.dart';
 import '../services/database_service.dart';
 import '../models/providers/database_provider.dart';
 import 'ai_coach_screen.dart';
+import '../widgets/kaplan_loading.dart';
 
 class ConversationsScreen extends StatefulWidget {
   const ConversationsScreen({Key? key}) : super(key: key);
@@ -130,7 +131,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const KaplanLoading()
           : _conversations.isEmpty
               ? _buildEmptyState()
               : Column(
@@ -140,14 +141,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                     ),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
                         onPressed: _createNewConversation,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Yeni Sohbet'),
+                        child: const Text('Yeni Sohbet'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
-                          minimumSize: const Size(200, 45),
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
                         ),
                       ),
                     ),
@@ -181,13 +184,16 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
             style: TextStyle(color: Colors.grey),
           ),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
+          ElevatedButton(
             onPressed: _createNewConversation,
-            icon: const Icon(Icons.add),
-            label: const Text('Yeni Sohbet'),
+            child: const Text('Yeni Sohbet'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
+              minimumSize: const Size(200, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
             ),
           ),
         ],
