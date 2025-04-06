@@ -85,6 +85,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 void main() async {
+  // Flutter binding'i başlat
   WidgetsFlutterBinding.ensureInitialized();
   
   // Platform'a göre uygun SQLite yapılandırması
@@ -178,7 +179,8 @@ class MyApp extends StatelessWidget {
       supportedLocales: [
         const Locale('tr', 'TR'),
       ],
-      home: const PermissionHandlerScreen(),
+      // Önce SplashScreen'i göster, sonra MainScreen'e geç
+      home: SplashScreen(nextScreen: MainScreen()),
     );
   }
 }
@@ -231,24 +233,35 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   bool _isInitialized = false;
+  late List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    HomeScreen(),
-    ProgramScreen(),
-    ActivityScreen(),
-    NutritionScreen(),
-    StatsScreen(),
-    ConversationsScreen(),
-    SettingsScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(),
+      ProgramScreen(),
+      ActivityScreen(),
+      NutritionScreen(),
+      StatsScreen(),
+      ConversationsScreen(),
+      SettingsScreen(),
+    ];
+    
+    // Uygulama açılışında bildirim izinlerini iste
+    _requestNotificationPermissions();
+    
+    // Future.microtask kullanarak build tamamlandıktan sonra loadUser çağrılmasını sağlıyoruz
+    Future.microtask(() {
+      _initializeData();
+      _isInitialized = true;
+    });
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isInitialized) {
-      _initializeData();
-      _isInitialized = true;
-    }
+    // Burada artık _initializeData() çağrılmıyor, initState içinde ele alıyoruz
   }
 
   Future<void> _initializeData() async {
@@ -268,6 +281,20 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         _selectedIndex = 0;
       });
+    }
+  }
+
+  Future<void> _requestNotificationPermissions() async {
+    // Android 13 ve üzeri için bildirim izinleri
+    if (Platform.isAndroid) {
+      final PermissionStatus status = await Permission.notification.request();
+      print('Bildirim izin durumu: $status');
+    }
+
+    // iOS için bildirim izinleri
+    if (Platform.isIOS) {
+      final NotificationService notificationService = NotificationService();
+      await notificationService.requestPermission();
     }
   }
 
