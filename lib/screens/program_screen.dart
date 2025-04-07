@@ -6,6 +6,8 @@ import '../services/program_service.dart';
 import '../widgets/program_detail_dialog.dart';
 import 'package:provider/provider.dart';
 import '../models/providers/database_provider.dart';
+import '../theme.dart';
+import '../widgets/kaplan_appbar.dart';
 
 class ProgramScreen extends StatefulWidget {
   const ProgramScreen({Key? key}) : super(key: key);
@@ -107,20 +109,38 @@ class _ProgramScreenState extends State<ProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
+      appBar: KaplanAppBar(
+        title: 'Haftalık Program',
+        isDarkMode: isDarkMode,
+        isRequiredPage: true,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 // Gün seçici
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        isDarkMode ? const Color(0xFF2C2C2C) : AppTheme.primaryColor.withOpacity(0.7),
+                        isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
                     ],
@@ -146,13 +166,13 @@ class _ProgramScreenState extends State<ProgramScreen> {
                               height: 40,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                  ? Colors.orange
+                                  ? AppTheme.accentColor
                                   : isToday 
-                                    ? Colors.orange.withOpacity(0.2) 
+                                    ? AppTheme.accentColor.withOpacity(0.2) 
                                     : Colors.transparent,
                                 shape: BoxShape.circle,
                                 border: !isSelected && isToday
-                                  ? Border.all(color: Colors.orange)
+                                  ? Border.all(color: AppTheme.accentColor)
                                   : null,
                               ),
                               child: Center(
@@ -163,8 +183,8 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                     color: isSelected
                                       ? Colors.white
                                       : isToday
-                                        ? Colors.orange
-                                        : Theme.of(context).textTheme.bodyLarge?.color,
+                                        ? AppTheme.accentColor
+                                        : Colors.white,
                                   ),
                                 ),
                               ),
@@ -191,7 +211,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 context: context,
                                 title: 'Sabah Egzersizi',
                                 icon: Icons.wb_sunny,
-                                color: Colors.orange,
+                                color: AppTheme.morningExerciseColor,
                                 description: _weeklyProgram[_selectedDayIndex].morningExercise.description,
                                 onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].morningExercise, 'morning'),
                               ),
@@ -203,7 +223,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 context: context,
                                 title: 'Öğle Yemeği',
                                 icon: Icons.restaurant,
-                                color: Colors.green,
+                                color: AppTheme.lunchColor,
                                 description: _weeklyProgram[_selectedDayIndex].lunch.description,
                                 onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].lunch, 'lunch'),
                               ),
@@ -215,7 +235,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 context: context,
                                 title: 'Akşam Egzersizi',
                                 icon: Icons.fitness_center,
-                                color: Colors.purple,
+                                color: AppTheme.eveningExerciseColor,
                                 description: _weeklyProgram[_selectedDayIndex].eveningExercise.description,
                                 onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].eveningExercise, 'evening'),
                               ),
@@ -227,7 +247,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 context: context,
                                 title: 'Akşam Yemeği',
                                 icon: Icons.dinner_dining,
-                                color: Colors.blue,
+                                color: AppTheme.dinnerColor,
                                 description: _weeklyProgram[_selectedDayIndex].dinner.description,
                                 onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].dinner, 'dinner'),
                               ),

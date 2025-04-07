@@ -1,11 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/user_provider.dart';
-import '../providers/activity_provider.dart';
-import '../providers/nutrition_provider.dart';
-import '../utils/animations.dart';
+import 'package:flutter/services.dart';
 import '../theme.dart';
+import '../widgets/kaplan_loading.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget nextScreen;
@@ -16,85 +12,75 @@ class SplashScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
+  late Animation<double> _fadeInAnimation;
+  late Animation<double> _slideAnimation;
   late Animation<double> _scaleAnimation;
-  bool _isInitialized = false;
-
+  
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 1500),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(0.0, 0.5, curve: Curves.easeIn),
-      ),
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(0.0, 0.5, curve: Curves.easeOut),
-      ),
-    );
-
-    _controller.forward();
-
-    // Daha uzun süre göster ve hatalardan kaçın
-    Future.delayed(Duration(milliseconds: 500), () {
-      try {
-        _loadData();
-      } catch (e) {
-        print('Veri yükleme hatası: $e');
-      }
-    });
-
-    // Splash ekranını daha uzun süre göster
-    Timer(Duration(seconds: 5), () {
-      if (!mounted) return;
-      
-      try {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => widget.nextScreen),
-        );
-      } catch (e) {
-        print('Ekran geçiş hatası: $e');
-        
-        // Hata durumunda basit bir geçiş deneyelim
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => widget.nextScreen),
-          );
-        }
-      }
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Veri yükleme işlemi artık initState'de yapılıyor
-    _isInitialized = true;
-  }
-
-  Future<void> _loadData() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
     
-    // Verileri yükle
-    Provider.of<ActivityProvider>(context, listen: false).refreshActivities();
-    Provider.of<NutritionProvider>(context, listen: false).refreshMeals();
+    // Durum çubuğunu şeffaf yap
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ));
+    
+    // Animasyonları ayarla
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    
+    _fadeInAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+    
+    _slideAnimation = Tween<double>(begin: 50, end: 0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.2, 0.6, curve: Curves.easeOut),
+      ),
+    );
+    
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(0.2, 0.8, curve: Curves.easeOut),
+      ),
+    );
+    
+    // Animasyonları başlat
+    _controller.forward();
+    
+    // Sonraki ekrana git
+    _navigateToMain();
   }
-
+  
+  _navigateToMain() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted) {
+      // Geçiş animasyonu ile yeni ekrana geç
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: Duration(milliseconds: 1000),
+          pageBuilder: (_, animation, secondaryAnimation) => FadeTransition(
+            opacity: animation,
+            child: widget.nextScreen,
+          ),
+        ),
+      );
+    }
+  }
+  
   @override
   void dispose() {
     _controller.dispose();
@@ -103,120 +89,193 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
     return Scaffold(
-      backgroundColor: Color(0xFF0A1A2F),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Gradient arka plan
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0A1A2F),
-                  Color(0xFF152642),
-                ],
-              ),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.gradientStart,
+              AppTheme.gradientEnd,
+            ],
           ),
-          
-          // Dalga animasyonu
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: KFWaveAnimation(
-              color: AppTheme.primaryColor.withOpacity(0.2),
-              height: 120,
-            ),
-          ),
-          
-          // İçerik
-          Center(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 180,
-                          height: 180,
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              // Dekoratif arka plan animasyonu
+              Positioned(
+                top: size.height * 0.05,
+                right: -30,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _fadeInAnimation.value * 0.3,
+                      child: Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: Container(
+                          width: 160,
+                          height: 160,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryColor.withOpacity(0.3),
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: KFPulseAnimation(
-                            maxScale: 1.1,
-                            duration: Duration(milliseconds: 1500),
-                            child: ClipOval(
-                              child: Image.asset('assets/images/kaplan_logo.png',
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.fitness_center,
-                                    size: 80,
-                                    color: AppTheme.primaryColor,
-                                  );
-                                },
-                              ),
-                            ),
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(100),
                           ),
                         ),
-                        SizedBox(height: 24),
-                        ShaderMask(
-                          shaderCallback: (bounds) => LinearGradient(
-                            colors: [
-                              Color(0xFFF08721),
-                              Color(0xFFFFAB40),
-                            ],
-                          ).createShader(bounds),
-                          child: Text(
-                            'KAPLANFIT',
-                            style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 2,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  offset: Offset(2, 2),
-                                  blurRadius: 4,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              Positioned(
+                bottom: -50,
+                left: -20,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _fadeInAnimation.value * 0.2,
+                      child: Transform.scale(
+                        scale: _scaleAnimation.value,
+                        child: Container(
+                          width: 200,
+                          height: 200,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              // Ana içerik
+              Center(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _slideAnimation.value),
+                      child: Opacity(
+                        opacity: _fadeInAnimation.value,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Logo container
+                            Container(
+                              padding: EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.primaryColor.withOpacity(0.3),
+                                    blurRadius: 30,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withOpacity(0.3),
+                                  shape: BoxShape.circle,
                                 ),
-                              ],
+                                alignment: Alignment.center,
+                                child: Image.asset(
+                                  'assets/images/kaplan_logo.png',
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Center(
+                                      child: Icon(
+                                        Icons.fitness_center,
+                                        size: 60,
+                                        color: Colors.white,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
-                          ),
+                            SizedBox(height: 30),
+                            
+                            // Uygulama adı
+                            Text(
+                              'KaplanFit',
+                              style: TextStyle(
+                                fontSize: 40,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black26,
+                                    offset: Offset(1, 2),
+                                    blurRadius: 5,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            
+                            // Slogan
+                            Text(
+                              'Sağlıklı Yaşamın Anahtarı',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                            SizedBox(height: 50),
+                            
+                            // Yükleme animasyonu
+                            KaplanLoading(
+                              size: 70,
+                              color: Colors.white,
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          'SPORT & NUTRITION',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            letterSpacing: 1.5,
-                          ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              // Sürüm bilgisi
+              Positioned(
+                bottom: 20,
+                left: 0,
+                right: 0,
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _fadeInAnimation.value,
+                      child: Text(
+                        'Sürüm 1.0.0',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
                         ),
-                        SizedBox(height: 50),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

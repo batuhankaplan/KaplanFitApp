@@ -39,19 +39,39 @@ class _NutritionScreenState extends State<NutritionScreen> {
       body: Column(
         children: [
           // Tarih seçici
-          KFAnimatedSlide(
+          KFSlideAnimation(
             offsetBegin: const Offset(0, -0.2),
             duration: const Duration(milliseconds: 500),
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-              color: Theme.of(context).cardColor,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    isDarkMode ? const Color(0xFF2C2C2C) : AppTheme.primaryColor.withOpacity(0.7),
+                    isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Önceki gün
                   IconButton(
-                    icon: Icon(Icons.arrow_back_ios, size: 18),
+                    icon: const Icon(Icons.arrow_back_ios, size: 16),
                     onPressed: () {
                       _changeDate(-1);
                     },
@@ -62,13 +82,13 @@ class _NutritionScreenState extends State<NutritionScreen> {
                     onTap: _selectDate,
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 16),
-                        SizedBox(width: 8),
+                        const Icon(Icons.calendar_today, size: 14),
+                        const SizedBox(width: 8),
                         Text(
                           DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 15,
                           ),
                         ),
                       ],
@@ -77,7 +97,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                   
                   // Sonraki gün
                   IconButton(
-                    icon: Icon(Icons.arrow_forward_ios, size: 18),
+                    icon: const Icon(Icons.arrow_forward_ios, size: 16),
                     onPressed: () {
                       _changeDate(1);
                     },
@@ -90,7 +110,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
           
           // Calorie summary
           if (meals.isNotEmpty) 
-            KFAnimatedSlide(
+            KFSlideAnimation(
               offsetBegin: const Offset(0.2, 0),
               duration: const Duration(milliseconds: 500),
               child: Padding(
@@ -130,7 +150,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        KFAnimatedSlide(
+                        KFSlideAnimation(
                           offsetBegin: const Offset(0, 0.3),
                           child: Column(
                             children: [

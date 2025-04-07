@@ -1,5 +1,5 @@
-name: kaplanfit_app
-description: "Kişiye Özel Spor, Sağlık ve Beslenme Takip Uygulaması"
+name: kaplan_fit_app
+description: "Fitness ve sağlıklı yaşam uygulaması"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.6.1
+  sdk: '>=2.17.0 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,42 +30,37 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
   provider: ^6.0.5
-  shared_preferences: ^2.2.2
   sqflite: ^2.3.0
   path: ^1.8.3
-  fl_chart: ^0.65.0
-  intl: ^0.19.0
-  awesome_notifications: ^0.8.3
-  flutter_localizations:
-    sdk: flutter
-  sqflite_common_ffi: ^2.3.0
-  image_picker: ^1.1.2
+  intl: ^0.18.1
+  sqflite_common_ffi: ^2.3.0+2
+  shared_preferences: ^2.2.2
+  fl_chart: ^0.66.2
   location: ^5.0.3
   geolocator: ^10.1.0
-  permission_handler: ^11.4.0
-  window_size: ^0.1.0
-  google_generative_ai: ^0.4.6
-  url_launcher: ^6.2.6
-  timezone: ^0.9.4
-  http: ^1.1.0
-  flutter_native_splash: ^2.4.4
-  flutter_launcher_icons: ^0.14.3
-  animations: ^2.0.11
-  google_nav_bar: ^5.0.7
-  device_info_plus: ^11.3.0
-  flutter_local_notifications: ^18.0.1
+  permission_handler: ^11.2.0
+  awesome_notifications: ^0.8.3
+  window_size:
+    git:
+      url: https://github.com/google/flutter-desktop-embedding.git
+      path: plugins/window_size
+  
+  # Yeni eklenen paketler
+  google_nav_bar: ^5.0.6
+  animations: ^2.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # Splash screen paketi dev_dependencies'de kalabilir ama konfigürasyonu kaldırıyoruz
-  # flutter_native_splash: ^2.3.13
-  
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -76,39 +71,6 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
-flutter_icons:
-  android: true
-  ios: true
-  image_path: "assets/images/kaplan_logo_big.png"
-  adaptive_icon_background: "#0A1128"
-  adaptive_icon_foreground: "assets/images/kaplan_logo_big.png"
-  min_sdk_android: 21
-  remove_alpha_ios: true
-  adaptive_icon_padding: false
-  adaptive_icon_foreground_scale_factor: 0.35
-  image_path_android: "assets/images/kaplan_logo_big.png"
-  image_path_ios: "assets/images/kaplan_logo_big.png"
-
-# Splash screen konfigürasyonu güncellendi - yuvarlak logo
-flutter_native_splash:
-  color: "#5D69BE"
-  image: assets/images/kaplan_logo_big.png
-  color_dark: "#121219"
-  image_dark: assets/images/kaplan_logo_big.png
-  android_12:
-    image: assets/images/kaplan_logo_big.png
-    icon_background_color: "#5D69BE"
-    image_dark: assets/images/kaplan_logo_big.png
-    icon_background_color_dark: "#121219"
-  android: true
-  ios: true
-  web: false
-  fullscreen: true
-  android_gravity: center
-  ios_content_mode: center
-  android_screen_orientation: portrait
-  web_image_mode: center
-  
 # The following section is specific to Flutter packages.
 flutter:
 
@@ -120,12 +82,13 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/to/resolution-aware-images
+  # https://flutter.dev/assets-and-images/#resolution-aware
 
   # For details regarding adding assets from package dependencies, see
-  # https://flutter.dev/to/asset-from-package
+  # https://flutter.dev/assets-and-images/#from-packages
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a
@@ -145,4 +108,4 @@ flutter:
   #         weight: 700
   #
   # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  # see https://flutter.dev/custom-fonts/#from-packages 

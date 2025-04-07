@@ -3,72 +3,62 @@ import '../theme.dart';
 
 class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final bool isDarkMode;
   final List<Widget>? actions;
-  final bool centerTitle;
-  final double elevation;
-  final Widget? leading;
+  final bool showBackButton;
+  final bool isRequiredPage; // Program ve İstatistikler sayfaları için
 
   const KaplanAppBar({
     Key? key,
-    this.title = 'KaplanFIT',
+    required this.title,
+    required this.isDarkMode,
     this.actions,
-    this.centerTitle = true,
-    this.elevation = 0,
-    this.leading,
+    this.showBackButton = true,
+    this.isRequiredPage = false, // Varsayılan olarak false
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // Program ve İstatistikler sayfaları dışında AppBar gösterme
+    if (!isRequiredPage && title != 'Program' && title != 'İstatistikler') {
+      return PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: SafeArea(
+          child: Container(
+            height: 0,
+          ),
+        ),
+      );
+    }
     
     return AppBar(
-      backgroundColor: isDarkMode ? const Color(0xFF0A1A2F) : AppTheme.primaryColor,
-      elevation: elevation,
-      centerTitle: centerTitle,
-      leading: leading,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/images/kaplan_logo.png',
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.fitness_center,
-                    color: Colors.white,
-                  );
-                },
-              ),
-            ),
-          ),
-          SizedBox(width: 10),
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-        ],
+      backgroundColor: AppTheme.primaryColor,
+      elevation: 4,
+      shadowColor: Colors.black26,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.5,
+        ),
+      ),
+      centerTitle: true,
       actions: actions,
+      leading: showBackButton && Navigator.canPop(context)
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => Navigator.of(context).pop(),
+            )
+          : null,
     );
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => isRequiredPage || title == 'Program' || title == 'İstatistikler' 
+      ? const Size.fromHeight(kToolbarHeight)
+      : const Size.fromHeight(kToolbarHeight); // Tüm durumlarda boşluk bırak
 } 

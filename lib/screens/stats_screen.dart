@@ -12,6 +12,7 @@ import '../models/activity_record.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import '../utils/animations.dart';
+import '../widgets/kaplan_appbar.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({Key? key}) : super(key: key);
@@ -136,287 +137,134 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     ).toList();
     
     return Scaffold(
-      body: Column(
-        children: [
-          // Tab Bar bölümü - navigasyon bar ile uyumlu (AppBar'ın altına yerleştiriyoruz)
-          Container(
-            color: isDarkMode ? const Color(0xFF303030) : AppTheme.primaryColor.withOpacity(0.8),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: isDarkMode ? Theme.of(context).primaryColor : Colors.white, // Seçili tab turuncu/beyaz
-              unselectedLabelColor: isDarkMode ? Colors.white.withOpacity(0.7) : Colors.white.withOpacity(0.7),
-              indicatorColor: isDarkMode ? Theme.of(context).primaryColor : Colors.white, // İndikatör rengi
-              tabs: [
-                Tab(text: 'Beslenme'),
-                Tab(text: 'Aktivite'),
-                Tab(text: 'Kilo'),
-              ],
-            ),
-          ),
-          // Zaman aralığı seçici
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildTimeRangeButton('Haftalık', TimeRange.week),
-                _buildTimeRangeButton('Aylık', TimeRange.month),
-                _buildTimeRangeButton('Yıllık', TimeRange.year),
-              ],
-            ),
-          ),
-          
-          // Tarih aralığı gösterimi
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${DateFormat('d MMM yyyy', 'tr_TR').format(_startDate)} - ${DateFormat('d MMM yyyy', 'tr_TR').format(_endDate)}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white70 : Colors.black54,
+      appBar: KaplanAppBar(
+        title: 'İstatistikler',
+        isDarkMode: isDarkMode,
+        isRequiredPage: true,
+      ),
+      body: Container(
+        color: AppTheme.primaryColor.withOpacity(0.05),
+        child: Column(
+          children: [
+            // Üst panel - Tab Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: Material(
+                  color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.9),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: isDarkMode ? Colors.white60 : Colors.black54,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.accentColor,
+                          AppTheme.accentColor.withOpacity(0.8),
+                        ],
+                      ),
+                    ),
+                    tabs: [
+                      Tab(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.restaurant_menu, size: 16),
+                              SizedBox(width: 4),
+                              Text('Beslenme'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.directions_run, size: 16),
+                              SizedBox(width: 4),
+                              Text('Aktivite'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Tab(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.monitor_weight, size: 16),
+                              SizedBox(width: 4),
+                              Text('Kilo'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          
-          // Tab içeriği
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // BESLENME İSTATİSTİKLERİ
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Toplam kalori ve günlük ortalama
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                child: Container(
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFFFFA726), Color(0xFFFFCC80)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.restaurant, color: Colors.white, size: 32),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Toplam Kalori',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$totalCalories kcal',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                child: Container(
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFF7E57C2), Color(0xFFB39DDB)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.calendar_today, color: Colors.white, size: 32),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Günlük Ortalama',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$avgCalories kcal',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        SizedBox(height: 24),
-                        Text(
-                          'Kalori Alımı',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        SizedBox(height: 8),
-                        KFAnimatedSlide(
-                          offsetBegin: const Offset(0, 0.3),
-                          child: Container(
-                            height: 300,
-                            padding: EdgeInsets.all(8),
-                            child: filteredMeals.isEmpty
-                                ? Center(child: Text('Veri bulunamadı'))
-                                : _buildNutritionLineChart(mealDataByDate, isDarkMode),
-                          ),
+            
+            // Zaman aralığı seçici
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: _buildTimeRangeSelector(),
+            ),
+            
+            // Tarih aralığı gösterimi
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDarkMode 
+                          ? Colors.black.withOpacity(0.3) 
+                          : Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                          offset: Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-                ),
-                
-                // AKTİVİTE İSTATİSTİKLERİ
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Toplam süre ve günlük ortalama
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                child: Container(
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFF66BB6A), Color(0xFFA5D6A7)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.timer, color: Colors.white, size: 32),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Toplam Süre',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$totalDuration dk',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                child: Container(
-                                  padding: EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFF5C6BC0), Color(0xFF9FA8DA)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.trending_up, color: Colors.white, size: 32),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Günlük Ortalama',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$avgDuration dk/gün',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        SizedBox(height: 24),
-                        Text(
-                          'Aktivite Türlerine Göre Süreler',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        SizedBox(height: 8),
-                        KFAnimatedSlide(
-                          offsetBegin: const Offset(0, 0.3),
-                          child: Container(
-                            height: 300,
-                            padding: EdgeInsets.all(8),
-                            child: _buildActivityLineChart(activityDataByDate, isDarkMode),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      '${DateFormat('d MMM yyyy', 'tr_TR').format(_startDate)} - ${DateFormat('d MMM yyyy', 'tr_TR').format(_endDate)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
                     ),
                   ),
-                ),
-                
-                // KİLO İSTATİSTİKLERİ
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (user != null) ...[
-                          // Mevcut kilo ve BMI durumu
+                ],
+              ),
+            ),
+            
+            // Tab içeriği
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // BESLENME İSTATİSTİKLERİ
+                  SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Toplam kalori ve günlük ortalama
                           Row(
                             children: [
                               Expanded(
@@ -427,24 +275,26 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       gradient: LinearGradient(
-                                        colors: [Color(0xFF26A69A), Color(0xFF80CBC4)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          AppTheme.primaryColor.withOpacity(0.7),
+                                          AppTheme.primaryColor.withOpacity(0.9),
+                                        ],
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
+                                        Icon(Icons.restaurant, color: Colors.white, size: 32),
+                                        SizedBox(height: 8),
                                         Text(
-                                          'Mevcut Kilo',
+                                          'Toplam Kalori',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        SizedBox(height: 8),
                                         Text(
-                                          '${user.weight.toStringAsFixed(1)} kg',
+                                          '$totalCalories kcal',
                                           style: TextStyle(
                                             fontSize: 24,
                                             fontWeight: FontWeight.bold,
@@ -465,35 +315,30 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       gradient: LinearGradient(
-                                        colors: [Color(0xFF5C6BC0), Color(0xFF9FA8DA)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          AppTheme.primaryColor.withOpacity(0.7),
+                                          AppTheme.primaryColor.withOpacity(0.9),
+                                        ],
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
+                                        Icon(Icons.calendar_today, color: Colors.white, size: 32),
+                                        SizedBox(height: 8),
                                         Text(
-                                          'BMI',
+                                          'Günlük Ortalama',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        SizedBox(height: 8),
                                         Text(
-                                          '${user.bmi.toStringAsFixed(1)}',
+                                          '$avgCalories kcal',
                                           style: TextStyle(
                                             fontSize: 24,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
-                                          ),
-                                        ),
-                                        Text(
-                                          user.bmiCategory,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ],
@@ -503,49 +348,350 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               ),
                             ],
                           ),
-                        ],
-                        
-                        SizedBox(height: 24),
-                        Text(
-                          'Kilo Değişimi',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        SizedBox(height: 8),
-                        KFAnimatedSlide(
-                          offsetBegin: const Offset(0, 0.3),
-                          child: Container(
-                            height: 300,
-                            padding: EdgeInsets.all(8),
-                            child: _buildWeightChart(filteredWeightHistory, isDarkMode),
+                          
+                          SizedBox(height: 24),
+                          Text(
+                            'Kalori Alımı',
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 8),
+                          KFSlideAnimation(
+                            offsetBegin: const Offset(0, 0.3),
+                            child: Container(
+                              height: 300,
+                              padding: EdgeInsets.all(8),
+                              child: filteredMeals.isEmpty
+                                  ? Center(child: Text('Veri bulunamadı'))
+                                  : _buildNutritionLineChart(mealDataByDate, isDarkMode),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  
+                  // AKTİVİTE İSTATİSTİKLERİ
+                  SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Toplam süre ve günlük ortalama
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Card(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  child: Container(
+                                    padding: EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppTheme.primaryColor.withOpacity(0.7),
+                                          AppTheme.primaryColor.withOpacity(0.9),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.timer, color: Colors.white, size: 32),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Toplam Süre',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$totalDuration dk',
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Card(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  child: Container(
+                                    padding: EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppTheme.primaryColor.withOpacity(0.7),
+                                          AppTheme.primaryColor.withOpacity(0.9),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.trending_up, color: Colors.white, size: 32),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Günlük Ortalama',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          '$avgDuration dk/gün',
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          
+                          SizedBox(height: 24),
+                          Text(
+                            'Aktivite Türlerine Göre Süreler',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          SizedBox(height: 8),
+                          KFSlideAnimation(
+                            offsetBegin: const Offset(0, 0.3),
+                            child: Container(
+                              height: 300,
+                              padding: EdgeInsets.all(8),
+                              child: _buildActivityLineChart(activityDataByDate, isDarkMode),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // KİLO İSTATİSTİKLERİ
+                  SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (user != null) ...[
+                            // Mevcut kilo ve BMI durumu
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Card(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    child: Container(
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            AppTheme.primaryColor.withOpacity(0.7),
+                                            AppTheme.primaryColor.withOpacity(0.9),
+                                          ],
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Mevcut Kilo',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            '${user.weight.toStringAsFixed(1)} kg',
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Card(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    child: Container(
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            AppTheme.primaryColor.withOpacity(0.7),
+                                            AppTheme.primaryColor.withOpacity(0.9),
+                                          ],
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'BMI',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            '${user.bmi.toStringAsFixed(1)}',
+                                            style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          Text(
+                                            user.bmiCategory,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          
+                          SizedBox(height: 24),
+                          Text(
+                            'Kilo Değişimi',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          SizedBox(height: 8),
+                          KFSlideAnimation(
+                            offsetBegin: const Offset(0, 0.3),
+                            child: Container(
+                              height: 300,
+                              padding: EdgeInsets.all(8),
+                              child: _buildWeightChart(filteredWeightHistory, isDarkMode),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Zaman aralığı butonları için yeni widget
+  Widget _buildTimeRangeSelector() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      padding: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(40),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildTimeRangeButton('Haftalık', TimeRange.week, Icons.calendar_view_week),
+          _buildTimeRangeButton('Aylık', TimeRange.month, Icons.calendar_view_month),
+          _buildTimeRangeButton('Yıllık', TimeRange.year, Icons.calendar_today),
         ],
       ),
     );
   }
   
-  // Zaman aralığı butonu
-  Widget _buildTimeRangeButton(String label, TimeRange range) {
+  // Tek zaman butonu
+  Widget _buildTimeRangeButton(String title, TimeRange range, IconData icon) {
     final isSelected = _selectedTimeRangeEnum == range;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    return ElevatedButton(
-      onPressed: () => _updateDateRange(range),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected 
-          ? Theme.of(context).primaryColor 
-          : Theme.of(context).cardColor,
-        foregroundColor: isSelected 
-          ? Colors.white 
-          : Theme.of(context).textTheme.bodyLarge?.color,
+    return GestureDetector(
+      onTap: () => _updateDateRange(range),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected 
+              ? LinearGradient(
+                  colors: [
+                    AppTheme.accentColor,
+                    AppTheme.accentColor.withOpacity(0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected 
+              ? null
+              : isDarkMode 
+                  ? Colors.transparent
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.accentColor.withOpacity(0.3),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected 
+                  ? Colors.white 
+                  : isDarkMode 
+                      ? Colors.white70 
+                      : Colors.black54,
+            ),
+            SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected 
+                    ? Colors.white 
+                    : isDarkMode 
+                        ? Colors.white70 
+                        : Colors.black54,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Text(label),
     );
   }
   

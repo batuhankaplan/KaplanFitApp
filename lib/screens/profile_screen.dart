@@ -214,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Profil resmi seçme
-                  KFAnimatedSlide(
+                  KFSlideAnimation(
                     offsetBegin: const Offset(0, -0.2),
                     child: GestureDetector(
                       onTap: _pickImage,
@@ -356,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 32),
 
                       // BMI göstergesi animasyonlu olarak
-                      KFAnimatedSlide(
+                      KFSlideAnimation(
                         offsetBegin: const Offset(0, 0.3),
                         child: Container(
                           padding: const EdgeInsets.all(16),
@@ -474,7 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 32),
                       
                       // Kaydet butonu
-                      KFAnimatedSlide(
+                      KFSlideAnimation(
                         offsetBegin: const Offset(0, 0.5),
                         duration: const Duration(milliseconds: 600),
                         delay: const Duration(milliseconds: 300),

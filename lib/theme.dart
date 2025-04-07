@@ -1,42 +1,92 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFFF08721); // Kaplan turuncu
-  static const Color secondaryColor = Color(0xFF242424); // Koyu gri
-  static const Color accentColor = Color(0xFF5A35B2); // Mor aksan
+  // Ana renkler
+  static const Color primaryColor = Color(0xFF5D69BE); // Mor-mavi ana renk
+  static const Color secondaryColor = Color(0xFF26C485); // Yeşil ikincil renk
+  static const Color accentColor = Color(0xFFFF6B6B); // Canlı mercan aksan rengi
   
-  // Daha koyu arka plan renkleri
-  static const Color backgroundColor = Color(0xFF001A2E); // Koyu lacivert arka plan
-  static const Color cardColor = Color(0xFF052A40); // Kart arka planı (daha açık lacivert)
-  static const Color navBarColor = Color(0xFF0A1F2E); // Navigasyon barı arka planı
-  static const Color textColor = Color(0xFFF5F5F5); // Açık metin rengi
-  static const Color secondaryTextColor = Color(0xFFB8B8B8); // İkincil metin rengi
+  // Arka plan ve metin renkleri
+  static const Color backgroundColor = Color(0xFFF6F8FE);
+  static const Color darkBackgroundColor = Color(0xFF121219);
+  static const Color surfaceColor = Color(0xFFFFFFFF);
+  static const Color darkSurfaceColor = Color(0xFF1A1A26);
+  static const Color cardBackgroundColor = Color(0xFF1C2E5E);
+  static const Color darkCardBackgroundColor = Color(0xFF242436);
+  static const Color textColor = Color(0xFF333333);
+  static const Color darkTextColor = Color(0xFFE1E1E1);
+  static const Color secondaryTextColor = Color(0xFF757575);
+  static const Color darkSecondaryTextColor = Color(0xFFAAAAAA);
   
-  // Yeni görev kartı renkleri (daha koyu tonlar)
-  static const Color morningExerciseColor = Color(0xFF1A5A8C); // Sabah egzersizi
-  static const Color lunchColor = Color(0xFFB25A1A); // Öğle yemeği
-  static const Color eveningExerciseColor = Color(0xFF4A2696); // Akşam egzersizi
-  static const Color dinnerColor = Color(0xFF0D594C); // Akşam yemeği
+  // Görev kartı renkleri
+  static const Color morningExerciseColor = Color(0xFF5878FF); // Sabah egzersizi (mavi)
+  static const Color lunchColor = Color(0xFFFF8F5D); // Öğle yemeği (turuncu)
+  static const Color eveningExerciseColor = Color(0xFFAF52DE); // Akşam egzersizi (mor)
+  static const Color dinnerColor = Color(0xFF2DB886); // Akşam yemeği (yeşil)
+  static const Color waterReminderColor = Color(0xFF54C5F8); // Su içme hatırlatıcı (açık mavi)
   
-  // Yapıldı işaretlenen görevlerin soluklaştırılmış renkleri
-  static const Color completedTaskColor = Color(0xFF1F2D35); // Tamamlanmış görev arka planı
-
+  // Tamamlanmış görevlerin rengi
+  static const Color completedTaskColor = Color(0xFF243355); // Tamamlanmış görev arka planı
+  
+  // Kategori renkleri
+  static const Color categoryWorkoutColor = Color(0xFF7C4DFF); // Antrenman kategorisi (mor)
+  static const Color categoryNutritionColor = Color(0xFF00BFA5); // Beslenme kategorisi (turkuaz)
+  static const Color categoryWaterColor = Color(0xFF29B6F6); // Su kategorisi (açık mavi)
+  static const Color categoryRestColor = Color(0xFFFFB74D); // Dinlenme kategorisi (amber)
+  static const Color categoryStatsColor = Color(0xFFEF5350); // İstatistik kategorisi (kırmızı)
+  
+  // Grafik renkleri
+  static const Color chartSuccessColor = Color(0xFF66BB6A); // Başarı grafiği (yeşil)
+  static const Color chartPendingColor = Color(0xFFFFCA28); // Bekleyen grafiği (sarı)
+  static const Color chartFailedColor = Color(0xFFEF5350); // Başarısız grafiği (kırmızı)
+  static const Color chartNeutralColor = Color(0xFF90A4AE); // Nötr grafiği (gri-mavi)
+  
+  // Görev kategorileri için renkler
+  static const Color workoutColor = Color(0xFFFF6B6B);
+  static const Color nutritionColor = Color(0xFF26C485);
+  static const Color waterColor = Color(0xFF5D9CEC);
+  static const Color sleepColor = Color(0xFF8C7AE6);
+  static const Color meditationColor = Color(0xFFFFCF56);
+  static const Color goalColor = Color(0xFFB795FF);
+  
+  // Grafik renkleri
+  static const List<Color> chartColors = [
+    Color(0xFF5D69BE),
+    Color(0xFFFF6B6B),
+    Color(0xFF26C485),
+    Color(0xFFFFCF56),
+    Color(0xFF8C7AE6),
+    Color(0xFF5D9CEC),
+  ];
+  
+  // Gradyan renkler
+  static const Color gradientStart = Color(0xFF516AE2);
+  static const Color gradientEnd = Color(0xFF5D69BE);
+  
+  // İleride değişebilecek her renk için Getter
+  static Color get taskCardColorLight => const Color(0xFFFFFFFF);
+  static Color get taskCardColorDark => const Color(0xFF242424);
+  static Color get cardColor => const Color(0xFF243355);
+  
+  // Koyu tema
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     primaryColor: primaryColor,
-    scaffoldBackgroundColor: backgroundColor,
-    cardColor: cardColor,
+    scaffoldBackgroundColor: darkBackgroundColor,
+    cardColor: darkCardBackgroundColor,
     colorScheme: ColorScheme.dark(
       primary: primaryColor,
       secondary: secondaryColor,
-      surface: cardColor,
-      background: backgroundColor,
-      error: Colors.red,
+      tertiary: accentColor,
+      surface: darkSurfaceColor,
+      background: darkBackgroundColor,
+      error: Color(0xFFFF5252),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
-      onSurface: textColor,
-      onBackground: textColor,
+      onTertiary: Colors.white,
+      onSurface: darkTextColor,
+      onBackground: darkTextColor,
       onError: Colors.white,
       brightness: Brightness.dark,
     ),
@@ -44,90 +94,193 @@ class AppTheme {
       headlineLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
-        color: textColor,
+        letterSpacing: -0.5,
+        color: darkTextColor,
       ),
       headlineMedium: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: textColor,
+        letterSpacing: -0.3,
+        color: darkTextColor,
       ),
       headlineSmall: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: textColor,
+        letterSpacing: -0.2,
+        color: darkTextColor,
       ),
       bodyLarge: TextStyle(
         fontSize: 18,
-        color: textColor,
+        letterSpacing: 0.1,
+        color: darkTextColor,
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
-        color: textColor,
+        letterSpacing: 0.1,
+        color: darkTextColor,
       ),
       bodySmall: TextStyle(
         fontSize: 14,
-        color: secondaryTextColor,
+        letterSpacing: 0.1,
+        color: darkSecondaryTextColor,
+      ),
+      labelLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+        color: darkTextColor,
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: backgroundColor,
-      foregroundColor: textColor,
+      backgroundColor: primaryColor,
+      foregroundColor: Colors.white,
       elevation: 0,
+      centerTitle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+        color: Colors.white,
+      ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: navBarColor,
+      backgroundColor: darkCardBackgroundColor,
       selectedItemColor: primaryColor,
-      unselectedItemColor: secondaryTextColor,
+      unselectedItemColor: darkSecondaryTextColor,
       type: BottomNavigationBarType.fixed,
+      elevation: 8,
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
+      selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      unselectedLabelStyle: TextStyle(fontSize: 12),
     ),
     cardTheme: CardTheme(
-      color: cardColor,
+      color: darkCardBackgroundColor,
       elevation: 4,
       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
       ),
+      clipBehavior: Clip.antiAlias,
     ),
     buttonTheme: ButtonThemeData(
       buttonColor: primaryColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
       ),
     ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: secondaryColor,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
+      elevation: 4,
+      extendedTextStyle: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+      ),
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: darkCardBackgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: darkTextColor,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 16,
+        color: darkTextColor,
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: darkCardBackgroundColor,
+      contentTextStyle: TextStyle(color: darkTextColor),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      behavior: SnackBarBehavior.floating,
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: darkSecondaryTextColor, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: darkSecondaryTextColor.withOpacity(0.6), width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Color(0xFFFF5252), width: 1.5),
       ),
       filled: true,
-      fillColor: cardColor,
+      fillColor: darkSurfaceColor,
+      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      labelStyle: TextStyle(color: darkSecondaryTextColor, fontSize: 16),
+      hintStyle: TextStyle(color: darkSecondaryTextColor.withOpacity(0.7), fontSize: 16),
+    ),
+    dividerTheme: DividerThemeData(
+      thickness: 1,
+      color: cardBackgroundColor,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: cardBackgroundColor,
+      disabledColor: cardBackgroundColor.withOpacity(0.6),
+      selectedColor: primaryColor,
+      secondarySelectedColor: secondaryColor,
+      labelStyle: TextStyle(fontSize: 14),
+      secondaryLabelStyle: TextStyle(fontSize: 14),
+      brightness: Brightness.dark,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: primaryColor,
+      linearTrackColor: cardBackgroundColor,
+      circularTrackColor: cardBackgroundColor,
+    ),
+    tabBarTheme: TabBarTheme(
+      labelColor: primaryColor,
+      unselectedLabelColor: secondaryTextColor,
+      indicatorColor: primaryColor,
+      indicatorSize: TabBarIndicatorSize.label,
+      labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
     ),
   );
 
+  // Açık tema
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     primaryColor: primaryColor,
-    scaffoldBackgroundColor: Color(0xFFF5F5F5),
+    scaffoldBackgroundColor: Color(0xFFF8F8FC),
     cardColor: Colors.white,
     colorScheme: ColorScheme.light(
       primary: primaryColor,
       secondary: secondaryColor,
+      tertiary: accentColor,
       surface: Colors.white,
-      background: Color(0xFFF5F5F5),
-      error: Colors.red,
+      background: Color(0xFFF8F8FC),
+      error: Color(0xFFE53935),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
-      onSurface: Colors.black,
-      onBackground: Colors.black,
+      onTertiary: Colors.white,
+      onSurface: Color(0xFF212121),
+      onBackground: Color(0xFF212121),
       onError: Colors.white,
       brightness: Brightness.light,
     ),
@@ -135,54 +288,95 @@ class AppTheme {
       headlineLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
-        color: Colors.black87,
+        letterSpacing: -0.5,
+        color: Color(0xFF212121),
       ),
       headlineMedium: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: Colors.black87,
+        letterSpacing: -0.3,
+        color: Color(0xFF212121),
       ),
       headlineSmall: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: Colors.black87,
+        letterSpacing: -0.2,
+        color: Color(0xFF212121),
       ),
       bodyLarge: TextStyle(
         fontSize: 18,
-        color: Colors.black87,
+        letterSpacing: 0.1,
+        color: Color(0xFF212121),
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
-        color: Colors.black87,
+        letterSpacing: 0.1,
+        color: Color(0xFF212121),
       ),
       bodySmall: TextStyle(
         fontSize: 14,
-        color: Colors.black54,
+        letterSpacing: 0.1,
+        color: Color(0xFF757575),
+      ),
+      labelLarge: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+        color: Color(0xFF212121),
       ),
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: primaryColor,
       foregroundColor: Colors.white,
       elevation: 0,
+      centerTitle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+        color: Colors.white,
+      ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
       selectedItemColor: primaryColor,
-      unselectedItemColor: Colors.grey,
+      unselectedItemColor: Color(0xFF757575),
       type: BottomNavigationBarType.fixed,
+      elevation: 8,
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
+      selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      unselectedLabelStyle: TextStyle(fontSize: 12),
     ),
     cardTheme: CardTheme(
       color: Colors.white,
       elevation: 2,
       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
       ),
+      clipBehavior: Clip.antiAlias,
     ),
     buttonTheme: ButtonThemeData(
       buttonColor: primaryColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: secondaryColor,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      elevation: 4,
+      extendedTextStyle: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -190,16 +384,120 @@ class AppTheme {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        elevation: 3,
+        textStyle: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: primaryColor,
+        side: BorderSide(color: primaryColor, width: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        textStyle: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: primaryColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        textStyle: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
         ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Color(0xFFBDBDBD), width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Color(0xFFBDBDBD), width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Color(0xFFE53935), width: 1.5),
       ),
       filled: true,
       fillColor: Colors.white,
+      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      labelStyle: TextStyle(color: Color(0xFF757575), fontSize: 16),
+      hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 16),
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF212121),
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 16,
+        color: Color(0xFF212121),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: Color(0xFF323232),
+      contentTextStyle: TextStyle(color: Colors.white),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+    dividerTheme: DividerThemeData(
+      thickness: 1,
+      color: Color(0xFFE0E0E0),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: Color(0xFFEEEEEE),
+      disabledColor: Color(0xFFE0E0E0),
+      selectedColor: primaryColor,
+      secondarySelectedColor: secondaryColor,
+      labelStyle: TextStyle(fontSize: 14),
+      secondaryLabelStyle: TextStyle(fontSize: 14),
+      brightness: Brightness.light,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: primaryColor,
+      linearTrackColor: Color(0xFFE0E0E0),
+      circularTrackColor: Color(0xFFE0E0E0),
+    ),
+    tabBarTheme: TabBarTheme(
+      labelColor: primaryColor,
+      unselectedLabelColor: Color(0xFF757575),
+      indicatorColor: primaryColor,
+      indicatorSize: TabBarIndicatorSize.label,
+      labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      unselectedLabelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
     ),
   );
 } 

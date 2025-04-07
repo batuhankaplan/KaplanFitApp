@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/user_provider.dart';
-import '../theme.dart';
 import '../main.dart';
+import '../theme.dart';
 import 'profile_screen.dart';
 import 'notification_settings_screen.dart';
 import 'faq_screen.dart';
@@ -57,8 +57,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final user = userProvider.user;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
+      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -182,9 +184,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Widget _buildProfileSection() {
     final user = Provider.of<UserProvider>(context).user;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDarkMode ? AppTheme.darkCardBackgroundColor : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -232,8 +236,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color color,
     VoidCallback onTap,
   ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDarkMode ? AppTheme.darkCardBackgroundColor : Colors.white,
       child: ListTile(
         leading: Container(
           padding: EdgeInsets.all(8),

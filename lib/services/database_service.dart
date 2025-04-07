@@ -7,6 +7,7 @@ import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import '../models/chat_model.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
