@@ -5,77 +5,43 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/services.dart';
 import 'theme.dart';
 import 'screens/home_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/tasks_screen.dart';
-import 'screens/nutrition_screen.dart';
 import 'screens/activity_screen.dart';
-import 'screens/stats_screen.dart';
-import 'screens/splash_screen.dart';
+import 'screens/nutrition_screen.dart';
+import 'screens/ai_coach_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/program_screen.dart';
-import 'screens/ai_coach_screen.dart';
-import 'screens/conversations_screen.dart';
-import 'screens/notification_settings_screen.dart';
-import 'screens/help_support_screen.dart';
+import 'screens/stats_screen.dart';
+import 'screens/splash_screen.dart';
 import 'providers/user_provider.dart';
 import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
 import 'models/providers/database_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:window_size/window_size.dart';
 import 'services/program_service.dart';
-import 'utils/animations.dart';
-import 'widgets/kaplan_appbar.dart';
 import 'services/notification_service.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:geolocator/geolocator.dart';
+import 'widgets/kaplan_appbar.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:animations/animations.dart';
 import 'splash/custom_splash_screen.dart';
 
 // Tema sağlayıcı sınıfı
 class ThemeProvider with ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.dark; // Varsayılan olarak koyu tema
-  
+  ThemeMode _themeMode = ThemeMode.dark;
   ThemeMode get themeMode => _themeMode;
-  
   bool get isDarkMode => _themeMode == ThemeMode.dark;
-  
+
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
     notifyListeners();
   }
-  
+
   void toggleTheme() {
-    _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    _themeMode =
+        _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     notifyListeners();
   }
-}
-
-// Awesome Notifications için gerekli global handler
-@pragma('vm:entry-point')
-Future<void> notificationActionReceivedMethod(ReceivedAction receivedAction) async {
-  // Burada bildirime tıklandığında yapılacak işlemleri belirleyebiliriz
-  // Örneğin belirli bir ekranı açma, verileri güncelleme vb.
-  print('Bildirime tıklandı: ${receivedAction.toMap().toString()}');
-}
-
-@pragma('vm:entry-point')
-Future<void> notificationCreatedMethod(ReceivedNotification receivedNotification) async {
-  print('Bildirim oluşturuldu: ${receivedNotification.toMap().toString()}');
-}
-
-@pragma('vm:entry-point')
-Future<void> notificationDisplayedMethod(ReceivedNotification receivedNotification) async {
-  print('Bildirim gösterildi: ${receivedNotification.toMap().toString()}');
-}
-
-@pragma('vm:entry-point')
-Future<void> notificationDismissedMethod(ReceivedAction receivedAction) async {
-  print('Bildirim kapatıldı: ${receivedAction.toMap().toString()}');
 }
 
 // Ana ekran
@@ -88,7 +54,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  
+
   final List<Widget> _widgetOptions = const [
     HomeScreen(),
     ActivityScreen(),
@@ -96,7 +62,7 @@ class _MainScreenState extends State<MainScreen> {
     AICoachScreen(),
     SettingsScreen(),
   ];
-  
+
   final List<String> _titles = [
     'Ana Sayfa',
     'Aktiviteler',
@@ -110,20 +76,16 @@ class _MainScreenState extends State<MainScreen> {
       _selectedIndex = index;
     });
   }
-  
-  void _openDrawer() {
-    Scaffold.of(context).openDrawer();
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: KaplanAppBar(
         title: _titles[_selectedIndex],
         isDarkMode: isDarkMode,
-        isRequiredPage: _selectedIndex == 0 ? false : false,
+        isRequiredPage: false,
         showBackButton: false,
         actions: [],
       ),
@@ -141,7 +103,8 @@ class _MainScreenState extends State<MainScreen> {
         },
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : const Color(0xFFF8F8FC),
+      backgroundColor:
+          isDarkMode ? AppTheme.darkBackgroundColor : const Color(0xFFF8F8FC),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
@@ -156,15 +119,22 @@ class _MainScreenState extends State<MainScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: GNav(
-              rippleColor: isDarkMode ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey.shade300,
-              hoverColor: isDarkMode ? AppTheme.primaryColor.withOpacity(0.15) : Colors.grey.shade200,
+              rippleColor: isDarkMode
+                  ? AppTheme.primaryColor.withOpacity(0.1)
+                  : Colors.grey.shade300,
+              hoverColor: isDarkMode
+                  ? AppTheme.primaryColor.withOpacity(0.15)
+                  : Colors.grey.shade200,
               gap: 8,
               activeColor: isDarkMode ? Colors.white : Colors.white,
               iconSize: 24,
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               duration: Duration(milliseconds: 400),
-              tabBackgroundColor: isDarkMode ? AppTheme.primaryColor : AppTheme.primaryColor,
-              color: isDarkMode ? AppTheme.darkSecondaryTextColor : Colors.grey.shade600,
+              tabBackgroundColor:
+                  isDarkMode ? AppTheme.primaryColor : AppTheme.primaryColor,
+              color: isDarkMode
+                  ? AppTheme.darkSecondaryTextColor
+                  : Colors.grey.shade600,
               tabs: [
                 GButton(
                   icon: Icons.home_rounded,
@@ -195,10 +165,10 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-  
+
   Widget _buildExtraMenuSheet(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
@@ -260,74 +230,106 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-void main() async {
-  // Flutter binding'i başlat
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Platform'a göre uygun SQLite yapılandırması
-  if (Platform.isAndroid || Platform.isIOS) {
-    // Mobil cihazlarda yerel SQLite kütüphanesini kullan
-    // Açık bir şekilde varsayılan yapılandırmayı kullan
-    // FFI kullanmaya gerek yok
-  } else {
-    // Windows, macOS, Linux vb. platformlarda FFI kullan
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-  
-  await initializeDateFormatting('tr_TR', null);
-  
-  // Windows'ta belirli ekran boyutunu ayarla
+// Location plugin için gerekli düzeltme
+void initPlatformSpecificFeatures() {
   if (Platform.isWindows) {
-    // Samsung A73 çözünürlüğü: 1080 x 2040
-    const double width = 1080 / 3; // Pixel oranını ayarlamak için 3'e böldük
-    const double height = 2040 / 3;
-    
-    // Pencere boyutu için düzenlemeler yapılacak
-    // Not: Bu fonksiyonlar window_size paketinde mevcut değilse eklenmeli
-    // veya başka bir çözüm kullanılmalı
+    // Windows platformunda konum servisleri devre dışı bırakıldı
+    debugPrint('Windows platformunda konum servisleri devre dışı bırakıldı');
   }
-  
-  // Awesome Notifications için izleyicileri ayarla
-  AwesomeNotifications().setListeners(
-    onActionReceivedMethod: notificationActionReceivedMethod,
-    onNotificationCreatedMethod: notificationCreatedMethod,
-    onNotificationDisplayedMethod: notificationDisplayedMethod,
-    onDismissActionReceivedMethod: notificationDismissedMethod
-  );
-  
-  // Program servisini başlat
-  final programService = ProgramService();
-  await programService.initialize();
-  
-  // Bildirimleri başlat
-  final notificationService = NotificationService.instance;
-  await notificationService.init();
-  
-  // Test bildirimlerini planla - uygulama ilk açıldığında çalışmaması için devre dışı bırakıldı
-  /* 
+}
+
+void main() async {
+  // Uygulama çökme durumunda hata yakalama
+  FlutterError.onError = (FlutterErrorDetails details) {
+    debugPrint('HATA: ${details.exception}');
+    debugPrint('HATA DETAYI: ${details.stack}');
+  };
+
   try {
-    await notificationService.sendTestNotification();
-    print("Test bildirimleri başarıyla planlandı");
-  } catch (e) {
-    print("Test bildirimleri planlanırken hata: $e");
+    // Ensure Flutter is initialized
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Uygulama kapatıldığında bildirimleri ayarla
+    SystemChannels.lifecycle.setMessageHandler((message) async {
+      try {
+        debugPrint('Sistem yaşam döngüsü mesajı: $message');
+        if (message == AppLifecycleState.detached.toString() ||
+            message == AppLifecycleState.paused.toString()) {
+          debugPrint('Uygulama arka plana geçti, bildirimleri ayarlıyoruz...');
+          try {
+            await NotificationService.instance.setupNotificationsOnAppClose();
+          } catch (e) {
+            debugPrint('Bildirim ayarlama hatası: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('Yaşam döngüsü hatası: $e');
+      }
+      return null;
+    });
+
+    // Platform özel özelliklerini başlatma
+    initPlatformSpecificFeatures();
+
+    // Platform'a göre uygun SQLite yapılandırması
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Mobil cihazlar için varsayılan SQLite
+    } else {
+      // Desktop için FFI
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    await initializeDateFormatting('tr_TR', null);
+
+    // Program servisini başlat
+    final programService = ProgramService();
+    await programService.initialize();
+
+    // Bildirimleri başlat
+    final notificationService = NotificationService.instance;
+    await notificationService.init();
+
+    // Veritabanı sağlayıcısını hazırla
+    final databaseProvider = DatabaseProvider();
+    await databaseProvider.initialize();
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => ThemeProvider()),
+          ChangeNotifierProvider(create: (context) => UserProvider()),
+          ChangeNotifierProvider(create: (context) => ActivityProvider()),
+          ChangeNotifierProvider(create: (context) => NutritionProvider()),
+          ChangeNotifierProvider.value(value: databaseProvider),
+          Provider<ProgramService>.value(value: programService),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  } catch (e, stack) {
+    debugPrint('UYGULAMA BAŞLATMA HATASI: $e');
+    debugPrint('HATA DETAYI: $stack');
+
+    // Hata durumunda minimal uygulama
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 60),
+              SizedBox(height: 20),
+              Text('Uygulama başlatılırken bir hata oluştu.'),
+              Text('Lütfen uygulamayı yeniden başlatın.'),
+              SizedBox(height: 8),
+              Text('Hata: $e', style: TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+    ));
   }
-  */
-  
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => ThemeProvider()),
-        ChangeNotifierProvider(create: (context) => UserProvider()),
-        ChangeNotifierProvider(create: (context) => ActivityProvider()),
-        ChangeNotifierProvider(create: (context) => NutritionProvider()),
-        ChangeNotifierProvider(create: (context) => DatabaseProvider()),
-        // ProgramService'i sağlayıcı olarak ekle
-        Provider<ProgramService>.value(value: programService),
-      ],
-      child: const MyApp(),
-    ),
-  );
 }
 
 // Uygulama ana sınıfı
@@ -340,9 +342,9 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, child) {
         return MaterialApp(
           title: 'KaplanFIT',
-          theme: AppTheme.lightTheme,
+          theme: lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: themeProvider.themeMode, 
+          themeMode: themeProvider.themeMode,
           home: CustomSplashScreen(nextScreen: MainScreen()),
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
@@ -365,30 +367,30 @@ class PermissionHandlerScreen extends StatefulWidget {
   const PermissionHandlerScreen({Key? key}) : super(key: key);
 
   @override
-  State<PermissionHandlerScreen> createState() => _PermissionHandlerScreenState();
+  State<PermissionHandlerScreen> createState() =>
+      _PermissionHandlerScreenState();
 }
 
 class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
-    // Doğrudan splash screen'e gidip izinleri daha sonra isteyelim
     _navigateToMainApp();
   }
-  
+
   void _navigateToMainApp() {
-    // Kısa bir gecikme ekleyerek splash ekranının daha uzun görünmesini sağlayalım
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => SplashScreen(nextScreen: MainScreen())),
+          MaterialPageRoute(
+              builder: (context) => SplashScreen(nextScreen: MainScreen())),
         );
       }
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -398,3 +400,40 @@ class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
     );
   }
 }
+
+// ThemeData oluşturuyoruz
+final lightTheme = ThemeData(
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: AppTheme.primaryColor,
+    brightness: Brightness.light,
+  ),
+  scaffoldBackgroundColor: const Color(0xFFE8E8E8),
+  primaryColor: AppTheme.primaryColor,
+  appBarTheme: AppBarTheme(
+    backgroundColor: AppTheme.primaryColor,
+    foregroundColor: Colors.white,
+  ),
+  cardTheme: CardTheme(
+    color: const Color(0xFFF0F0F0),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 2,
+  ),
+  dialogBackgroundColor: const Color(0xFFEDEDED),
+  canvasColor: const Color(0xFFEAEAEA),
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppTheme.primaryColor,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+    ),
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    fillColor: const Color(0xFFF5F5F5),
+    filled: true,
+  ),
+  useMaterial3: true,
+  fontFamily: 'Montserrat',
+  visualDensity: VisualDensity.adaptivePlatformDensity,
+);

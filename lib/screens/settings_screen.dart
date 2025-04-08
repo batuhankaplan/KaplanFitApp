@@ -58,7 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final user = userProvider.user;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
       body: SingleChildScrollView(
@@ -66,21 +66,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // Kullanıcı profil özeti
             _buildProfileSection(),
-            
+
             // Ayarlar menüsü
             _buildSettingsOption(
-              context, 
-              'Profil', 
-              Icons.person, 
+              context,
+              'Profil',
+              Icons.person,
               Colors.blue,
               () {
                 Navigator.push(
-                  context, 
+                  context,
                   MaterialPageRoute(builder: (context) => ProfileScreen()),
                 );
               },
             ),
-            
+
             // Tema Seçimi
             Card(
               margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -94,7 +94,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                    themeProvider.isDarkMode
+                        ? Icons.dark_mode
+                        : Icons.light_mode,
                     color: Colors.deepPurple,
                   ),
                 ),
@@ -104,67 +106,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ),
-            
+
             _buildSettingsOption(
-              context, 
-              'Bildirimler', 
-              Icons.notifications, 
+              context,
+              'Bildirimler',
+              Icons.notifications,
               Colors.orange,
               () {
                 Navigator.push(
-                  context, 
-                  MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsScreen()),
                 );
               },
             ),
-            
+
             _buildSettingsOption(
-              context, 
-              'Yardım ve Destek', 
-              Icons.help, 
+              context,
+              'Yardım ve Destek',
+              Icons.help,
               Colors.green,
               () {
                 Navigator.push(
-                  context, 
+                  context,
                   MaterialPageRoute(builder: (context) => const FAQScreen()),
                 );
               },
             ),
-            
+
             _buildSettingsOption(
-              context, 
-              'Uygulama Hakkında', 
-              Icons.info, 
+              context,
+              'Uygulama Hakkında',
+              Icons.info,
               Colors.purple,
               () {
                 _showAboutDialog(context);
               },
             ),
-            
+
             SizedBox(height: 16),
-            
+
             // Çıkış düğmesi
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: Icon(Icons.exit_to_app),
-                  label: Text('Çıkış Yap'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                child: Material(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    onTap: () {
+                      _showLogoutDialog(context);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.exit_to_app, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('Çıkış Yap',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 16)),
+                        ],
+                      ),
                     ),
                   ),
-                  onPressed: () {
-                    _showLogoutDialog(context);
-                  },
                 ),
               ),
             ),
-            
+
             // Uygulama versiyonu
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -181,11 +193,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   Widget _buildProfileSection() {
     final user = Provider.of<UserProvider>(context).user;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: isDarkMode ? AppTheme.darkCardBackgroundColor : Colors.white,
@@ -228,16 +240,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   Widget _buildSettingsOption(
-    BuildContext context, 
-    String title, 
-    IconData icon, 
+    BuildContext context,
+    String title,
+    IconData icon,
     Color color,
     VoidCallback onTap,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: isDarkMode ? AppTheme.darkCardBackgroundColor : Colors.white,
@@ -259,10 +271,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   void _showLogoutDialog(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -277,7 +289,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               // Kullanıcı profil bilgilerini sıfırla
               await userProvider.clearUser();
-              
+
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Hesabınızdan çıkış yapıldı')),
@@ -292,7 +304,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   void _showNotImplementedDialog(BuildContext context, String feature) {
     showDialog(
       context: context,
@@ -308,7 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-  
+
   void _showAboutDialog(BuildContext context) {
     showAboutDialog(
       context: context,
@@ -320,10 +332,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         size: 40,
       ),
       children: [
-        Text('KaplanFit – Kişiye Özel Spor, Sağlık ve Beslenme Takip Uygulaması'),
+        Text(
+            'KaplanFit – Kişiye Özel Spor, Sağlık ve Beslenme Takip Uygulaması'),
         SizedBox(height: 16),
-        Text('Bu uygulama kilo verme, ayak/bacak dolaşım bozukluklarını azaltma ve motivasyon artırmaya yardımcı olmak için tasarlanmıştır.'),
+        Text(
+            'Bu uygulama kilo verme, ayak/bacak dolaşım bozukluklarını azaltma ve motivasyon artırmaya yardımcı olmak için tasarlanmıştır.'),
       ],
     );
   }
-} 
+}

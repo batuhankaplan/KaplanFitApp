@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart' hide PermissionStatus;
+import 'package:permission_handler/permission_handler.dart'
+    hide PermissionStatus;
 import '../providers/activity_provider.dart';
 import '../models/activity_record.dart';
 import '../models/task_type.dart';
@@ -11,6 +12,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../theme.dart';
 import '../utils/animations.dart';
 import '../widgets/kaplan_loading.dart';
+import 'dart:io';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({Key? key}) : super(key: key);
@@ -19,12 +21,13 @@ class ActivityScreen extends StatefulWidget {
   State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen> {
+class _ActivityScreenState extends State<ActivityScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _durationController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   FitActivityType _selectedActivityType = FitActivityType.walking;
-  
+
   // Konum izleme değişkenleri
   bool _isTrackingActivity = false;
   bool _hasLocationPermission = false;
@@ -33,66 +36,75 @@ class _ActivityScreenState extends State<ActivityScreen> {
   double _distanceInMeters = 0;
   int _elapsedTimeInSeconds = 0;
   late Location _location;
-  
+
   // Sabit stil tanımları
   static const _titleStyle = TextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 16,
   );
-  
+
   static const _subtitleStyle = TextStyle(
     color: Colors.grey,
     fontSize: 14,
   );
-  
+
   static const _emptyStateTextStyle = TextStyle(
     fontSize: 18,
     color: Colors.grey,
   );
-  
+
   static const _buttonTextStyle = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.bold,
     color: Colors.white,
   );
-  
+
   static const _cardShape = RoundedRectangleBorder(
     borderRadius: BorderRadius.all(Radius.circular(16)),
   );
-  
+
   static const _contentPadding = EdgeInsets.all(16.0);
-  
+
   @override
   void initState() {
     super.initState();
-    _location = Location();
-    _checkLocationPermission();
-    
+
+    // Windows platformunda Location plugin'i kullanmayı engelle
+    if (!Platform.isWindows) {
+      _location = Location();
+      _checkLocationPermission();
+    } else {
+      debugPrint('Windows platformunda konum servisleri devre dışı bırakıldı');
+    }
+
     // Provider'a seçilen tarihi bildir
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ActivityProvider>(context, listen: false).setSelectedDate(_selectedDate);
+      Provider.of<ActivityProvider>(context, listen: false)
+          .setSelectedDate(_selectedDate);
     });
   }
-  
+
   // Konum izni kontrolü
   Future<void> _checkLocationPermission() async {
     try {
-      bool serviceEnabled = await _location.serviceEnabled();
+      if (_location == null) return;
+
+      bool serviceEnabled = await _location!.serviceEnabled();
       if (!serviceEnabled) {
-        serviceEnabled = await _location.requestService();
+        serviceEnabled = await _location!.requestService();
         if (!serviceEnabled) {
           return;
         }
       }
-      
-      PermissionStatus permissionStatus = await _location.hasPermission();
+
+      PermissionStatus permissionStatus = await _location!.hasPermission();
       if (permissionStatus == PermissionStatus.denied) {
-        permissionStatus = await _location.requestPermission();
+        permissionStatus = await _location!.requestPermission();
         if (permissionStatus != PermissionStatus.granted) {
           return;
         }
       }
-      
+
       setState(() {
         _hasLocationPermission = true;
       });
@@ -100,7 +112,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       print('Konum izni hatası: $e');
     }
   }
-  
+
   // Aktivite takibini başlat
   Future<void> _startActivityTracking() async {
     try {
@@ -109,12 +121,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
         await _checkLocationPermission();
         if (!_hasLocationPermission) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Aktivite takibi için konum izni gereklidir')),
+            SnackBar(
+                content: Text('Aktivite takibi için konum izni gereklidir')),
           );
           return;
         }
       }
-      
+
       // Konum servisi aktif mi kontrolü
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -123,19 +136,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
         );
         return;
       }
-      
+
       // Konumu yüksek doğrulukla almaya başla
       _lastPosition = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       setState(() {
         _isTrackingActivity = true;
         _activityStartTime = DateTime.now();
         _distanceInMeters = 0;
         _elapsedTimeInSeconds = 0;
       });
-      
+
       // Periyodik olarak konum güncelleme
       Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
@@ -146,88 +159,88 @@ class _ActivityScreenState extends State<ActivityScreen> {
         if (_lastPosition != null && _isTrackingActivity) {
           // Mesafe hesaplama
           double distance = Geolocator.distanceBetween(
-            _lastPosition!.latitude, 
+            _lastPosition!.latitude,
             _lastPosition!.longitude,
-            position.latitude, 
+            position.latitude,
             position.longitude,
           );
-          
+
           setState(() {
             _distanceInMeters += distance;
-            _elapsedTimeInSeconds = 
+            _elapsedTimeInSeconds =
                 DateTime.now().difference(_activityStartTime!).inSeconds;
             _lastPosition = position;
           });
         }
       });
-      
+
       // Süre takibi için timer
       Stream.periodic(Duration(seconds: 1)).listen((event) {
         if (_isTrackingActivity && mounted) {
           setState(() {
-            _elapsedTimeInSeconds = 
+            _elapsedTimeInSeconds =
                 DateTime.now().difference(_activityStartTime!).inSeconds;
           });
         }
       });
-      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Aktivite takibi başlatılamadı: $e')),
       );
     }
   }
-  
+
   // Aktivite takibini durdur
   Future<void> _stopActivityTracking() async {
     if (!_isTrackingActivity) return;
-    
+
     // Aktiviteyi kaydet
-    final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-    
+    final activityProvider =
+        Provider.of<ActivityProvider>(context, listen: false);
+
     // Dakika olarak süre (en az 1 dakika)
     int durationMinutes = (_elapsedTimeInSeconds / 60).ceil();
     if (durationMinutes < 1) durationMinutes = 1;
-    
+
     // Mesafeyi kilometre cinsinden (2 decimal)
     double distanceKm = _distanceInMeters / 1000;
     String distanceStr = distanceKm.toStringAsFixed(2);
-    
+
     // Hız hesaplama (km/saat)
-    double speedKmH = _elapsedTimeInSeconds > 0 
-        ? (distanceKm / (_elapsedTimeInSeconds / 3600)) 
+    double speedKmH = _elapsedTimeInSeconds > 0
+        ? (distanceKm / (_elapsedTimeInSeconds / 3600))
         : 0;
     String speedStr = speedKmH.toStringAsFixed(1);
-    
+
     final activity = ActivityRecord(
       type: _selectedActivityType,
       durationMinutes: durationMinutes,
       date: _activityStartTime ?? DateTime.now(),
       notes: 'Mesafe: ${distanceStr} km, Hız: ${speedStr} km/s',
     );
-    
+
     await activityProvider.addActivity(activity);
-    
+
     setState(() {
       _isTrackingActivity = false;
       _activityStartTime = null;
       _lastPosition = null;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Aktivite kaydedildi!')),
     );
   }
-  
+
   // Süreyi formatlı gösterme
   String _formatDuration(int seconds) {
     final int hours = seconds ~/ 3600;
     final int minutes = (seconds % 3600) ~/ 60;
     final int remainingSeconds = seconds % 60;
-    
+
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
-  
+
   @override
   void dispose() {
     _durationController.dispose();
@@ -240,7 +253,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final provider = Provider.of<ActivityProvider>(context);
     final isLoading = provider.isLoading;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: isLoading
@@ -253,14 +266,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   duration: const Duration(milliseconds: 500),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 16),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          isDarkMode ? const Color(0xFF2C2C2C) : AppTheme.primaryColor.withOpacity(0.7),
-                          isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
+                          isDarkMode
+                              ? const Color(0xFF2C2C2C)
+                              : AppTheme.primaryColor.withOpacity(0.7),
+                          isDarkMode
+                              ? const Color(0xFF1F1F1F)
+                              : AppTheme.primaryColor,
                         ],
                       ),
                       borderRadius: const BorderRadius.only(
@@ -285,7 +303,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             _changeDate(-1);
                           },
                         ),
-                        
+
                         // Seçilen tarih gösterimi
                         GestureDetector(
                           onTap: _selectDate,
@@ -294,7 +312,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               const Icon(Icons.calendar_today, size: 14),
                               const SizedBox(width: 8),
                               Text(
-                                DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
+                                DateFormat('d MMMM yyyy', 'tr_TR')
+                                    .format(_selectedDate),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 15,
@@ -303,7 +322,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             ],
                           ),
                         ),
-                        
+
                         // Sonraki gün
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -328,7 +347,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                 child: Column(
                                   children: [
                                     KFWaveAnimation(
-                                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.3),
                                       height: 100,
                                     ),
                                     const SizedBox(height: 20),
@@ -364,7 +385,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                 ),
                               );
                             }
-                            
+
                             final activity = provider.activities[index];
                             return KFAnimatedItem(
                               index: index,
@@ -377,12 +398,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
             ),
     );
   }
-  
+
   Widget _buildActivityCard(ActivityRecord activity) {
     Color activityColor = _getActivityColor(activity.type);
     String activityTypeName = _getActivityTypeName(activity.type);
-    String formattedDate = DateFormat('d MMM, HH:mm', 'tr_TR').format(activity.date);
-    
+    String formattedDate =
+        DateFormat('d MMM, HH:mm', 'tr_TR').format(activity.date);
+
     return Dismissible(
       key: Key('activity_${activity.id}'),
       direction: DismissDirection.endToStart,
@@ -396,7 +418,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         ),
       ),
       onDismissed: (direction) {
-        Provider.of<ActivityProvider>(context, listen: false).deleteActivity(activity.id!);
+        Provider.of<ActivityProvider>(context, listen: false)
+            .deleteActivity(activity.id!);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$activityTypeName aktivitesi silindi'),
@@ -410,7 +433,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
           builder: (BuildContext context) {
             return AlertDialog(
               title: const Text('Aktivite Sil'),
-              content: Text('Bu $activityTypeName aktivitesini silmek istediğinize emin misiniz?'),
+              content: Text(
+                  'Bu $activityTypeName aktivitesini silmek istediğinize emin misiniz?'),
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
@@ -473,7 +497,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.teal.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
@@ -518,8 +543,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
         onPressed: _showAddActivityDialog,
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).brightness == Brightness.dark
-            ? AppTheme.primaryColor
-            : AppTheme.primaryColor,
+              ? AppTheme.primaryColor
+              : AppTheme.primaryColor,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(30)),
@@ -537,7 +562,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: days));
     });
-    Provider.of<ActivityProvider>(context, listen: false).setSelectedDate(_selectedDate);
+    Provider.of<ActivityProvider>(context, listen: false)
+        .setSelectedDate(_selectedDate);
   }
 
   Future<void> _selectDate() async {
@@ -547,20 +573,21 @@ class _ActivityScreenState extends State<ActivityScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    
+
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
-      Provider.of<ActivityProvider>(context, listen: false).setSelectedDate(_selectedDate);
+      Provider.of<ActivityProvider>(context, listen: false)
+          .setSelectedDate(_selectedDate);
     }
   }
-  
+
   void _showAddActivityDialog() {
     _durationController.clear();
     _notesController.clear();
     _selectedActivityType = FitActivityType.walking;
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -573,11 +600,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 // Aktivite türü seçici
                 _buildActivityTypeDropdown(),
                 const SizedBox(height: 16),
-                
+
                 // Süre girişi
                 _buildDurationTextField(),
                 const SizedBox(height: 16),
-                
+
                 // Notlar
                 _buildNotesTextField(),
               ],
@@ -594,19 +621,22 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 if (_durationController.text.isNotEmpty) {
                   final duration = int.tryParse(_durationController.text);
                   if (duration != null && duration > 0) {
-                    final provider = Provider.of<ActivityProvider>(context, listen: false);
+                    final provider =
+                        Provider.of<ActivityProvider>(context, listen: false);
                     final now = DateTime.now();
-                    
+
                     final activity = ActivityRecord(
                       type: _selectedActivityType,
                       durationMinutes: duration,
                       date: _selectedDate.copyWith(
-                        hour: now.hour, 
+                        hour: now.hour,
                         minute: now.minute,
                       ),
-                      notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+                      notes: _notesController.text.isNotEmpty
+                          ? _notesController.text
+                          : null,
                     );
-                    
+
                     provider.addActivity(activity);
                     Navigator.of(context).pop();
                   }
@@ -670,7 +700,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     _selectedActivityType = activity.type;
     _durationController.text = activity.durationMinutes.toString();
     _notesController.text = activity.notes ?? '';
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -683,11 +713,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 // Aktivite türü seçici
                 _buildActivityTypeDropdown(),
                 const SizedBox(height: 16),
-                
+
                 // Süre girişi
                 _buildDurationTextField(),
                 const SizedBox(height: 16),
-                
+
                 // Notlar
                 _buildNotesTextField(),
               ],
@@ -708,10 +738,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ),
               onPressed: () {
                 if (activity.id != null) {
-                  Provider.of<ActivityProvider>(context, listen: false).deleteActivity(activity.id!);
+                  Provider.of<ActivityProvider>(context, listen: false)
+                      .deleteActivity(activity.id!);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${_getActivityTypeName(activity.type)} aktivitesi silindi'),
+                      content: Text(
+                          '${_getActivityTypeName(activity.type)} aktivitesi silindi'),
                       duration: const Duration(seconds: 2),
                     ),
                   );
@@ -729,16 +761,19 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 if (_durationController.text.isNotEmpty) {
                   final duration = int.tryParse(_durationController.text);
                   if (duration != null && duration > 0) {
-                    final provider = Provider.of<ActivityProvider>(context, listen: false);
-                    
+                    final provider =
+                        Provider.of<ActivityProvider>(context, listen: false);
+
                     final updatedActivity = ActivityRecord(
                       id: activity.id,
                       type: _selectedActivityType,
                       durationMinutes: duration,
                       date: activity.date, // Orijinal tarihi koru
-                      notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+                      notes: _notesController.text.isNotEmpty
+                          ? _notesController.text
+                          : null,
                     );
-                    
+
                     provider.updateActivity(updatedActivity);
                     Navigator.of(context).pop();
                   }
@@ -798,7 +833,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       },
     );
   }
-  
+
   // Süre girişi için TextField
   TextField _buildDurationTextField() {
     return TextField(
@@ -810,7 +845,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       keyboardType: TextInputType.number,
     );
   }
-  
+
   // Notlar için TextField
   TextField _buildNotesTextField() {
     return TextField(
@@ -822,4 +857,4 @@ class _ActivityScreenState extends State<ActivityScreen> {
       maxLines: 2,
     );
   }
-} 
+}

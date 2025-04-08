@@ -27,30 +27,31 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   // Günlük görevlerin durumunu tutan değişkenler
   bool isMorningExerciseDone = false;
   bool isLunchDone = false;
   bool isEveningExerciseDone = false;
   bool isDinnerDone = false;
   bool isLoading = true;
-  
+
   // Aktivite ve öğün ID'lerini saklamak için değişkenler
   int? morningExerciseId;
   int? lunchMealId;
   int? eveningExerciseId;
   int? dinnerMealId;
-  
+
   // Program içerikleri
   String morningProgram = '';
   String lunchMenu = '';
   String eveningProgram = '';
   String dinnerMenu = '';
-  
+
   // Su tüketimi için state
   int _waterIntake = 0;
   final int _waterGoal = 2000; // ml
-  
+
   // Motivasyon mesajları
   final List<String> _motivationalMessages = [
     "Her gün bir adım, sağlıklı yaşama bir adım.",
@@ -65,10 +66,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     "Dünden daha iyi, yarından daha güçlü!",
     "Bahane üretmek için harcadığın enerjiyi egzersize harca.",
   ];
-  
+
   // Seçilen motivasyon mesajı
   late String _selectedMotivationalMessage;
-  
+
   // Sayfa kontrolcüsü
   late PageController _pageController;
 
@@ -84,38 +85,46 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       vsync: this,
       duration: Duration(milliseconds: 800),
     )..forward();
-    
+
     // Rastgele bir motivasyon mesajı seç
     _selectedMotivationalMessage = _motivationalMessages[
-      DateTime.now().millisecondsSinceEpoch % _motivationalMessages.length
-    ];
-    
+        DateTime.now().millisecondsSinceEpoch % _motivationalMessages.length];
+
     // Su tüketim değerini yükle
     _loadWaterIntake();
-    
+
     // Görevleri başlat
     _initTasks();
   }
-  
+
   @override
   void dispose() {
-    // Listener'ı temizle
-    final databaseProvider = Provider.of<DatabaseProvider>(context, listen: false);
-    databaseProvider.removeListener(_refreshProgram);
-    
+    // Listener'ı temizleme kısmını güncelliyoruz
     _pageController.dispose();
     _animationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // DatabaseProvider değişikliklerini dinle
+    final databaseProvider = Provider.of<DatabaseProvider>(context);
+
+    // Eski listener'ı kaldır ve yenisini ekle
+    databaseProvider.removeListener(_refreshProgram);
+    databaseProvider.addListener(_refreshProgram);
   }
 
   // Kaydedilmiş görev durumlarını yükle
   Future<void> _loadSavedTaskStates() async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    
+
     // Bugünün tarihi için kaydedilmiş durumları kontrol et
     final String lastSavedDate = prefs.getString('lastSavedDate') ?? '';
-    
+
     // Eğer yeni bir gün başladıysa tüm durumları sıfırla
     if (lastSavedDate != today) {
       prefs.setString('lastSavedDate', today);
@@ -123,14 +132,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       prefs.setBool('isLunchDone', false);
       prefs.setBool('isEveningExerciseDone', false);
       prefs.setBool('isDinnerDone', false);
-      
+
       // ID'leri de sıfırla
       prefs.remove('morningExerciseId');
       prefs.remove('lunchMealId');
-      prefs.remove('eveningExerciseId'); 
+      prefs.remove('eveningExerciseId');
       prefs.remove('dinnerMealId');
     }
-    
+
     // Kaydedilmiş durumları yükle
     if (mounted) {
       setState(() {
@@ -138,40 +147,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         isLunchDone = prefs.getBool('isLunchDone') ?? false;
         isEveningExerciseDone = prefs.getBool('isEveningExerciseDone') ?? false;
         isDinnerDone = prefs.getBool('isDinnerDone') ?? false;
-        
+
         // ID'leri de yükle
         morningExerciseId = prefs.getInt('morningExerciseId');
         lunchMealId = prefs.getInt('lunchMealId');
         eveningExerciseId = prefs.getInt('eveningExerciseId');
         dinnerMealId = prefs.getInt('dinnerMealId');
-        
+
         isLoading = false;
       });
     }
   }
-  
+
   // Görev durumlarını kaydet
   Future<void> _savingTaskStates() async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    
+
     prefs.setString('lastSavedDate', today);
     prefs.setBool('isMorningExerciseDone', isMorningExerciseDone);
     prefs.setBool('isLunchDone', isLunchDone);
     prefs.setBool('isEveningExerciseDone', isEveningExerciseDone);
     prefs.setBool('isDinnerDone', isDinnerDone);
-    
+
     // ID'leri de kaydet
-    if (morningExerciseId != null) prefs.setInt('morningExerciseId', morningExerciseId!);
+    if (morningExerciseId != null)
+      prefs.setInt('morningExerciseId', morningExerciseId!);
     if (lunchMealId != null) prefs.setInt('lunchMealId', lunchMealId!);
-    if (eveningExerciseId != null) prefs.setInt('eveningExerciseId', eveningExerciseId!);
+    if (eveningExerciseId != null)
+      prefs.setInt('eveningExerciseId', eveningExerciseId!);
     if (dinnerMealId != null) prefs.setInt('dinnerMealId', dinnerMealId!);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     if (isLoading) {
       return Center(
         child: CircularProgressIndicator(
@@ -195,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: _buildWelcomeHeader(context),
               ),
             ),
-            
+
             // Motivasyon kartı
             SliverToBoxAdapter(
               child: KFSlideAnimation(
@@ -204,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: _buildMotivationCard(context),
               ),
             ),
-            
+
             // Günlük görevler başlığı
             SliverToBoxAdapter(
               child: Padding(
@@ -228,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               ),
             ),
-            
+
             // Görev kartları
             SliverList(
               delegate: SliverChildListDelegate([
@@ -239,21 +250,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     context,
                     icon: Icons.directions_run,
                     title: 'Sabah Egzersizi',
-                    subtitle: morningProgram.isNotEmpty ? morningProgram : '30 dakika kardio',
+                    subtitle: morningProgram.isNotEmpty
+                        ? morningProgram
+                        : '30 dakika kardio',
                     time: '08:00',
                     isDone: isMorningExerciseDone,
                     color: AppTheme.morningExerciseColor,
                     onTap: () {
                       // Görev nesnesi oluştur
                       Task task = Task(
-                        id: 1, // Sabit ID
-                        title: 'Sabah Egzersizi',
-                        description: morningProgram.isNotEmpty ? morningProgram : '30 dakika kardio',
-                        date: DateTime.now(),
-                        isCompleted: !isMorningExerciseDone, // Durumu tersine çevir
-                        type: TaskType.morningExercise
-                      );
-                      
+                          id: 1, // Sabit ID
+                          title: 'Sabah Egzersizi',
+                          description: morningProgram.isNotEmpty
+                              ? morningProgram
+                              : '30 dakika kardio',
+                          date: DateTime.now(),
+                          isCompleted:
+                              !isMorningExerciseDone, // Durumu tersine çevir
+                          type: TaskType.morningExercise);
+
                       // _onTaskChanged fonksiyonunu çağır
                       _onTaskChanged(task, !isMorningExerciseDone);
                     },
@@ -266,21 +281,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     context,
                     icon: Icons.restaurant,
                     title: 'Sağlıklı Öğle Yemeği',
-                    subtitle: lunchMenu.isNotEmpty ? lunchMenu : 'Protein ve sebze ağırlıklı',
+                    subtitle: lunchMenu.isNotEmpty
+                        ? lunchMenu
+                        : 'Protein ve sebze ağırlıklı',
                     time: '13:00',
                     isDone: isLunchDone,
                     color: AppTheme.lunchColor,
                     onTap: () {
                       // Görev nesnesi oluştur
                       Task task = Task(
-                        id: 2, // Sabit ID
-                        title: 'Sağlıklı Öğle Yemeği',
-                        description: lunchMenu.isNotEmpty ? lunchMenu : 'Protein ve sebze ağırlıklı',
-                        date: DateTime.now(),
-                        isCompleted: !isLunchDone, // Durumu tersine çevir
-                        type: TaskType.lunch
-                      );
-                      
+                          id: 2, // Sabit ID
+                          title: 'Sağlıklı Öğle Yemeği',
+                          description: lunchMenu.isNotEmpty
+                              ? lunchMenu
+                              : 'Protein ve sebze ağırlıklı',
+                          date: DateTime.now(),
+                          isCompleted: !isLunchDone, // Durumu tersine çevir
+                          type: TaskType.lunch);
+
                       // _onTaskChanged fonksiyonunu çağır
                       _onTaskChanged(task, !isLunchDone);
                     },
@@ -293,21 +311,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     context,
                     icon: Icons.fitness_center,
                     title: 'Akşam Antrenmanı',
-                    subtitle: eveningProgram.isNotEmpty ? eveningProgram : '45 dakika güç antrenmanı',
+                    subtitle: eveningProgram.isNotEmpty
+                        ? eveningProgram
+                        : '45 dakika güç antrenmanı',
                     time: '18:00',
                     isDone: isEveningExerciseDone,
                     color: AppTheme.eveningExerciseColor,
                     onTap: () {
                       // Görev nesnesi oluştur
                       Task task = Task(
-                        id: 3, // Sabit ID
-                        title: 'Akşam Antrenmanı',
-                        description: eveningProgram.isNotEmpty ? eveningProgram : '45 dakika güç antrenmanı',
-                        date: DateTime.now(),
-                        isCompleted: !isEveningExerciseDone, // Durumu tersine çevir
-                        type: TaskType.eveningExercise
-                      );
-                      
+                          id: 3, // Sabit ID
+                          title: 'Akşam Antrenmanı',
+                          description: eveningProgram.isNotEmpty
+                              ? eveningProgram
+                              : '45 dakika güç antrenmanı',
+                          date: DateTime.now(),
+                          isCompleted:
+                              !isEveningExerciseDone, // Durumu tersine çevir
+                          type: TaskType.eveningExercise);
+
                       // _onTaskChanged fonksiyonunu çağır
                       _onTaskChanged(task, !isEveningExerciseDone);
                     },
@@ -320,21 +342,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     context,
                     icon: Icons.dinner_dining,
                     title: 'Akşam Yemeği',
-                    subtitle: dinnerMenu.isNotEmpty ? dinnerMenu : 'Hafif ve sağlıklı',
+                    subtitle: dinnerMenu.isNotEmpty
+                        ? dinnerMenu
+                        : 'Hafif ve sağlıklı',
                     time: '20:00',
                     isDone: isDinnerDone,
                     color: AppTheme.dinnerColor,
                     onTap: () {
                       // Görev nesnesi oluştur
                       Task task = Task(
-                        id: 4, // Sabit ID
-                        title: 'Akşam Yemeği',
-                        description: dinnerMenu.isNotEmpty ? dinnerMenu : 'Hafif ve sağlıklı',
-                        date: DateTime.now(),
-                        isCompleted: !isDinnerDone, // Durumu tersine çevir
-                        type: TaskType.dinner
-                      );
-                      
+                          id: 4, // Sabit ID
+                          title: 'Akşam Yemeği',
+                          description: dinnerMenu.isNotEmpty
+                              ? dinnerMenu
+                              : 'Hafif ve sağlıklı',
+                          date: DateTime.now(),
+                          isCompleted: !isDinnerDone, // Durumu tersine çevir
+                          type: TaskType.dinner);
+
                       // _onTaskChanged fonksiyonunu çağır
                       _onTaskChanged(task, !isDinnerDone);
                     },
@@ -342,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               ]),
             ),
-            
+
             // İstatistikler başlığı
             SliverToBoxAdapter(
               child: Padding(
@@ -360,7 +385,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               ),
             ),
-            
+
             // İstatistik kartları
             SliverToBoxAdapter(
               child: KFSlideAnimation(
@@ -372,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               ),
             ),
-            
+
             // Alt boşluk
             SliverToBoxAdapter(
               child: SizedBox(height: 16),
@@ -382,15 +407,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildWelcomeHeader(BuildContext context) {
     final user = Provider.of<UserProvider>(context).user;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     final now = DateTime.now();
     final dayOfWeek = DateFormat('EEEE', 'tr_TR').format(now);
     final dateFormatted = DateFormat('d MMMM yyyy', 'tr_TR').format(now);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
       child: Column(
@@ -445,8 +470,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isDarkMode 
-                            ? AppTheme.primaryColor.withOpacity(0.3) 
+                        color: isDarkMode
+                            ? AppTheme.primaryColor.withOpacity(0.3)
                             : AppTheme.primaryColor.withOpacity(0.1),
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -470,11 +495,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   // Menü sayfasını inşa et
   Widget _buildMenuSheet(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
@@ -534,10 +559,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildMotivationCard(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       margin: EdgeInsets.all(16),
       child: Stack(
@@ -613,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
-          
+
           // Dekoratif daireler
           Positioned(
             right: -20,
@@ -643,7 +668,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildCompletionBadge(BuildContext context) {
     final completedTasks = [
       isMorningExerciseDone,
@@ -651,10 +676,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       isEveningExerciseDone,
       isDinnerDone
     ].where((task) => task).length;
-    
+
     final totalTasks = 4;
     final completion = completedTasks / totalTasks;
-    
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -683,7 +708,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildTaskCard(
     BuildContext context, {
     required IconData icon,
@@ -695,7 +720,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required VoidCallback onTap,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Material(
@@ -729,7 +754,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isDone ? Colors.grey.withOpacity(0.2) : color.withOpacity(0.2),
+                    color: isDone
+                        ? Colors.grey.withOpacity(0.2)
+                        : color.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -751,7 +778,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           color: isDone
                               ? Theme.of(context).textTheme.bodySmall?.color
                               : Theme.of(context).textTheme.bodyLarge?.color,
-                          decoration: isDone ? TextDecoration.lineThrough : null,
+                          decoration:
+                              isDone ? TextDecoration.lineThrough : null,
                         ),
                       ),
                       SizedBox(height: 4),
@@ -760,7 +788,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         style: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.bodySmall?.color,
-                          decoration: isDone ? TextDecoration.lineThrough : null,
+                          decoration:
+                              isDone ? TextDecoration.lineThrough : null,
                         ),
                       ),
                     ],
@@ -784,11 +813,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        color: isDone ? color.withOpacity(0.2) : Colors.transparent,
+                        color: isDone
+                            ? color.withOpacity(0.2)
+                            : Colors.transparent,
                         shape: BoxShape.circle,
                         border: isDone
                             ? null
-                            : Border.all(color: color.withOpacity(0.5), width: 2),
+                            : Border.all(
+                                color: color.withOpacity(0.5), width: 2),
                       ),
                       child: isDone
                           ? Icon(
@@ -807,29 +839,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildStatCards(BuildContext context) {
     // Provider'ları al
     final activityProvider = Provider.of<ActivityProvider>(context);
     final nutritionProvider = Provider.of<NutritionProvider>(context);
-    
+
     // Bugünün tarihi
     final today = DateTime.now();
-    
+
     // Bugünkü toplam kalori alımını hesapla
     int totalCalories = 0;
     final meals = nutritionProvider.meals;
     for (var meal in meals) {
       totalCalories += meal.calories?.toInt() ?? 0;
     }
-    
+
     // Bugünkü toplam aktivite dakikasını hesapla
     int totalActivityMinutes = 0;
     final activities = activityProvider.activities;
     for (var activity in activities) {
       totalActivityMinutes += activity.durationMinutes?.toInt() ?? 0;
     }
-    
+
     return Column(
       children: [
         Row(
@@ -860,7 +892,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ],
     );
   }
-  
+
   Widget _buildStatCard(
     BuildContext context, {
     required IconData icon,
@@ -869,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required Color color,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -921,11 +953,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildWaterIntakeCard(BuildContext context, int waterIntake) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final percentage = (_waterIntake / _waterGoal).clamp(0.0, 1.0);
-    
+
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -995,7 +1027,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildWaterProgressBar(BuildContext context, double percentage) {
     return Container(
       height: 12,
@@ -1026,10 +1058,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
     );
   }
-  
+
   Widget _buildWaterButton(BuildContext context, int amount, Color color) {
     final buttonText = amount > 0 ? '+$amount' : '$amount';
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1037,11 +1069,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           // Su ekleme/çıkarma işlemi
           HapticFeedback.lightImpact();
           _updateWaterIntake(amount);
-          
-          final message = amount > 0 
-              ? '$amount ml su eklendi' 
+
+          final message = amount > 0
+              ? '$amount ml su eklendi'
               : '${amount.abs()} ml su çıkarıldı';
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(message),
@@ -1073,52 +1105,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() {
       isLoading = true; // Yükleme başladı
     });
-    
+
     try {
       // Önce SharedPreferences'den görev durumlarını yükle
       await _loadSavedTaskStates();
-      
+
       // ProgramService üzerinden günün programını al
-      final programService = Provider.of<DatabaseProvider>(context, listen: false).programService;
-      
+      final programService =
+          Provider.of<DatabaseProvider>(context, listen: false).programService;
+
       // Bugünün haftanın günü indeksini al (0-Pazartesi, 6-Pazar)
       final today = DateTime.now().weekday - 1;
       print('Bugünün indeksi: $today'); // Hata ayıklama için log
-      
+
       // Günlük programı al
       final dailyProgram = await programService.getDailyProgram(today);
-      
+
       if (dailyProgram != null) {
         print('Günlük program bulundu');
-        
+
         setState(() {
           // Günün programını açıklama metinlerine uygula
           final morningExercise = dailyProgram.morningExercise;
           final lunch = dailyProgram.lunch;
           final eveningExercise = dailyProgram.eveningExercise;
           final dinner = dailyProgram.dinner;
-          
+
           // Açıklamaları kaydet
           if (morningExercise.description.isNotEmpty) {
             morningProgram = morningExercise.description;
             print('Sabah egzersizi: $morningProgram');
           }
-          
+
           if (lunch.description.isNotEmpty) {
             lunchMenu = lunch.description;
             print('Öğle yemeği: $lunchMenu');
           }
-          
+
           if (eveningExercise.description.isNotEmpty) {
             eveningProgram = eveningExercise.description;
             print('Akşam egzersizi: $eveningProgram');
           }
-          
+
           if (dinner.description.isNotEmpty) {
             dinnerMenu = dinner.description;
             print('Akşam yemeği: $dinnerMenu');
           }
-          
+
           isLoading = false; // Yükleme tamamlandı
         });
       } else {
@@ -1134,25 +1167,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       });
     }
   }
-  
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    
-    // DatabaseProvider değişikliklerini dinle
-    final databaseProvider = Provider.of<DatabaseProvider>(context);
-    databaseProvider.addListener(_refreshProgram);
-  }
-  
+
   // Program güncellendiğinde çağrılacak metot
   void _refreshProgram() {
     _initTasks();
   }
 
   void _onTaskChanged(Task task, bool isCompleted) {
-    final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
-    final nutritionProvider = Provider.of<NutritionProvider>(context, listen: false);
-    
+    final activityProvider =
+        Provider.of<ActivityProvider>(context, listen: false);
+    final nutritionProvider =
+        Provider.of<NutritionProvider>(context, listen: false);
+
     // Görev tipine göre durumu güncelle
     if (task.type == TaskType.morningExercise) {
       setState(() {
@@ -1171,36 +1197,39 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         isDinnerDone = isCompleted;
       });
     }
-    
+
     // Görev durumunu güncelle
     Task updatedTask = Task(
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      date: task.date,
-      isCompleted: isCompleted,
-      type: task.type
-    );
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        date: task.date,
+        isCompleted: isCompleted,
+        type: task.type);
     activityProvider.updateTask(updatedTask);
-    
+
     // Durumları kaydet
     _savingTaskStates();
-    
+
     if (isCompleted) {
       // Eğer görev tamamlandıysa, ilgili aktivite veya yemek kaydını ekle
-      if (task.type == TaskType.morningExercise || task.type == TaskType.eveningExercise) {
-        final FitActivityType activityType = task.type == TaskType.morningExercise 
-          ? FitActivityType.walking 
-          : FitActivityType.running;
-        
+      if (task.type == TaskType.morningExercise ||
+          task.type == TaskType.eveningExercise) {
+        final FitActivityType activityType =
+            task.type == TaskType.morningExercise
+                ? FitActivityType.walking
+                : FitActivityType.running;
+
         // Yeni aktivite oluştur ve ID'sini sakla
-        activityProvider.addActivity(ActivityRecord(
+        activityProvider
+            .addActivity(ActivityRecord(
           type: activityType,
           durationMinutes: 30, // Varsayılan değer
           date: DateTime.now(),
           notes: 'Günlük görev: ${task.title}',
           taskId: task.id,
-        )).then((activityId) {
+        ))
+            .then((activityId) {
           if (task.type == TaskType.morningExercise) {
             setState(() {
               morningExerciseId = activityId;
@@ -1213,18 +1242,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _savingTaskStates(); // ID'yi kaydedince tekrar kaydet
         });
       } else if (task.type == TaskType.lunch || task.type == TaskType.dinner) {
-        final FitMealType mealType = task.type == TaskType.lunch 
-          ? FitMealType.lunch 
-          : FitMealType.dinner;
-        
+        final FitMealType mealType = task.type == TaskType.lunch
+            ? FitMealType.lunch
+            : FitMealType.dinner;
+
         // Yeni öğün oluştur ve ID'sini sakla
-        nutritionProvider.addMeal(MealRecord(
+        nutritionProvider
+            .addMeal(MealRecord(
           type: mealType,
           foods: ['Günlük öğün'],
           calories: 500, // Varsayılan değer
           date: DateTime.now(),
           taskId: task.id,
-        )).then((mealId) {
+        ))
+            .then((mealId) {
           if (task.type == TaskType.lunch) {
             setState(() {
               lunchMealId = mealId;
@@ -1274,8 +1305,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildGreetingCard() {
     final userName = Provider.of<UserProvider>(context).user?.name ?? 'Kaplan';
-    final formattedDate = DateFormat('d MMMM yyyy, EEEE', 'tr_TR').format(DateTime.now());
-    
+    final formattedDate =
+        DateFormat('d MMMM yyyy, EEEE', 'tr_TR').format(DateTime.now());
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1309,7 +1341,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         children: [
           Icon(
             Icons.lightbulb_outline,
-            color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
+            color:
+                Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -1347,8 +1380,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // Su tüketim değerini güncelle
   void _updateWaterIntake(int amount) {
     setState(() {
-      _waterIntake = (_waterIntake + amount).clamp(0, 5000); // Max 5 litre olarak sınırla
+      _waterIntake =
+          (_waterIntake + amount).clamp(0, 5000); // Max 5 litre olarak sınırla
     });
     _saveWaterIntake();
   }
-} 
+}
