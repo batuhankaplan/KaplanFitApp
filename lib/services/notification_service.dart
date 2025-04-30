@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -16,9 +16,13 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  final String _channelId = 'basic_channel';
-  final String _channelName = 'Basic Notifications';
-  final String _channelDescription = 'KaplanFit uygulama bildirimleri';
+  final String _channelId = 'kaplanfit_daily_reminders';
+  final String _channelName = 'Günlük Hatırlatmalar';
+  final String _channelDescription = 'Antrenman, beslenme ve su hatırlatmaları';
+
+  final String _testChannelId = 'kaplanfit_test_notifications';
+  final String _testChannelName = 'Test Bildirimleri';
+  final String _testChannelDescription = 'Anlık test bildirimleri için kanal';
 
   static final DeviceInfoPlugin _deviceInfoPlugin = DeviceInfoPlugin();
 
@@ -30,8 +34,16 @@ class NotificationService {
     if (_initialized) return;
 
     tz_data.initializeTimeZones();
+    // Sistem saat dilimini al (ör: Europe/Istanbul)
+    // Eğer alınamazsa varsayılan olarak UTC kullanılacak
+    try {
+      final String currentTimeZone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(currentTimeZone));
+    } catch (e) {
+      debugPrint("Yerel saat dilimi alınamadı: $e. UTC kullanılıyor.");
+      tz.setLocalLocation(tz.getLocation('Etc/UTC'));
+    }
 
-    // Bildirim simgesi ve bildirim ayarları
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -48,105 +60,122 @@ class NotificationService {
     );
 
     try {
-      // Bildirimleri başlat
       await _flutterLocalNotificationsPlugin.initialize(
         initSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse response) {
-          debugPrint('Bildirim tıklandı: ${response.payload}');
-          // Bildirime tıklandığında yapılacak işlemler buraya eklenebilir
-        },
+        onDidReceiveNotificationResponse: _onNotificationResponse,
       );
 
-      // Android için bildirimleri ayarla
       if (Platform.isAndroid) {
-        await _configureAndroidNotifications();
+        await _createNotificationChannels();
       }
 
-      // İzinleri kontrol et ve iste
       await _checkAndRequestPermissions();
 
-      // Uygulama kapandığında bildirimlerin çalışması için ayarla
-      await _setupNotificationsForAppClose();
-
       _initialized = true;
-      debugPrint('Bildirim servisi başarıyla başlatıldı.');
+      debugPrint(
+          'Bildirim servisi başarıyla başlatıldı. Yerel Saat Dilimi: ${tz.local}');
     } catch (e) {
       debugPrint('Bildirim servisi başlatılırken hata: $e');
     }
   }
 
-  Future<void> _configureAndroidNotifications() async {
-    try {
-      // Android bildirimi için kanal oluştur
-      final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
-          _flutterLocalNotificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin>();
+  void _onNotificationResponse(NotificationResponse response) {
+    debugPrint('Bildirim tıklandı! Payload: ${response.payload}');
+    // TODO: Payload'a göre uygulama içi yönlendirme yapılabilir.
+    // Örneğin: if (response.payload == 'workout_reminder') { // Antrenman ekranına git }
+  }
 
-      await androidPlugin?.createNotificationChannel(
+  Future<void> _createNotificationChannels() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin == null) return;
+
+    try {
+      // Günlük Hatırlatmalar Kanalı (Yüksek Öncelik)
+      await androidPlugin.createNotificationChannel(
         AndroidNotificationChannel(
           _channelId,
           _channelName,
           description: _channelDescription,
-          importance: Importance.max,
+          importance: Importance.max, // Yüksek öncelik
           playSound: true,
           enableVibration: true,
-          sound: const RawResourceAndroidNotificationSound('alarm_sound'),
+          sound: const RawResourceAndroidNotificationSound(
+              'alarm_sound'), // raw/alarm_sound.mp3 dosyası olmalı
           enableLights: true,
           ledColor: const Color(0xFF5D69BE),
         ),
       );
 
-      // Ek bir yüksek öncelikli kanal oluştur
-      await androidPlugin?.createNotificationChannel(
-        const AndroidNotificationChannel(
-          'high_importance_channel',
-          'Yüksek Öncelikli Bildirimler',
-          description: 'Bu kanal kritik bildirimleri göstermek için kullanılır',
-          importance: Importance.max,
+      // Test Bildirimleri Kanalı (Normal Öncelik)
+      await androidPlugin.createNotificationChannel(
+        AndroidNotificationChannel(
+          _testChannelId,
+          _testChannelName,
+          description: _testChannelDescription,
+          importance: Importance.high, // Yüksek ama max değil
           playSound: true,
           enableVibration: true,
-          enableLights: true,
         ),
       );
-
-      debugPrint('Android bildirimleri yapılandırıldı.');
+      debugPrint('Android bildirim kanalları oluşturuldu.');
     } catch (e) {
-      debugPrint('Android bildirimleri yapılandırılırken hata: $e');
+      debugPrint('Android bildirim kanalları oluşturulurken hata: $e');
     }
   }
 
+  /// Gerekli bildirim izinlerini kontrol eder ve ister.
   Future<bool> _checkAndRequestPermissions() async {
+    bool allPermissionsGranted = true;
     try {
       if (Platform.isAndroid) {
-        // Android 13+ (SDK 33+) için özel izin kontrolü
         final androidInfo = await _deviceInfoPlugin.androidInfo;
+
+        // Android 13+ (SDK 33+) Bildirim İzni
         if (androidInfo.version.sdkInt >= 33) {
-          final status = await Permission.notification.status;
-          if (status.isDenied) {
-            final result = await Permission.notification.request();
-
-            // Kullanıcı izin verdiyse exact alarm izni de kontrol et
-            if (result.isGranted && androidInfo.version.sdkInt >= 31) {
-              await _checkScheduleExactNotificationsPermission();
-            }
-
-            return result.isGranted;
+          var notificationStatus = await Permission.notification.status;
+          debugPrint(
+              "[Permissions] Android 13+ Notification Status: $notificationStatus");
+          if (notificationStatus.isDenied) {
+            notificationStatus = await Permission.notification.request();
+            debugPrint(
+                "[Permissions] Android 13+ Notification Request Result: $notificationStatus");
           }
-
-          // İzin varsa exact alarm izni de kontrol et
-          if (status.isGranted && androidInfo.version.sdkInt >= 31) {
-            await _checkScheduleExactNotificationsPermission();
+          if (!notificationStatus.isGranted) {
+            debugPrint("[Permissions] Android 13+ bildirim izni verilmedi.");
+            allPermissionsGranted = false;
+            // İzin verilmediyse bile devam edebiliriz, ama loglamak önemli.
           }
-
-          return status.isGranted;
-        } else if (androidInfo.version.sdkInt >= 31) {
-          // Android 12 için exact alarm izni kontrolü
-          await _checkScheduleExactNotificationsPermission();
-          return true;
         }
-        return true; // Android 12 altında otomatik izin var
+
+        // Android 12+ (SDK 31+) Tam Zamanlı Alarm İzni (SCHEDULE_EXACT_ALARM)
+        if (androidInfo.version.sdkInt >= 31) {
+          var exactAlarmStatus = await Permission.scheduleExactAlarm.status;
+          debugPrint(
+              "[Permissions] Android 12+ Exact Alarm Status: $exactAlarmStatus");
+          if (exactAlarmStatus.isDenied) {
+            // Bu izin için request() genellikle doğrudan ayarlar sayfasını açar.
+            exactAlarmStatus = await Permission.scheduleExactAlarm.request();
+            debugPrint(
+                "[Permissions] Android 12+ Exact Alarm Request Result: $exactAlarmStatus");
+            // Kullanıcı ayarlardan geri döndükten sonra durumu tekrar kontrol etmek gerekebilir.
+            // Şimdilik sadece isteği yapıyoruz.
+          }
+          if (!exactAlarmStatus.isGranted) {
+            debugPrint(
+                "[Permissions] Tam zamanlı alarm (SCHEDULE_EXACT_ALARM) izni yok. Bildirimler gecikebilir.");
+            // Bu iznin kritik olduğunu kullanıcıya bildirebiliriz.
+            // allPermissionsGranted = false; // Bu iznin olmaması app'i durdurmaz.
+          } else {
+            debugPrint("[Permissions] Tam zamanlı alarm izni verilmiş.");
+          }
+        }
+        return allPermissionsGranted; // Şimdilik sadece temel bildirim izninin durumunu döndürüyoruz.
+        // Exact alarm olmasa da uygulama çalışır.
       } else if (Platform.isIOS) {
+        // iOS izinleri başlatmada istendi, burada tekrar kontrol edilebilir veya sadece true dönülebilir.
         final settings = await _flutterLocalNotificationsPlugin
             .resolvePlatformSpecificImplementation<
                 IOSFlutterLocalNotificationsPlugin>()
@@ -155,450 +184,257 @@ class NotificationService {
               badge: true,
               sound: true,
             );
-        return settings ?? false;
+        // settings?.alert artık geçerli değil, genel olarak izin verilip verilmediğine bakılır.
+        // FlutterLocalNotificationsPlugin 17+ ile requestPermissions bool döndürür.
+        return settings ?? false; // İzin verildiyse true döner.
       }
-      return false;
+      return false; // Desteklenmeyen platform
     } catch (e) {
-      debugPrint('İzin kontrolü sırasında hata: $e');
-      return false;
-    }
-  }
-
-  // Tam zamanlı bildirim izinlerini kontrol et (Android 12+)
-  Future<bool> _checkScheduleExactNotificationsPermission() async {
-    try {
-      final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
-          _flutterLocalNotificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin>();
-
-      if (androidPlugin == null) return false;
-
-      // Tam zamanlı bildirim iznini kontrol et
-      final bool hasExactAlarmPermission =
-          await androidPlugin.canScheduleExactNotifications() ?? false;
-
-      // Bildirim sisteminin önceliğini yükselt
-      await androidPlugin.requestNotificationsPermission();
-      await androidPlugin.requestExactAlarmsPermission();
-
-      // Eğer izin yoksa kullanıcıya bildirimle bilgilendirme
-      if (!hasExactAlarmPermission) {
-        await _flutterLocalNotificationsPlugin.show(
-          9999, // Özel ID
-          'Tam Bildirim Zamanlaması İçin İzin Gerekli',
-          'Bildirimlerin zamanında gelmesi için ayarlara giderek tam zamanlı bildirim iznini etkinleştirin.',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'high_importance_channel',
-              'Yüksek Öncelikli Bildirimler',
-              channelDescription:
-                  'Bu kanal kritik bildirimleri göstermek için kullanılır',
-              importance: Importance.max,
-              priority: Priority.max,
-              playSound: true,
-              enableVibration: true,
-            ),
-          ),
-        );
-
-        // Ek bir bildirim daha göndererek dikkat çek
-        await Future.delayed(Duration(seconds: 2));
-        await _flutterLocalNotificationsPlugin.show(
-          9998, // Farklı ID
-          'Bildirim İzni Eksik',
-          'Ayarlar > Uygulamalar > KaplanFit > Bildirimler > Tam zamanlı bildirimlere izin ver',
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'basic_channel',
-              'Basic Notifications',
-              channelDescription: 'KaplanFit uygulama bildirimleri',
-              importance: Importance.max,
-              priority: Priority.max,
-              playSound: true,
-              enableVibration: true,
-            ),
-          ),
-        );
-      }
-
-      return hasExactAlarmPermission;
-    } catch (e) {
-      debugPrint('Exact alarms izni kontrol edilirken hata: $e');
+      debugPrint('İzin kontrolü/isteme sırasında hata: $e');
       return false;
     }
   }
 
-  // Anında bir test bildirimi gönder
-  Future<void> sendTestNotification() async {
-    try {
-      // Önce izinleri kontrol et
-      final bool hasPermission = await _checkAndRequestPermissions();
-      if (!hasPermission) {
-        debugPrint('Bildirim izni reddedildi.');
-        return;
-      }
-
-      if (!_initialized) {
-        await init();
-      }
-
-      // Birden fazla kanaldan bildirimler göndererek daha güvenilir bildirim sağla
-      const AndroidNotificationDetails basicAndroidDetails =
-          AndroidNotificationDetails(
-        'basic_channel', // Kanal ID
-        'Basic Notifications', // Kanal adı
-        channelDescription: 'KaplanFit uygulama bildirimleri',
-        importance: Importance.max,
-        priority: Priority.max,
-        icon: '@mipmap/ic_launcher',
-        playSound: true,
-        enableVibration: true,
-        color: Color(0xFF5D69BE),
-        fullScreenIntent: true,
-        category: AndroidNotificationCategory.alarm,
-        visibility: NotificationVisibility.public,
-        actions: <AndroidNotificationAction>[
-          AndroidNotificationAction('open', 'Aç'),
-        ],
-      );
-
-      const AndroidNotificationDetails highImportanceAndroidDetails =
-          AndroidNotificationDetails(
-        'high_importance_channel', // Kanal ID
-        'Yüksek Öncelikli Bildirimler', // Kanal adı
-        channelDescription:
-            'Bu kanal kritik bildirimleri göstermek için kullanılır',
-        importance: Importance.max,
-        priority: Priority.max,
-        icon: '@mipmap/ic_launcher',
-        playSound: true,
-        enableVibration: true,
-        color: Color(0xFF5D69BE),
-        fullScreenIntent: true,
-        category: AndroidNotificationCategory.alarm,
-        visibility: NotificationVisibility.public,
-        actions: <AndroidNotificationAction>[
-          AndroidNotificationAction('open', 'Aç'),
-        ],
-      );
-
-      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-
-      const NotificationDetails basicNotificationDetails = NotificationDetails(
-        android: basicAndroidDetails,
-        iOS: iosDetails,
-      );
-
-      const NotificationDetails highImportanceNotificationDetails =
-          NotificationDetails(
-        android: highImportanceAndroidDetails,
-        iOS: iosDetails,
-      );
-
-      // Ana test bildirimi
-      await _flutterLocalNotificationsPlugin.show(
-        Random().nextInt(1000), // Bildirim ID'si rastgele
-        'Test Bildirimi',
-        'Bu bir test bildirimidir. Bildirim sistemi çalışıyor!',
-        basicNotificationDetails,
-      );
-
-      // Yüksek öncelikli kanaldan da bildirim gönder
-      await _flutterLocalNotificationsPlugin.show(
-        Random().nextInt(1000) + 5000, // Farklı ID
-        'Yüksek Öncelikli Test Bildirimi',
-        'Bu yüksek öncelikli bir test bildirimidir!',
-        highImportanceNotificationDetails,
-      );
-
-      // Android'de exact alarms izni kontrolü
-      bool canScheduleExactAlarms = true;
-      if (Platform.isAndroid) {
-        final androidInfo = await _deviceInfoPlugin.androidInfo;
-        if (androidInfo.version.sdkInt >= 31) {
-          // Android 12+
-          canScheduleExactAlarms = await _flutterLocalNotificationsPlugin
-                  .resolvePlatformSpecificImplementation<
-                      AndroidFlutterLocalNotificationsPlugin>()
-                  ?.canScheduleExactNotifications() ??
-              false;
-        }
-      }
-
-      // Anlık test bildirimleri gönder
-      final now = DateTime.now();
-
-      // Hemen gösterilecek olan bildirimler
-      for (int i = 1; i <= 3; i++) {
-        await _flutterLocalNotificationsPlugin.show(
-          3000 + i, // Farklı ID
-          'Anlık Test $i',
-          'Bu bildirim hemen gösteriliyor - Test $i',
-          i % 2 == 0
-              ? basicNotificationDetails
-              : highImportanceNotificationDetails,
-        );
-      }
-
-      // Eğer tam zamanlı bildirim planlayabiliyorsak zamanlanmış test bildirimleri de ekle
-      if (canScheduleExactAlarms) {
-        // Test amacıyla zamanlı test bildirimleri oluştur - daha kısa aralıklarla
-        for (int i = 1; i <= 10; i++) {
-          await scheduleNotification(
-            id: 2000 + i,
-            title: '$i Dakika Sonra Bildirim',
-            body: 'Bu bildirim şu andan $i dakika sonrası için planlandı.',
-            scheduledDate:
-                now.add(Duration(seconds: i * 30)), // 30 saniye aralıklarla
-          );
-        }
-
-        debugPrint(
-            'Test bildirimleri başarıyla gönderildi. 10 adet zamanlı bildirim de planlandı.');
-      } else {
-        debugPrint(
-            'Test bildirimi gönderildi. Tam zamanlı bildirim izni olmadığından zamanlanmış bildirimler eklenmedi.');
-      }
-    } catch (e) {
-      debugPrint('Test bildirimi gönderilirken hata: $e');
-      throw Exception('Bildirim gönderilirken hata: $e');
-    }
-  }
-
-  // Zamanlanmış bildirim gönder
-  Future<void> scheduleNotification({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledDate,
-    String? payload,
-  }) async {
-    try {
-      // Önce izinleri kontrol et
-      final bool hasPermission = await _checkAndRequestPermissions();
-      if (!hasPermission) {
-        debugPrint('Bildirim izni reddedildi.');
-        return;
-      }
-
-      if (!_initialized) {
-        await init();
-      }
-
-      // Kanallar arası dönüşümlü olarak bildirimler gönderelim
-      final bool useHighImportance =
-          id % 2 == 0; // Çift ID'ler için yüksek öncelikli kanal
-
-      final AndroidNotificationDetails androidDetails =
-          AndroidNotificationDetails(
-        useHighImportance ? 'high_importance_channel' : 'basic_channel',
-        useHighImportance
-            ? 'Yüksek Öncelikli Bildirimler'
-            : 'Basic Notifications',
-        channelDescription: useHighImportance
-            ? 'Bu kanal kritik bildirimleri göstermek için kullanılır'
-            : 'KaplanFit uygulama bildirimleri',
-        importance: Importance.max,
-        priority: Priority.max,
-        icon: '@mipmap/ic_launcher',
-        playSound: true,
-        enableVibration: true,
-        color: Color(0xFF5D69BE),
-        fullScreenIntent: true,
-        category: AndroidNotificationCategory.alarm,
-        visibility: NotificationVisibility.public,
-        actions: <AndroidNotificationAction>[
-          AndroidNotificationAction('open', 'Aç'),
-        ],
-      );
-
-      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-        interruptionLevel: InterruptionLevel.timeSensitive,
-      );
-
-      final NotificationDetails notificationDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      // Android'de exact alarms izni kontrolü
-      bool canScheduleExactAlarms = true;
-      if (Platform.isAndroid) {
-        final androidInfo = await _deviceInfoPlugin.androidInfo;
-        if (androidInfo.version.sdkInt >= 31) {
-          // Android 12+
-          try {
-            canScheduleExactAlarms = await _flutterLocalNotificationsPlugin
-                    .resolvePlatformSpecificImplementation<
-                        AndroidFlutterLocalNotificationsPlugin>()
-                    ?.canScheduleExactNotifications() ??
-                false;
-          } catch (e) {
-            debugPrint('Exact alarms izni kontrol edilirken hata: $e');
-            canScheduleExactAlarms = false;
-          }
-        }
-      }
-
-      // Bildirim yakın zamanlı ise (5 dakika içinde) hemen normal bildirim olarak göster
-      final now = DateTime.now();
-      final difference = scheduledDate.difference(now).inMinutes;
-      if (difference <= 5) {
-        await _flutterLocalNotificationsPlugin.show(
-          id,
-          title,
-          body,
-          notificationDetails,
-          payload: payload,
-        );
-        debugPrint('Bildirim zamanı yakın olduğundan hemen gönderildi: $title');
-        return;
-      }
-
-      // Eğer tam zamanlı bildirim planlama izni yoksa normal bildirim göster
-      if (!canScheduleExactAlarms && Platform.isAndroid) {
-        // Tam zamanlı bildirimler yerine normal bildirim gönder
-        await _flutterLocalNotificationsPlugin.show(
-          id,
-          title,
-          body,
-          notificationDetails,
-          payload: payload,
-        );
-        debugPrint(
-            'Tam zamanlı bildirim izni olmadığından normal bildirim gönderildi: $title');
-        return;
-      }
-
-      try {
-        await _flutterLocalNotificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          tz.TZDateTime.from(scheduledDate, tz.local),
-          notificationDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: payload,
-        );
-
-        // Hemen bir hatırlatma bildirimi de gönder
-        await _flutterLocalNotificationsPlugin.show(
-          id + 10000,
-          'Bildirim Ayarlandı',
-          '$title bildirimi ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')} için planlandı.',
-          notificationDetails,
-        );
-
-        debugPrint('Bildirim zamanlandı: $title - $scheduledDate');
-      } catch (e) {
-        // Eğer zamanlanmış bildirim çalışmazsa, anında bildirim göster
-        debugPrint(
-            'Zamanlanmış bildirim gönderilirken hata: $e. Anında bildirim gönderiliyor.');
-        await _flutterLocalNotificationsPlugin.show(
-          id,
-          title,
-          body,
-          notificationDetails,
-          payload: payload,
-        );
-      }
-    } catch (e) {
-      debugPrint('Bildirim zamanlanırken hata: $e');
-      throw Exception('Bildirim zamanlanırken hata: $e');
-    }
-  }
-
-  // Günlük bildirim ayarla (her gün belirli bir saatte)
+  /// Her gün belirtilen saatte tekrarlayan bildirim planlar.
   Future<void> scheduleDailyNotification({
     required int id,
     required String title,
     required String body,
     required TimeOfDay timeOfDay,
+    String? payload,
   }) async {
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: id,
-        channelKey: 'basic_channel',
-        title: title,
-        body: body,
-        category: NotificationCategory.Alarm,
-        wakeUpScreen: true,
-        fullScreenIntent: true,
-        autoDismissible: false,
-        locked: true,
-        criticalAlert: true,
-      ),
-      schedule: NotificationCalendar(
-        hour: timeOfDay.hour,
-        minute: timeOfDay.minute,
-        second: 0,
-        millisecond: 0,
-        repeats: true,
-        preciseAlarm: true,
-        allowWhileIdle: true,
-      ),
-    );
-  }
+    if (!_initialized) await init();
 
-  // Tüm bildirimleri iptal et
-  Future<void> cancelAllNotifications() async {
     try {
-      await _flutterLocalNotificationsPlugin.cancelAll();
+      // Tam zamanlı alarm iznini ve modunu belirle (Android 12+)
+      AndroidScheduleMode scheduleMode =
+          AndroidScheduleMode.exactAllowWhileIdle;
+      if (Platform.isAndroid) {
+        final androidInfo = await _deviceInfoPlugin.androidInfo;
+        if (androidInfo.version.sdkInt >= 31) {
+          final bool canScheduleExact = await _flutterLocalNotificationsPlugin
+                  .resolvePlatformSpecificImplementation<
+                      AndroidFlutterLocalNotificationsPlugin>()
+                  ?.canScheduleExactNotifications() ??
+              false;
+          if (!canScheduleExact) {
+            scheduleMode = AndroidScheduleMode.inexact;
+            debugPrint(
+                "Bildirim $id için tam zamanlı alarm izni yok, kesin olmayan modda planlanacak.");
+          }
+        }
+      }
 
-      // Kullanıcı bilgilendirmesi için saati temizle
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('notification_time');
+      // Planlanacak zamanı hesapla (bir sonraki tekrar)
+      final tz.TZDateTime scheduledTime = _nextInstanceOfTime(timeOfDay);
 
-      debugPrint('Tüm bildirimler iptal edildi.');
+      // Bildirim detayları
+      final NotificationDetails notificationDetails = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId, // Günlük hatırlatmalar için ana kanal
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.max,
+          priority: Priority.high,
+          // sound: RawResourceAndroidNotificationSound('alarm_sound'), // Kanalda tanımlı
+          // icon: '@mipmap/ic_launcher', // Başlatmada tanımlı
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive, // Önemli bildirim
+        ),
+      );
+
+      // Bildirimi planla
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        notificationDetails,
+        androidScheduleMode: scheduleMode,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents:
+            DateTimeComponents.time, // Her gün bu saatte tekrarla
+        payload: payload,
+      );
+
+      debugPrint(
+          'Günlük bildirim planlandı: ID $id - Saat ${timeOfDay.hour}:${timeOfDay.minute.toString().padLeft(2, '0')} - Zaman: $scheduledTime');
     } catch (e) {
-      debugPrint('Bildirimler iptal edilirken hata: $e');
-      throw Exception('Bildirimler iptal edilirken hata: $e');
+      debugPrint('Günlük bildirim (ID: $id) planlanırken hata: $e');
     }
   }
 
-  // Belirli bir bildirimi iptal et
+  /// Belirtilen saatin bir sonraki tekrarını (bugün veya yarın) hesaplar.
+  tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, time.hour, time.minute);
+    // Eğer planlanan saat geçmişte kaldıysa, yarına planla
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    return scheduledDate;
+  }
+
+  /// Belirtilen **tarih ve saatte** tek seferlik bildirim planlar.
+  Future<void> scheduleOneTimeNotification({
+    required String title,
+    required String body,
+    required DateTime scheduledDateTime, // TimeOfDay yerine DateTime
+    String? payload,
+  }) async {
+    if (!_initialized) await init();
+
+    try {
+      // ID oluşturma (aynı kalabilir)
+      final int notificationId = 20000 + Random().nextInt(10000);
+
+      // Planlanacak zamanı hesapla (artık doğrudan DateTime kullanıyoruz)
+      // _nextInstanceOfTime fonksiyonuna gerek kalmadı.
+      final tz.TZDateTime scheduledTime =
+          tz.TZDateTime.from(scheduledDateTime, tz.local);
+      debugPrint(
+          '[scheduleOneTimeNotification] Hesaplanan Planlama Zamanı (TZ): $scheduledTime'); // LOG
+
+      // Geçmiş zaman kontrolü (isteğe bağlı ama iyi pratik)
+      if (scheduledTime.isBefore(tz.TZDateTime.now(tz.local))) {
+        debugPrint(
+            "Geçmiş bir zaman ($scheduledTime) için bildirim planlanamaz (ID: $notificationId).");
+        return; // Geçmişse planlama yapma
+      }
+
+      // Android için alarm modunu belirle (aynı kalabilir)
+      AndroidScheduleMode scheduleMode =
+          AndroidScheduleMode.exactAllowWhileIdle;
+      if (Platform.isAndroid) {
+        final androidInfo = await _deviceInfoPlugin.androidInfo;
+        if (androidInfo.version.sdkInt >= 31) {
+          final bool canScheduleExact = await _flutterLocalNotificationsPlugin
+                  .resolvePlatformSpecificImplementation<
+                      AndroidFlutterLocalNotificationsPlugin>()
+                  ?.canScheduleExactNotifications() ??
+              false;
+          if (!canScheduleExact) {
+            scheduleMode = AndroidScheduleMode.inexact;
+            debugPrint(
+                "Bildirim $notificationId için tam zamanlı alarm izni yok, kesin olmayan modda planlanacak.");
+          }
+        }
+      }
+      debugPrint(
+          '[scheduleOneTimeNotification] Kullanılacak Android Schedule Mode: $scheduleMode'); // LOG
+
+      // Bildirim detayları (Günlük hatırlatmalarla aynı kanalı kullanabiliriz)
+      final NotificationDetails notificationDetails = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId, // Ana hatırlatma kanalı
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        ),
+      );
+      debugPrint(
+          '[scheduleOneTimeNotification] zonedSchedule çağrısı yapıldı. ID: $notificationId'); // LOG
+
+      // Bildirimi planla (matchDateTimeComponents OLMADAN)
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        notificationId,
+        title,
+        body,
+        scheduledTime,
+        notificationDetails,
+        androidScheduleMode: scheduleMode,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        // matchDateTimeComponents: DateTimeComponents.time, // Kaldırıldı, tek seferlik
+        payload: payload ?? 'custom_one_time_${notificationId}',
+      );
+
+      // debugPrint('Tek seferlik bildirim planlandı: ID $notificationId - "$title" - Zaman: $scheduledTime');
+    } catch (e, stacktrace) {
+      // Hata ile birlikte stacktrace'i de yakala
+      debugPrint(
+          '[scheduleOneTimeNotification] Tek seferlik bildirim planlanırken HATA: $e'); // LOG
+      debugPrint(
+          '[scheduleOneTimeNotification] Stacktrace: $stacktrace'); // LOG
+    }
+  }
+
+  /// Anında bir test bildirimi gönderir.
+  Future<void> sendNowTestNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_initialized) await init();
+
+    try {
+      // Bildirim detayları (test için farklı kanal)
+      final NotificationDetails notificationDetails = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _testChannelId, // Testler için ayrı kanal
+          _testChannelName,
+          channelDescription: _testChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
+
+      // Bildirimi göster
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch % 100000, // Anlık, rastgele ID
+        title,
+        body,
+        notificationDetails,
+        payload: payload ?? 'test_payload',
+      );
+      debugPrint('Anlık test bildirimi gönderildi: "$title"');
+    } catch (e) {
+      debugPrint('Anlık test bildirimi gönderilirken hata: $e');
+    }
+  }
+
+  /// Tüm planlanmış bildirimleri iptal eder.
+  Future<void> cancelAllNotifications() async {
+    try {
+      await _flutterLocalNotificationsPlugin.cancelAll();
+      debugPrint('Tüm planlanmış bildirimler iptal edildi.');
+    } catch (e) {
+      debugPrint('Bildirimler iptal edilirken hata: $e');
+    }
+  }
+
+  /// Belirli bir ID'ye sahip planlanmış bildirimi iptal eder.
   Future<void> cancelNotification(int id) async {
     try {
       await _flutterLocalNotificationsPlugin.cancel(id);
       debugPrint('$id ID\'li bildirim iptal edildi.');
     } catch (e) {
-      debugPrint('Bildirim iptal edilirken hata: $e');
-      throw Exception('Bildirim iptal edilirken hata: $e');
+      debugPrint('Bildirim ($id) iptal edilirken hata: $e');
     }
   }
 
-  // Bildirimlerin etkin olup olmadığını kontrol et
+  /// Bildirimlerin etkin olup olmadığını kontrol eder (izin bazlı).
   Future<bool> areNotificationsEnabled() async {
-    try {
-      if (Platform.isAndroid) {
-        final androidInfo = await _deviceInfoPlugin.androidInfo;
-        if (androidInfo.version.sdkInt >= 33) {
-          return await Permission.notification.isGranted;
-        }
-        return true;
-      } else if (Platform.isIOS) {
-        // iOS için bildirimlerin etkin olup olmadığını kontrol etme yöntemi
-        final settings = await _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>()
-            ?.getNotificationAppLaunchDetails();
-        return settings?.didNotificationLaunchApp ?? false;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Bildirim durumu kontrol edilirken hata: $e');
-      return false;
-    }
+    if (!_initialized) await init(); // Başlatılmadıysa başlat
+    return await _checkAndRequestPermissions(); // İzin durumunu döndür
   }
 
   // Mevcut zamanlanmış bildirimleri getir
@@ -610,150 +446,5 @@ class NotificationService {
       debugPrint('Bildirim zamanı alınırken hata: $e');
       return null;
     }
-  }
-
-  // Uygulama kapandığında bildirimlerin çalışması için gerekli ayarlar
-  Future<void> _setupNotificationsForAppClose() async {
-    try {
-      // Android için wake lock ve tam zamanlı bildirim izinleri
-      if (Platform.isAndroid) {
-        final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
-            _flutterLocalNotificationsPlugin
-                .resolvePlatformSpecificImplementation<
-                    AndroidFlutterLocalNotificationsPlugin>();
-
-        if (androidPlugin != null) {
-          // Bildirim izinlerini garanti et
-          await androidPlugin.requestNotificationsPermission();
-
-          // Tam zamanlı bildirim izinlerini iste
-          await androidPlugin.requestExactAlarmsPermission();
-
-          debugPrint('✅ Bildirim izinleri ayarlandı');
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Bildirim izinleri ayarlanırken hata: $e');
-    }
-  }
-
-  // Uygulama kapatıldığında çağrılabilecek metot
-  Future<void> setupNotificationsOnAppClose() async {
-    try {
-      if (!_initialized) {
-        await init();
-      }
-
-      debugPrint(
-          '✅ Bildirim sistemi aktif, kapanma bildirimleri devre dışı bırakıldı');
-    } catch (e) {
-      debugPrint('❌ Bildirim sistemi hazırlanırken hata: $e');
-    }
-  }
-
-  Future<void> scheduleTestNotification({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledDate,
-  }) async {
-    try {
-      if (!_initialized) {
-        await init();
-      }
-
-      // Test bildirimi için izinleri kontrol et
-      if (!(await checkNotificationPermissions())) {
-        throw Exception(
-            'Bildirim izinleri reddedildi. Ayarlardan izin vermeniz gerekiyor.');
-      }
-
-      // Test bildirimi ayarları - En yüksek öncelik, titreşim, ses ve lock screen görünürlüğü
-      const notificationDetails = NotificationDetails(
-        android: AndroidNotificationDetails(
-          'high_importance_channel',
-          'Yüksek Öncelikli Bildirimler',
-          channelDescription:
-              'Bu kanal kritik bildirimleri göstermek için kullanılır',
-          importance: Importance.max,
-          priority: Priority.max,
-          playSound: true,
-          sound: RawResourceAndroidNotificationSound('notification'),
-          enableVibration: true,
-          fullScreenIntent: true,
-          category: AndroidNotificationCategory.alarm,
-          visibility: NotificationVisibility.public,
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          sound: 'notification.aiff',
-          interruptionLevel: InterruptionLevel.timeSensitive,
-        ),
-      );
-
-      try {
-        // TZ yerel DateTime'ın zonedSchedule'a çevrilmesi
-        final tz.TZDateTime zonedScheduleTime =
-            tz.TZDateTime.from(scheduledDate, tz.local);
-
-        // Zamanlanmış bildirimi ayarla
-        await _flutterLocalNotificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          zonedScheduleTime,
-          notificationDetails,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-          payload: 'test_notification',
-        );
-
-        debugPrint('Bildirim zamanlandı: $title - $scheduledDate');
-      } catch (e) {
-        // Eğer zamanlanmış bildirim çalışmazsa, anında bildirim göster
-        debugPrint(
-            'Zamanlanmış bildirim gönderilirken hata: $e. Anında bildirim deneniyor.');
-
-        // AwesomeNotifications ile deneyelim
-        await AwesomeNotifications().createNotification(
-          content: NotificationContent(
-            id: id,
-            channelKey: 'basic_channel',
-            title: title,
-            body: body,
-            category: NotificationCategory.Alarm,
-            wakeUpScreen: true,
-            fullScreenIntent: true,
-            criticalAlert: true,
-          ),
-          schedule: NotificationCalendar.fromDate(
-            date: scheduledDate,
-            preciseAlarm: true,
-            allowWhileIdle: true,
-          ),
-        );
-
-        // Son çare olarak standart bildirimi deneyelim
-        await _flutterLocalNotificationsPlugin.show(
-          id,
-          title,
-          body,
-          notificationDetails,
-          payload: 'test_notification',
-        );
-      }
-    } catch (e) {
-      debugPrint('Bildirim zamanlanırken hata: $e');
-      throw Exception('Bildirim zamanlanırken hata: $e');
-    }
-  }
-
-  Future<bool> checkNotificationPermissions() async {
-    // Bu metodun içeriği, mevcut _checkAndRequestPermissions metodunun içeriğiyle aynıdır.
-    // İzinleri kontrol etmek için _checkAndRequestPermissions metodunu kullanabilirsiniz.
-    return await _checkAndRequestPermissions();
   }
 }

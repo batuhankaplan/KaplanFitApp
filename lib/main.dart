@@ -249,25 +249,6 @@ void main() async {
     // Ensure Flutter is initialized
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Uygulama kapatıldığında bildirimleri ayarla
-    SystemChannels.lifecycle.setMessageHandler((message) async {
-      try {
-        debugPrint('Sistem yaşam döngüsü mesajı: $message');
-        if (message == AppLifecycleState.detached.toString() ||
-            message == AppLifecycleState.paused.toString()) {
-          debugPrint('Uygulama arka plana geçti, bildirimleri ayarlıyoruz...');
-          try {
-            await NotificationService.instance.setupNotificationsOnAppClose();
-          } catch (e) {
-            debugPrint('Bildirim ayarlama hatası: $e');
-          }
-        }
-      } catch (e) {
-        debugPrint('Yaşam döngüsü hatası: $e');
-      }
-      return null;
-    });
-
     // Platform özel özelliklerini başlatma
     initPlatformSpecificFeatures();
 

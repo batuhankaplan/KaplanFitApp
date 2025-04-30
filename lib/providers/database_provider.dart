@@ -8,7 +8,8 @@ class DatabaseProvider with ChangeNotifier {
   // Veritabanı servisi
   DatabaseService get database {
     if (!_isInitialized) {
-      throw Exception('DatabaseProvider henüz başlatılmadı. Önce init() çağrılmalı.');
+      throw Exception(
+          'DatabaseProvider henüz başlatılmadı. Önce init() çağrılmalı.');
     }
     return _database;
   }
@@ -20,8 +21,8 @@ class DatabaseProvider with ChangeNotifier {
   Future<void> init() async {
     if (_isInitialized) return;
     _database = DatabaseService();
-    await _database.initialize();
+    await _database.database;
     _isInitialized = true;
     notifyListeners();
   }
-} 
+}
