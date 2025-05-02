@@ -282,7 +282,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                       _buildProgressItem(
                         title: 'Günlük Su',
                         icon: Icons.opacity,
-                        iconColor: AppTheme.waterReminderColor,
+                        iconColor: const Color.fromARGB(255, 28, 141, 194),
                         progress: _calculateWaterProgress(user),
                         value:
                             '${_getTodayWater()} / ${_getWaterTarget(user)} ml',
@@ -664,7 +664,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
   // Görünüm Modu Seçici (Liste/Grafik - ToggleButtons)
   Widget _buildViewModeSelector() {
     final color = _selectedTrackingType == TrackingType.water
-        ? AppTheme.waterReminderColor
+        ? const Color.fromARGB(255, 37, 42, 44)
         : _selectedTrackingType == TrackingType.weight
             ? AppTheme.weightColor
             : _selectedTrackingType == TrackingType.calories

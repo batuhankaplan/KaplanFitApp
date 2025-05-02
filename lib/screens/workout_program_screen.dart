@@ -209,90 +209,73 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                             _getCategoryIcon(category),
                             color: AppTheme.primaryColor,
                           ),
-                          children: programsInCategory.map((programItem) {
-                            return Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    programItem.title,
+                          children: programsInCategory.expand((programItem) {
+                            if (programItem.programSets == null ||
+                                programItem.programSets!.isEmpty) {
+                              return <Widget>[];
+                            }
+
+                            return programItem.programSets!.map((set) {
+                              final exercise = _exerciseDetails[set.exerciseId];
+                              if (exercise == null) {
+                                print(
+                                    "Exercise detail not found for ID: ${set.exerciseId}");
+                                return SizedBox.shrink();
+                              }
+                              return Container(
+                                margin: EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? Colors.black12
+                                      : Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDarkMode
+                                        ? Colors.white10
+                                        : Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  leading: CircleAvatar(
+                                    backgroundColor:
+                                        AppTheme.primaryColor.withOpacity(0.2),
+                                    child: Icon(
+                                      Icons.fitness_center,
+                                      color: AppTheme.primaryColor,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    exercise.name,
                                     style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w500,
                                       color: isDarkMode
-                                          ? Colors.white70
+                                          ? Colors.white
                                           : Colors.black87,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
-                                  if (programItem.programSets != null)
-                                    ...programItem.programSets!.map((set) {
-                                      final exercise =
-                                          _exerciseDetails[set.exerciseId];
-                                      if (exercise == null) {
-                                        return SizedBox.shrink();
-                                      }
-                                      return Container(
-                                        margin: EdgeInsets.only(bottom: 8),
-                                        decoration: BoxDecoration(
-                                          color: isDarkMode
-                                              ? Colors.black12
-                                              : Colors.grey.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: isDarkMode
-                                                ? Colors.white10
-                                                : Colors.grey.shade200,
-                                          ),
-                                        ),
-                                        child: ListTile(
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                          leading: CircleAvatar(
-                                            backgroundColor: AppTheme
-                                                .primaryColor
-                                                .withOpacity(0.2),
-                                            child: Icon(
-                                              Icons.fitness_center,
-                                              color: AppTheme.primaryColor,
-                                            ),
-                                          ),
-                                          title: Text(
-                                            exercise.name,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              color: isDarkMode
-                                                  ? Colors.white
-                                                  : Colors.black87,
-                                            ),
-                                          ),
-                                          subtitle: Text(
-                                            '${set.setsDescription} set x ${set.repsDescription}',
-                                            style: TextStyle(
-                                              color: isDarkMode
-                                                  ? Colors.white60
-                                                  : Colors.black54,
-                                            ),
-                                          ),
-                                          trailing: exercise.videoUrl != null
-                                              ? Icon(
-                                                  Icons.play_circle_outline,
-                                                  color: AppTheme.primaryColor,
-                                                )
-                                              : null,
-                                          onTap: () =>
-                                              _showExerciseDetails(exercise),
-                                        ),
-                                      );
-                                    }).toList(),
-                                ],
-                              ),
-                            );
+                                  subtitle: Text(
+                                    '${set.setsDescription} x ${set.repsDescription}',
+                                    style: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.white60
+                                          : Colors.black54,
+                                    ),
+                                  ),
+                                  trailing: exercise.videoUrl != null
+                                      ? Icon(
+                                          Icons.play_circle_outline,
+                                          color: AppTheme.primaryColor,
+                                        )
+                                      : null,
+                                  onTap: () => _showExerciseDetails(exercise),
+                                ),
+                              );
+                            }).toList();
                           }).toList(),
                         ),
                       ),
