@@ -18,31 +18,24 @@ import 'screens/splash_screen.dart';
 import 'providers/user_provider.dart';
 import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
-import 'models/providers/database_provider.dart';
 import 'services/program_service.dart';
 import 'services/notification_service.dart';
+import 'services/exercise_service.dart';
+import 'services/database_service.dart';
+import 'services/ai_coach_service.dart';
 import 'widgets/kaplan_appbar.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:animations/animations.dart';
 import 'splash/custom_splash_screen.dart';
-
-// Tema sağlayıcı sınıfı
-class ThemeProvider with ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.dark;
-  ThemeMode get themeMode => _themeMode;
-  bool get isDarkMode => _themeMode == ThemeMode.dark;
-
-  void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
-    notifyListeners();
-  }
-
-  void toggleTheme() {
-    _themeMode =
-        _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    notifyListeners();
-  }
-}
+import 'providers/workout_provider.dart';
+import 'widgets/kaplan_loading.dart';
+import 'screens/profile_screen.dart';
+import 'screens/goal_tracking_screen.dart';
+import 'screens/goal_settings_screen.dart';
+import 'screens/notification_settings_screen.dart';
+import 'screens/workout_program_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Ana ekran
 class MainScreen extends StatefulWidget {
@@ -125,10 +118,10 @@ class _MainScreenState extends State<MainScreen> {
               hoverColor: isDarkMode
                   ? AppTheme.primaryColor.withOpacity(0.15)
                   : Colors.grey.shade200,
-              gap: 8,
+              gap: 4,
               activeColor: isDarkMode ? Colors.white : Colors.white,
               iconSize: 24,
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               duration: Duration(milliseconds: 400),
               tabBackgroundColor:
                   isDarkMode ? AppTheme.primaryColor : AppTheme.primaryColor,
@@ -208,6 +201,23 @@ class _MainScreenState extends State<MainScreen> {
           ),
           ListTile(
             leading: Icon(
+              Icons.fitness_center_rounded,
+              color: AppTheme.accentColor,
+            ),
+            title: Text('Antrenman Programı'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WorkoutProgramScreen(),
+                  settings: RouteSettings(name: "WorkoutProgramScreen"),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(
               Icons.bar_chart_rounded,
               color: AppTheme.primaryColor,
             ),
@@ -239,107 +249,260 @@ void initPlatformSpecificFeatures() {
 }
 
 void main() async {
-  // Uygulama çökme durumunda hata yakalama
-  FlutterError.onError = (FlutterErrorDetails details) {
-    debugPrint('HATA: ${details.exception}');
-    debugPrint('HATA DETAYI: ${details.stack}');
-  };
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('tr_TR', null);
+  await Firebase.initializeApp(); // Firebase başlatma tekrar aktif.
+  // await NotificationService().init(); // Bildirim servisi (şimdilik yorumda)
 
+  // --- GEÇİCİ: Veritabanı İçe Aktarma (Sadece 1 Kez Çalıştır ve SİL!) ---
   try {
-    // Ensure Flutter is initialized
-    WidgetsFlutterBinding.ensureInitialized();
-
-    // Platform özel özelliklerini başlatma
-    initPlatformSpecificFeatures();
-
-    // Platform'a göre uygun SQLite yapılandırması
-    if (Platform.isAndroid || Platform.isIOS) {
-      // Mobil cihazlar için varsayılan SQLite
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isFoodDbImported =
+        prefs.getBool('food_db_imported_v1') ?? false; // Kontrol tekrar AKTİF
+    if (!isFoodDbImported) {
+      // Kontrol tekrar AKTİF
+      print(
+          "[Firestore Import] İlk çalıştırma: Besin veritabanı Firestore'a aktarılıyor...");
+      DatabaseService tempDbService = DatabaseService();
+      await tempDbService
+          .importFoodDatabaseFromAsset('assets/besinveritabanı.txt');
+      await prefs.setBool('food_db_imported_v1', true); // Kontrol tekrar AKTİF
+      print(
+          "[Firestore Import] Firestore'a besin aktarma işlemi tamamlandı ve işaretlendi.");
     } else {
-      // Desktop için FFI
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      print("[Firestore Import] Besin veritabanı zaten içe aktarılmış.");
     }
-
-    await initializeDateFormatting('tr_TR', null);
-
-    // Program servisini başlat
-    final programService = ProgramService();
-    await programService.initialize();
-
-    // Bildirimleri başlat
-    final notificationService = NotificationService.instance;
-    await notificationService.init();
-
-    // Veritabanı sağlayıcısını hazırla
-    final databaseProvider = DatabaseProvider();
-    await databaseProvider.initialize();
-
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (context) => ThemeProvider()),
-          ChangeNotifierProvider(create: (context) => UserProvider()),
-          ChangeNotifierProvider(create: (context) => ActivityProvider()),
-          ChangeNotifierProvider(create: (context) => NutritionProvider()),
-          ChangeNotifierProvider.value(value: databaseProvider),
-          Provider<ProgramService>.value(value: programService),
-        ],
-        child: const MyApp(),
-      ),
-    );
-  } catch (e, stack) {
-    debugPrint('UYGULAMA BAŞLATMA HATASI: $e');
-    debugPrint('HATA DETAYI: $stack');
-
-    // Hata durumunda minimal uygulama
-    runApp(MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, color: Colors.red, size: 60),
-              SizedBox(height: 20),
-              Text('Uygulama başlatılırken bir hata oluştu.'),
-              Text('Lütfen uygulamayı yeniden başlatın.'),
-              SizedBox(height: 8),
-              Text('Hata: $e', style: TextStyle(fontSize: 12)),
-            ],
-          ),
-        ),
-      ),
-    ));
+  } catch (e) {
+    print("SharedPreferences veya DB import hatası: $e");
   }
+  // --- GEÇİCİ KOD SONU -> YORUM SATIRLARI KALDIRILDI ---
+
+  // Servisleri oluştur
+  final databaseService = DatabaseService();
+  final exerciseService = ExerciseService();
+  // ProgramService positional parametreler bekliyor
+  final programService = ProgramService(
+    databaseService, // named parameter yerine positional
+    // exerciseService // initialize metodu ExerciseService bekliyor, constructor değil
+  );
+
+  // UserProvider'ı oluştur ve kullanıcıyı yükle
+  final userProvider = UserProvider(databaseService); // DatabaseService geç
+  await userProvider.loadUser();
+
+  // ProgramService'i initialize et (User ID varsa)
+  try {
+    // initialize ExerciseService bekliyor
+    await programService.initialize(exerciseService);
+    print("ProgramService initialize edildi.");
+    // if (userProvider.user?.id != null) {
+    //   print("ProgramService initialize edildi (User ID: ${userProvider.user!.id!})");
+    // } else {
+    //   print("ProgramService initialize edildi (Kullanıcı ID'si olmadan).");
+    // }
+  } catch (e) {
+    print("ProgramService initialize hatası: $e");
+  }
+
+  runApp(
+    MultiProvider(
+      providers: [
+        // ... (Provider listesi önceki düzeltmedeki gibi)
+        Provider<DatabaseService>.value(value: databaseService),
+        Provider<ExerciseService>.value(value: exerciseService),
+        Provider<ProgramService>.value(value: programService),
+
+        ChangeNotifierProvider<UserProvider>.value(
+            value: userProvider), // value ile verelim
+
+        ChangeNotifierProvider<ActivityProvider>(
+          create: (context) => ActivityProvider(databaseService),
+        ),
+        ChangeNotifierProvider<WorkoutProvider>(
+          create: (context) => WorkoutProvider(databaseService),
+        ),
+        ChangeNotifierProxyProvider<UserProvider, NutritionProvider>(
+          create: (context) => NutritionProvider(databaseService),
+          update: (context, userProvider, previousNutritionProvider) {
+            previousNutritionProvider?.updateUserId(userProvider.user?.id);
+            return previousNutritionProvider ??
+                NutritionProvider(databaseService);
+          },
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 // Uygulama ana sınıfı
 class MyApp extends StatelessWidget {
+  // Servis parametreleri kaldırıldı
   const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return MaterialApp(
-          title: 'KaplanFIT',
-          theme: lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: themeProvider.themeMode,
-          home: CustomSplashScreen(nextScreen: MainScreen()),
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('tr', 'TR'),
-            Locale('en', 'US'),
-          ],
-          locale: const Locale('tr', 'TR'),
-          debugShowCheckedModeBanner: false,
-        );
+    return MaterialApp(
+      title: 'KaplanFit',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
+      debugShowCheckedModeBanner: false,
+      initialRoute: '/', // SplashScreen
+      routes: {
+        '/': (context) => KaplanSplashScreen(),
+        '/home': (context) => MainScreen(),
+        '/profile': (context) => ProfileScreen(),
+        '/activity': (context) => ActivityScreen(),
+        '/nutrition': (context) => NutritionScreen(),
+        '/settings': (context) => SettingsScreen(),
+        '/goal_settings': (context) => GoalSettingsScreen(),
+        '/program': (context) => ProgramScreen(),
+        '/goal_tracking': (context) => GoalTrackingScreen(),
+        '/notification_settings': (context) => NotificationSettingsScreen(),
       },
+    );
+  }
+}
+
+class KaplanSplashScreen extends StatefulWidget {
+  const KaplanSplashScreen({Key? key}) : super(key: key);
+
+  @override
+  State<KaplanSplashScreen> createState() => _KaplanSplashScreenState();
+}
+
+class _KaplanSplashScreenState extends State<KaplanSplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Logo animasyonunu başlat
+    _controller = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+
+    _controller.forward();
+
+    // Kullanıcı verilerini yükle ve uygun ekrana yönlendir
+    _loadUserAndNavigate();
+  }
+
+  Future<void> _loadUserAndNavigate() async {
+    print("[SplashScreen] _loadUserAndNavigate started.");
+    // Kısa bir gecikme ekleyerek splash ekranı animasyonunun görünmesini sağla
+    await Future.delayed(const Duration(milliseconds: 2500));
+
+    if (!mounted) {
+      print("[SplashScreen] Widget not mounted after delay. Aborting.");
+      return;
+    }
+    print("[SplashScreen] Widget mounted. Proceeding to load user.");
+
+    bool userLoaded = false; // Default to false
+    try {
+      print("[SplashScreen] Accessing UserProvider...");
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      print("[SplashScreen] Calling userProvider.loadUser()...");
+      userLoaded = await userProvider.loadUser();
+      print("[SplashScreen] userProvider.loadUser() returned: $userLoaded");
+
+      if (!mounted) {
+        print(
+            "[SplashScreen] Widget not mounted after loadUser. Aborting navigation.");
+        return;
+      }
+
+      // Yönlendirme:
+      if (userLoaded) {
+        print(
+            "[SplashScreen] User loaded successfully. Navigating to /home (MainScreen).");
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        print("[SplashScreen] User not loaded. Navigating to ProfileScreen.");
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        );
+      }
+    } catch (e, stacktrace) {
+      // Hata ve stacktrace yakala
+      print("[SplashScreen] Error during loadUser or navigation: $e");
+      print("[SplashScreen] Stacktrace: $stacktrace");
+      if (mounted) {
+        print("[SplashScreen] Navigating to ProfileScreen due to error.");
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ProfileScreen()),
+        );
+      } else {
+        print(
+            "[SplashScreen] Widget not mounted after error. Cannot navigate.");
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: Center(
+        child: ScaleTransition(
+          scale: _animation,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo
+              Icon(
+                Icons.fitness_center_rounded,
+                size: 120,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 24),
+              // Uygulama adı
+              Text(
+                'KAPLAN FIT',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Alt metin
+              Text(
+                'Sağlıklı Yaşam, Güçlü Gelecek',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+              const SizedBox(height: 48),
+              // Yükleniyor göstergesi
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -365,8 +528,7 @@ class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-              builder: (context) => SplashScreen(nextScreen: MainScreen())),
+          MaterialPageRoute(builder: (context) => KaplanSplashScreen()),
         );
       }
     });
@@ -382,39 +544,32 @@ class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
   }
 }
 
-// ThemeData oluşturuyoruz
-final lightTheme = ThemeData(
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: AppTheme.primaryColor,
-    brightness: Brightness.light,
-  ),
-  scaffoldBackgroundColor: const Color(0xFFE8E8E8),
-  primaryColor: AppTheme.primaryColor,
-  appBarTheme: AppBarTheme(
-    backgroundColor: AppTheme.primaryColor,
-    foregroundColor: Colors.white,
-  ),
-  cardTheme: CardTheme(
-    color: const Color(0xFFF0F0F0),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    elevation: 2,
-  ),
-  dialogBackgroundColor: const Color(0xFFEDEDED),
-  canvasColor: const Color(0xFFEAEAEA),
-  elevatedButtonTheme: ElevatedButtonThemeData(
-    style: ElevatedButton.styleFrom(
-      backgroundColor: AppTheme.primaryColor,
-      foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(30),
+// Kullanıcı profil oluşturma ekranı (Placeholder)
+class ProfileCreationScreen extends StatelessWidget {
+  const ProfileCreationScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // YENİ: Manuel yönlendirme butonu
+    return Scaffold(
+      appBar: AppBar(title: Text('Profil Oluştur')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Profiliniz bulunamadı.'),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (context) => SettingsScreen()),
+                );
+              },
+              child: Text('Profil Oluşturmaya Başla (Ayarlar)'),
+            ),
+          ],
+        ),
       ),
-    ),
-  ),
-  inputDecorationTheme: InputDecorationTheme(
-    fillColor: const Color(0xFFF5F5F5),
-    filled: true,
-  ),
-  useMaterial3: true,
-  fontFamily: 'Montserrat',
-  visualDensity: VisualDensity.adaptivePlatformDensity,
-);
+    );
+  }
+}

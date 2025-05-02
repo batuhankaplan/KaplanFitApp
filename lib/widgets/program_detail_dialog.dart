@@ -24,8 +24,9 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
   @override
   void initState() {
     super.initState();
-    _descriptionController = TextEditingController(text: widget.programItem.description);
-    
+    _descriptionController =
+        TextEditingController(text: widget.programItem.description);
+
     // Dialog başlığını ve ikonunu program tipine göre ayarla
     switch (widget.type) {
       case 'morning':
@@ -103,13 +104,15 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
           onPressed: () {
             // Programı güncelle ve yeni nesne oluştur
             final updatedItem = ProgramItem(
+              type: widget.programItem.type,
               title: widget.programItem.title,
               description: _descriptionController.text,
+              programSets: widget.programItem.programSets,
               icon: widget.programItem.icon,
               color: widget.programItem.color,
               time: widget.programItem.time,
             );
-            
+
             Navigator.of(context).pop(updatedItem);
           },
           style: ElevatedButton.styleFrom(
@@ -120,4 +123,4 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
       ],
     );
   }
-} 
+}

@@ -6,12 +6,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart'
     hide PermissionStatus;
 import '../providers/activity_provider.dart';
+import '../providers/workout_provider.dart';
 import '../models/activity_record.dart';
 import '../models/task_type.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme.dart';
 import '../utils/animations.dart';
 import '../widgets/kaplan_loading.dart';
+import '../models/exercise_model.dart';
+import 'exercise_library_screen.dart';
 import 'dart:io';
 
 class ActivityScreen extends StatefulWidget {
@@ -250,152 +253,164 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<ActivityProvider>(context);
-    final isLoading = provider.isLoading;
+    final activityProvider = Provider.of<ActivityProvider>(context);
+    final workoutProvider = Provider.of<WorkoutProvider>(context);
+    final isLoading = activityProvider.isLoading;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: isLoading
           ? const KaplanLoading()
-          : Column(
-              children: [
-                // Tarih seçici
-                KFSlideAnimation(
-                  offsetBegin: const Offset(0, -0.2),
-                  duration: const Duration(milliseconds: 500),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          isDarkMode
-                              ? const Color(0xFF2C2C2C)
-                              : AppTheme.primaryColor.withOpacity(0.7),
-                          isDarkMode
-                              ? const Color(0xFF1F1F1F)
-                              : AppTheme.primaryColor,
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Önceki gün
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios, size: 16),
-                          onPressed: () {
-                            _changeDate(-1);
-                          },
-                        ),
+          : Consumer<WorkoutProvider>(
+              builder: (context, workoutProv, child) {
+                if (workoutProv.isWorkoutInProgress) {
+                  return _buildWorkoutInProgressView(context, workoutProv);
+                } else {
+                  return _buildActivityListView(
+                      context, activityProvider, isDarkMode);
+                }
+              },
+            ),
+    );
+  }
 
-                        // Seçilen tarih gösterimi
-                        GestureDetector(
-                          onTap: _selectDate,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 14),
-                              const SizedBox(width: 8),
-                              Text(
-                                DateFormat('d MMMM yyyy', 'tr_TR')
-                                    .format(_selectedDate),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Sonraki gün
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onPressed: () {
-                            _changeDate(1);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const Divider(),
-                // Aktivite listesi
-                Expanded(
-                  child: provider.activities.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              KFSlideAnimation(
-                                offsetBegin: const Offset(0, 0.3),
-                                child: Column(
-                                  children: [
-                                    KFWaveAnimation(
-                                      color: Theme.of(context)
-                                          .primaryColor
-                                          .withOpacity(0.3),
-                                      height: 100,
-                                    ),
-                                    const SizedBox(height: 20),
-                                    const Icon(
-                                      Icons.directions_run,
-                                      size: 80,
-                                      color: Colors.grey,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Bugün için aktivite yok',
-                                      style: _emptyStateTextStyle,
-                                    ),
-                                    const SizedBox(height: 24),
-                                    KFPulseAnimation(
-                                      maxScale: 1.05,
-                                      child: _buildAddActivityButton(),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: provider.activities.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == provider.activities.length) {
-                              return Center(
-                                child: KFPulseAnimation(
-                                  maxScale: 1.05,
-                                  child: _buildAddActivityButton(),
-                                ),
-                              );
-                            }
-
-                            final activity = provider.activities[index];
-                            return KFAnimatedItem(
-                              index: index,
-                              child: _buildActivityCard(activity),
-                            );
-                          },
-                        ),
+  Widget _buildActivityListView(BuildContext context,
+      ActivityProvider activityProvider, bool isDarkMode) {
+    return Column(
+      children: [
+        // Tarih seçici
+        KFSlideAnimation(
+          offsetBegin: const Offset(0, -0.2),
+          duration: const Duration(milliseconds: 500),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  isDarkMode
+                      ? const Color(0xFF2C2C2C)
+                      : AppTheme.primaryColor.withOpacity(0.7),
+                  isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Önceki gün
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios, size: 16),
+                  onPressed: () {
+                    _changeDate(-1);
+                  },
+                ),
+
+                // Seçilen tarih gösterimi
+                GestureDetector(
+                  onTap: _selectDate,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 14),
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat('d MMMM yyyy', 'tr_TR')
+                            .format(_selectedDate),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Sonraki gün
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onPressed: () {
+                    _changeDate(1);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(),
+        // Aktivite listesi
+        Expanded(
+          child: activityProvider.activities.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      KFSlideAnimation(
+                        offsetBegin: const Offset(0, 0.3),
+                        child: Column(
+                          children: [
+                            KFWaveAnimation(
+                              color: Theme.of(context)
+                                  .primaryColor
+                                  .withOpacity(0.3),
+                              height: 100,
+                            ),
+                            const SizedBox(height: 20),
+                            const Icon(
+                              Icons.directions_run,
+                              size: 80,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Bugün için aktivite yok',
+                              style: _emptyStateTextStyle,
+                            ),
+                            const SizedBox(height: 24),
+                            KFPulseAnimation(
+                              maxScale: 1.05,
+                              child: _buildAddActivityButton(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: activityProvider.activities.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == activityProvider.activities.length) {
+                      return Center(
+                        child: KFPulseAnimation(
+                          maxScale: 1.05,
+                          child: _buildAddActivityButton(),
+                        ),
+                      );
+                    }
+
+                    final activity = activityProvider.activities[index];
+                    return KFAnimatedItem(
+                      index: index,
+                      child: _buildActivityCard(activity),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -534,30 +549,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     );
   }
 
-  // Aktivite ekle butonunu ortalı ve daha güzel göster
-  Widget _buildAddActivityButton() {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: ElevatedButton(
-        onPressed: _showAddActivityDialog,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).brightness == Brightness.dark
-              ? AppTheme.primaryColor
-              : AppTheme.primaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(30)),
-          ),
-        ),
-        child: Text(
-          'Aktivite Ekle',
-          style: _buttonTextStyle,
-        ),
-      ),
-    );
-  }
-
   void _changeDate(int days) {
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: days));
@@ -587,26 +578,41 @@ class _ActivityScreenState extends State<ActivityScreen>
     _durationController.clear();
     _notesController.clear();
     _selectedActivityType = FitActivityType.walking;
+    Exercise? _selectedExercise;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setDialogState) => AlertDialog(
           title: const Text('Aktivite Ekle'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Aktivite türü seçici
-                _buildActivityTypeDropdown(),
+                _buildActivityTypeDropdown(setDialogState),
                 const SizedBox(height: 16),
 
                 // Süre girişi
                 _buildDurationTextField(),
                 const SizedBox(height: 16),
 
+                // Egzersiz Seçim Butonu
+                _buildExerciseSelectionButton(context, setDialogState,
+                    (exercise) {
+                  _selectedExercise = exercise;
+                  _notesController.text =
+                      'Egzersiz: ${exercise.name}\n${_notesController.text}';
+                  if (_selectedActivityType != FitActivityType.weightTraining) {
+                    _selectedActivityType = FitActivityType.weightTraining;
+                  }
+                  setDialogState(() {});
+                }),
+                const SizedBox(height: 16),
+
                 // Notlar
-                _buildNotesTextField(),
+                _buildNotesTextField(
+                    selectedExerciseName: _selectedExercise?.name),
               ],
             ),
           ),
@@ -625,6 +631,8 @@ class _ActivityScreenState extends State<ActivityScreen>
                         Provider.of<ActivityProvider>(context, listen: false);
                     final now = DateTime.now();
 
+                    String notes = _notesController.text.trim();
+
                     final activity = ActivityRecord(
                       type: _selectedActivityType,
                       durationMinutes: duration,
@@ -632,9 +640,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                         hour: now.hour,
                         minute: now.minute,
                       ),
-                      notes: _notesController.text.isNotEmpty
-                          ? _notesController.text
-                          : null,
+                      notes: notes.isNotEmpty ? notes : null,
                     );
 
                     provider.addActivity(activity);
@@ -711,7 +717,7 @@ class _ActivityScreenState extends State<ActivityScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Aktivite türü seçici
-                _buildActivityTypeDropdown(),
+                _buildActivityTypeDropdown(setState),
                 const SizedBox(height: 16),
 
                 // Süre girişi
@@ -787,7 +793,8 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   // Dialog'ta görünen DropdownButtonFormField widget'ı
-  DropdownButtonFormField<FitActivityType> _buildActivityTypeDropdown() {
+  DropdownButtonFormField<FitActivityType> _buildActivityTypeDropdown(
+      void Function(void Function()) setDialogState) {
     return DropdownButtonFormField<FitActivityType>(
       value: _selectedActivityType,
       decoration: const InputDecoration(
@@ -826,7 +833,7 @@ class _ActivityScreenState extends State<ActivityScreen>
       ],
       onChanged: (value) {
         if (value != null) {
-          setState(() {
+          setDialogState(() {
             _selectedActivityType = value;
           });
         }
@@ -847,14 +854,187 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   // Notlar için TextField
-  TextField _buildNotesTextField() {
+  TextField _buildNotesTextField({String? selectedExerciseName}) {
     return TextField(
       controller: _notesController,
-      decoration: const InputDecoration(
-        labelText: 'Notlar',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: selectedExerciseName != null
+            ? 'Notlar (Seçilen: $selectedExerciseName)'
+            : 'Notlar (Opsiyonel)',
+        border: const OutlineInputBorder(),
       ),
-      maxLines: 2,
+      maxLines: 3,
+    );
+  }
+
+  // Egzersiz Seçim Butonu Widget'ı
+  Widget _buildExerciseSelectionButton(
+    BuildContext context,
+    void Function(void Function()) setDialogState,
+    void Function(Exercise) onExerciseSelected,
+  ) {
+    return TextButton.icon(
+      icon: Icon(Icons.list_alt, color: Theme.of(context).primaryColor),
+      label: Text(
+        'Kütüphaneden Egzersiz Seç',
+        style: TextStyle(color: Theme.of(context).primaryColor),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+              color: Theme.of(context).primaryColor.withOpacity(0.5)),
+        ),
+        foregroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+      ),
+      onPressed: () async {
+        final selectedExercise = await Navigator.push<Exercise>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ExerciseLibraryScreen(isSelectionMode: true),
+          ),
+        );
+
+        if (selectedExercise != null) {
+          onExerciseSelected(selectedExercise);
+        }
+      },
+    );
+  }
+
+  // Placeholder for Workout In Progress View (to be added next)
+  Widget _buildWorkoutInProgressView(
+      BuildContext context, WorkoutProvider provider) {
+    // TODO: Copy UI from WorkoutLoggingScreen here
+    // return Center(
+    //   child: Column(
+    //     mainAxisAlignment: MainAxisAlignment.center,
+    //      children: [
+    //        Text('Antrenman Devam Ediyor...'),
+    //        SizedBox(height: 20),
+    //         // Add buttons for adding exercise, finishing, cancelling etc.
+    //        ElevatedButton(
+    //           onPressed: () => provider.cancelWorkout(),
+    //           child: Text('İptal Et (Test)'),
+    //        ),
+    //         ElevatedButton(
+    //           onPressed: () => provider.saveWorkout(),
+    //           child: Text('Kaydet (Test)'),
+    //        ),
+    //      ]
+    //   ),
+    // );
+
+    // --- Copied from WorkoutLoggingScreen ---
+    final currentWorkout = provider.currentWorkoutLog;
+    if (currentWorkout == null)
+      return const SizedBox
+          .shrink(); // Should not happen if isWorkoutInProgress is true
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Antrenman Başladı: ${TimeOfDay.fromDateTime(currentWorkout.date).format(context)}',
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+
+          // Placeholder for Exercise List
+          Expanded(
+            child: currentWorkout.exerciseLogs.isEmpty
+                ? Center(
+                    child: Text('Henüz egzersiz eklenmedi.',
+                        style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    itemCount: currentWorkout.exerciseLogs.length,
+                    itemBuilder: (context, index) {
+                      final exerciseLog = currentWorkout.exerciseLogs[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: ListTile(
+                          leading: CircleAvatar(child: Text('${index + 1}')),
+                          title: Text(exerciseLog.exerciseDetails?.name ??
+                              'Bilinmeyen Egzersiz'),
+                          subtitle:
+                              Text('${exerciseLog.sets?.length ?? 0} set'),
+                          // TODO: Add onTap to view/edit sets
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          const SizedBox(height: 16),
+
+          // Action Buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                icon: Icon(Icons.add),
+                label: Text('Egzersiz Ekle'),
+                onPressed: () {
+                  // TODO: Show exercise selection dialog
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Egzersiz ekleme henüz aktif değil.'),
+                  ));
+                },
+              ),
+              // TODO: Add Set Button (maybe inside exercise tile?)
+            ],
+          ),
+
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            icon: Icon(Icons.check_circle_outline_rounded),
+            label: Text('Antrenmanı Bitir ve Kaydet'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            onPressed: () {
+              // TODO: Ask for duration, notes, rating, feeling?
+              provider.saveWorkout();
+            },
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: Icon(Icons.cancel_outlined),
+            label: Text('Antrenmanı İptal Et'),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () {
+              provider.cancelWorkout();
+            },
+          ),
+          const SizedBox(height: 60), // Add padding to avoid FAB overlap
+        ],
+      ),
+    );
+    // --- End of Copied Code ---
+  }
+
+  // Aktivite ekle butonunu ortalı ve daha güzel göster
+  Widget _buildAddActivityButton() {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: ElevatedButton(
+        onPressed: _showAddActivityDialog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark
+              ? AppTheme.primaryColor
+              : AppTheme.primaryColor,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(30)),
+          ),
+        ),
+        child: Text(
+          'Aktivite Ekle',
+          style: _buttonTextStyle,
+        ),
+      ),
     );
   }
 }

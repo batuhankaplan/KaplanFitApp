@@ -4,8 +4,10 @@ class AppTheme {
   // Ana renkler
   static const Color primaryColor = Color(0xFF5D69BE); // Mor-mavi ana renk
   static const Color secondaryColor = Color(0xFF26C485); // Yeşil ikincil renk
-  static const Color accentColor = Color(0xFFFF6B6B); // Canlı mercan aksan rengi
-  
+  static const Color accentColor =
+      Color(0xFFFF6B6B); // Canlı mercan aksan rengi
+  static const Color infoColor = Color(0xFF2196F3); // Bilgi rengi - mavi
+
   // Arka plan ve metin renkleri
   static const Color backgroundColor = Color(0xFFF6F8FE);
   static const Color darkBackgroundColor = Color(0xFF121219);
@@ -17,30 +19,43 @@ class AppTheme {
   static const Color darkTextColor = Color(0xFFE1E1E1);
   static const Color secondaryTextColor = Color(0xFF757575);
   static const Color darkSecondaryTextColor = Color(0xFFAAAAAA);
-  
+
   // Görev kartı renkleri
-  static const Color morningExerciseColor = Color(0xFF5878FF); // Sabah egzersizi (mavi)
+  static const Color morningExerciseColor =
+      Color(0xFF5878FF); // Sabah egzersizi (mavi)
   static const Color lunchColor = Color(0xFFFF8F5D); // Öğle yemeği (turuncu)
-  static const Color eveningExerciseColor = Color(0xFFAF52DE); // Akşam egzersizi (mor)
+  static const Color eveningExerciseColor =
+      Color(0xFFAF52DE); // Akşam egzersizi (mor)
   static const Color dinnerColor = Color(0xFF2DB886); // Akşam yemeği (yeşil)
-  static const Color waterReminderColor = Color(0xFF54C5F8); // Su içme hatırlatıcı (açık mavi)
-  
+  static const Color waterReminderColor =
+      Color(0xFF54C5F8); // Su içme hatırlatıcı (açık mavi)
+
   // Tamamlanmış görevlerin rengi
-  static const Color completedTaskColor = Color(0xFF243355); // Tamamlanmış görev arka planı
-  
+  static const Color completedTaskColor =
+      Color(0xFF243355); // Tamamlanmış görev arka planı
+
   // Kategori renkleri
-  static const Color categoryWorkoutColor = Color(0xFF7C4DFF); // Antrenman kategorisi (mor)
-  static const Color categoryNutritionColor = Color(0xFF00BFA5); // Beslenme kategorisi (turkuaz)
-  static const Color categoryWaterColor = Color(0xFF29B6F6); // Su kategorisi (açık mavi)
-  static const Color categoryRestColor = Color(0xFFFFB74D); // Dinlenme kategorisi (amber)
-  static const Color categoryStatsColor = Color(0xFFEF5350); // İstatistik kategorisi (kırmızı)
-  
+  static const Color categoryWorkoutColor =
+      Color(0xFF7C4DFF); // Antrenman kategorisi (mor)
+  static const Color categoryNutritionColor =
+      Color(0xFF00BFA5); // Beslenme kategorisi (turkuaz)
+  static const Color categoryWaterColor =
+      Color(0xFF29B6F6); // Su kategorisi (açık mavi)
+  static const Color categoryRestColor =
+      Color(0xFFFFB74D); // Dinlenme kategorisi (amber)
+  static const Color categoryStatsColor =
+      Color(0xFFEF5350); // İstatistik kategorisi (kırmızı)
+
   // Grafik renkleri
-  static const Color chartSuccessColor = Color(0xFF66BB6A); // Başarı grafiği (yeşil)
-  static const Color chartPendingColor = Color(0xFFFFCA28); // Bekleyen grafiği (sarı)
-  static const Color chartFailedColor = Color(0xFFEF5350); // Başarısız grafiği (kırmızı)
-  static const Color chartNeutralColor = Color(0xFF90A4AE); // Nötr grafiği (gri-mavi)
-  
+  static const Color chartSuccessColor =
+      Color(0xFF66BB6A); // Başarı grafiği (yeşil)
+  static const Color chartPendingColor =
+      Color(0xFFFFCA28); // Bekleyen grafiği (sarı)
+  static const Color chartFailedColor =
+      Color(0xFFEF5350); // Başarısız grafiği (kırmızı)
+  static const Color chartNeutralColor =
+      Color(0xFF90A4AE); // Nötr grafiği (gri-mavi)
+
   // Görev kategorileri için renkler
   static const Color workoutColor = Color(0xFFFF6B6B);
   static const Color nutritionColor = Color(0xFF26C485);
@@ -48,7 +63,14 @@ class AppTheme {
   static const Color sleepColor = Color(0xFF8C7AE6);
   static const Color meditationColor = Color(0xFFFFCF56);
   static const Color goalColor = Color(0xFFB795FF);
-  
+
+  // Hedef takibi renkleri
+  static const Color weightColor = Color(0xFF7C4DFF); // Kilo takibi (mor)
+  static const Color calorieColor =
+      Color(0xFFFF8F5D); // Kalori takibi (turuncu)
+  static const Color activityColor =
+      Color(0xFF26C485); // Aktivite takibi (yeşil)
+
   // Grafik renkleri
   static const List<Color> chartColors = [
     Color(0xFF5D69BE),
@@ -58,16 +80,16 @@ class AppTheme {
     Color(0xFF8C7AE6),
     Color(0xFF5D9CEC),
   ];
-  
+
   // Gradyan renkler
   static const Color gradientStart = Color(0xFF516AE2);
   static const Color gradientEnd = Color(0xFF5D69BE);
-  
+
   // İleride değişebilecek her renk için Getter
   static Color get taskCardColorLight => const Color(0xFFFFFFFF);
   static Color get taskCardColorDark => const Color(0xFF242424);
   static Color get cardColor => const Color(0xFF243355);
-  
+
   // Koyu tema
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
@@ -215,7 +237,8 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: darkSecondaryTextColor.withOpacity(0.6), width: 1.5),
+        borderSide: BorderSide(
+            color: darkSecondaryTextColor.withOpacity(0.6), width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -229,7 +252,8 @@ class AppTheme {
       fillColor: darkSurfaceColor,
       contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       labelStyle: TextStyle(color: darkSecondaryTextColor, fontSize: 16),
-      hintStyle: TextStyle(color: darkSecondaryTextColor.withOpacity(0.7), fontSize: 16),
+      hintStyle: TextStyle(
+          color: darkSecondaryTextColor.withOpacity(0.7), fontSize: 16),
     ),
     dividerTheme: DividerThemeData(
       thickness: 1,
@@ -258,7 +282,8 @@ class AppTheme {
       indicatorColor: primaryColor,
       indicatorSize: TabBarIndicatorSize.label,
       labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+      unselectedLabelStyle:
+          TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
     ),
   );
 
@@ -497,7 +522,8 @@ class AppTheme {
       indicatorColor: primaryColor,
       indicatorSize: TabBarIndicatorSize.label,
       labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+      unselectedLabelStyle:
+          TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
     ),
   );
-} 
+}

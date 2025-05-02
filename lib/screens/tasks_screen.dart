@@ -54,13 +54,13 @@ class TasksScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              final provider = Provider.of<ActivityProvider>(context, listen: false);
-              provider.createDefaultTasks();
-            },
-            child: Text('Öntanımlı Görevleri Ekle'),
-          ),
+          // ElevatedButton(
+          //   onPressed: () {
+          //     final provider = Provider.of<ActivityProvider>(context, listen: false);
+          //     // provider.createDefaultTasks(); // Bu metod kaldırıldı
+          //   },
+          //   child: Text('Öntanımlı Görevleri Ekle'),
+          // ),
         ],
       ),
     );
@@ -74,27 +74,38 @@ class TasksScreen extends StatelessWidget {
         final task = tasks[index];
         return Card(
           margin: EdgeInsets.only(bottom: 16),
-          child: CheckboxListTile(
+          child: ListTile(
+            leading: Icon(
+              _getTaskIcon(task.type),
+              color: task.isCompleted
+                  ? Colors.grey
+                  : Theme.of(context).primaryColor,
+            ),
             title: Text(
               task.title,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                decoration:
+                    task.isCompleted ? TextDecoration.lineThrough : null,
+                color: task.isCompleted ? Colors.grey : null,
               ),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  task.description,
-                  style: TextStyle(
-                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                if (task.description != null && task.description!.isNotEmpty)
+                  Text(
+                    task.description!,
+                    style: TextStyle(
+                      decoration:
+                          task.isCompleted ? TextDecoration.lineThrough : null,
+                      color: task.isCompleted ? Colors.grey : null,
+                    ),
                   ),
-                ),
                 SizedBox(height: 4),
                 Text(
-                  DateFormat('dd MMM yyyy, HH:mm', 'tr_TR').format(task.date),
+                  DateFormat('dd MMM yyyy', 'tr_TR').format(task.date),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -102,17 +113,7 @@ class TasksScreen extends StatelessWidget {
                 ),
               ],
             ),
-            value: task.isCompleted,
-            onChanged: (bool? value) {
-              if (value != null) {
-                final provider = Provider.of<ActivityProvider>(context, listen: false);
-                provider.updateTaskCompletion(task, value);
-              }
-            },
-            activeColor: Theme.of(context).primaryColor,
-            checkColor: Colors.white,
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            controlAffinity: ListTileControlAffinity.leading,
           ),
         );
       },
@@ -123,7 +124,7 @@ class TasksScreen extends StatelessWidget {
     final formKey = GlobalKey<FormState>();
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -178,10 +179,11 @@ class TasksScreen extends StatelessWidget {
                   date: DateTime.now(),
                   type: TaskType.other,
                 );
-                
-                final provider = Provider.of<ActivityProvider>(context, listen: false);
+
+                final provider =
+                    Provider.of<ActivityProvider>(context, listen: false);
                 provider.addTask(task);
-                
+
                 Navigator.of(context).pop();
               }
             },
@@ -191,4 +193,20 @@ class TasksScreen extends StatelessWidget {
       ),
     );
   }
-} 
+
+  IconData _getTaskIcon(TaskType type) {
+    switch (type) {
+      case TaskType.morningExercise:
+        return Icons.directions_run;
+      case TaskType.lunch:
+        return Icons.restaurant;
+      case TaskType.eveningExercise:
+        return Icons.fitness_center;
+      case TaskType.dinner:
+        return Icons.dinner_dining;
+      case TaskType.other:
+      default:
+        return Icons.task_alt;
+    }
+  }
+}

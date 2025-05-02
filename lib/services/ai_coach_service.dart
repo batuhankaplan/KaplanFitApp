@@ -8,20 +8,20 @@ import '../models/task_type.dart';
 class AICoachService {
   // API anahtarı geçici olarak boş bırakılmıştır, kullanıcı kendi anahtarını girecektir
   String _apiKey = 'AIzaSyB5c4nbG1J7842wkmESVt0tUgD2I-Ey3M8';
-  final DatabaseService _db;
+  final DatabaseService _dbService;
   late GenerativeModel _model;
-  
+
   // Getter ve setter tanımlamaları
   String get apiKey => _apiKey;
   set apiKey(String value) {
     _apiKey = value;
     _initModel(); // Anahtar değiştiğinde modeli yeniden başlat
   }
-  
-  AICoachService(this._db) {
+
+  AICoachService(this._dbService) {
     _initModel();
   }
-  
+
   void _initModel() {
     // Model başlatılıyor - API anahtarı geçerli olmadığında çalışmayacaktır
     _model = GenerativeModel(
@@ -29,7 +29,7 @@ class AICoachService {
       apiKey: _apiKey,
     );
   }
-  
+
   // Kullanılabilir modelleri listelemek için metot - API henüz bu özelliği direkt olarak desteklemediği için manuel olarak
   Future<String> listAvailableModels() async {
     try {
@@ -49,26 +49,39 @@ class AICoachService {
       return "Model bilgisi gösterilirken hata oluştu: $e";
     }
   }
-  
+
   // Kullanıcı verileri, aktiviteler ve beslenme bilgileriyle oluşturulan context
   Future<String> _buildUserContext() async {
-    final user = await _db.getUser(); // Parametre olmadan çağırıyoruz
-    final activities = await _db.getActivitiesInRange(
-      DateTime.now().subtract(Duration(days: 30)), 
-      DateTime.now()
-    );
-    final meals = await _db.getMealsInRange(
-      DateTime.now().subtract(Duration(days: 30)), 
-      DateTime.now()
-    );
-    
+    // GEÇİCİ ÇÖZÜM: Varsayılan ID 1
+    // TODO: Gerçek kullanıcı ID yönetimini ekle
+    const int currentUserId = 1;
+    final user =
+        await _dbService.getUser(currentUserId); // ID parametresi eklendi
+
+    // Kullanıcı yoksa veya ID'si yoksa, bağlam oluşturmadan çık
+    if (user == null || user.id == null) {
+      print("AICoachService: Kullanıcı bulunamadı, bağlam oluşturulamıyor.");
+      return "Kullanıcı bilgileri alınamadı."; // veya başka bir uygun mesaj
+    }
+
+    final userId = user.id!; // Null check zaten yapıldı
+    print("AICoachService: Bağlam oluşturuluyor - Kullanıcı ID: $userId");
+
+    // Aktiviteleri al (şimdilik userId gerektirmiyor varsayıyoruz)
+    final activities = await _dbService.getActivitiesInRange(
+        DateTime.now().subtract(Duration(days: 30)), DateTime.now());
+
+    // Öğünleri userId ile al
+    final meals = await _dbService.getMealsInRange(
+        DateTime.now().subtract(Duration(days: 30)), DateTime.now(), userId);
+
     // En sık yapılan aktivite ve ortalama kalori hesaplamaları
     final mostFrequentActivity = _getMostFrequentActivity(activities);
     final avgCalories = _getAverageCaloriesPerDay(meals);
-    
+
     // Haftalık aktivite durumu
     final weeklyActivityStatus = _getWeeklyActivityStatus(activities);
-    
+
     return """
     KULLANICI BİLGİLERİ:
     Ad: ${user?.name ?? 'Bilinmiyor'}
@@ -111,30 +124,30 @@ class AICoachService {
     Kullanıcıya Türkçe yanıt ver.
     """;
   }
-  
+
   String _getMostFrequentActivity(List<ActivityRecord> activities) {
     if (activities.isEmpty) return "Henüz veri yok";
-    
+
     // Aktivite tiplerini sayma
     Map<FitActivityType, int> activityCounts = {};
     for (var activity in activities) {
       activityCounts[activity.type] = (activityCounts[activity.type] ?? 0) + 1;
     }
-    
+
     // En sık yapılan aktivite tipini bulma
     FitActivityType? mostFrequent;
     int maxCount = 0;
-    
+
     activityCounts.forEach((type, count) {
       if (count > maxCount) {
         maxCount = count;
         mostFrequent = type;
       }
     });
-    
+
     // Aktivite tipini metin olarak döndürme
     if (mostFrequent == null) return "Henüz veri yok";
-    
+
     switch (mostFrequent) {
       case FitActivityType.walking:
         return "Yürüyüş";
@@ -154,58 +167,63 @@ class AICoachService {
         return "Belirsiz";
     }
   }
-  
+
   int _getWeeklyActivityStatus(List<ActivityRecord> activities) {
     // Son 7 gün içindeki aktiviteleri filtreleme
     final now = DateTime.now();
     final weekAgo = now.subtract(Duration(days: 7));
-    
-    final weeklyActivities = activities.where((a) => 
-      a.date.isAfter(weekAgo) && a.date.isBefore(now.add(Duration(days: 1)))
-    ).toList();
-    
+
+    final weeklyActivities = activities
+        .where((a) =>
+            a.date.isAfter(weekAgo) &&
+            a.date.isBefore(now.add(Duration(days: 1))))
+        .toList();
+
     // Aktivite günlerini sayma (bir günde birden fazla aktivite olsa bile o gün bir kez sayılır)
     Set<String> activityDays = {};
     for (var activity in weeklyActivities) {
       // Günü yyyy-MM-dd formatında bir string olarak ekleyerek tekrarları engelliyoruz
-      activityDays.add("${activity.date.year}-${activity.date.month.toString().padLeft(2, '0')}-${activity.date.day.toString().padLeft(2, '0')}");
+      activityDays.add(
+          "${activity.date.year}-${activity.date.month.toString().padLeft(2, '0')}-${activity.date.day.toString().padLeft(2, '0')}");
     }
-    
+
     return activityDays.length;
   }
-  
+
   double _getAverageCaloriesPerDay(List<MealRecord> meals) {
     if (meals.isEmpty) return 0;
-    
+
     // Son ayda yenilen toplam kalori
-    int totalCalories = meals.fold(0, (sum, meal) => sum + (meal.calories ?? 0));
-    
+    int totalCalories =
+        meals.fold(0, (sum, meal) => sum + (meal.calories ?? 0));
+
     // Öğün olan tekil günleri hesaplama
     Set<String> mealDays = {};
     for (var meal in meals) {
-      mealDays.add("${meal.date.year}-${meal.date.month.toString().padLeft(2, '0')}-${meal.date.day.toString().padLeft(2, '0')}");
+      mealDays.add(
+          "${meal.date.year}-${meal.date.month.toString().padLeft(2, '0')}-${meal.date.day.toString().padLeft(2, '0')}");
     }
-    
+
     // Veri olan gün sayısı
     int numberOfDays = mealDays.length;
-    
+
     // Gün sayısı 0 ise NaN dönmemek için kontrol
     return numberOfDays > 0 ? totalCalories / numberOfDays : 0;
   }
-  
+
   Future<String> getCoachResponse(String userMessage) async {
     try {
       // API anahtarı kontrolünü kaldırıyoruz
-      
+
       final context = await _buildUserContext();
       final prompt = "$context\n\nKullanıcı: $userMessage";
-      
+
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
-      
+
       return response.text ?? "Üzgünüm, yanıt oluşturulamadı.";
     } catch (e) {
       return "Üzgünüm, bir hata oluştu: $e";
     }
   }
-} 
+}

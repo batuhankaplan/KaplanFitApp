@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/program_model.dart';
+import '../models/program_set.dart';
 import '../services/program_service.dart';
 import '../widgets/program_detail_dialog.dart';
 import 'package:provider/provider.dart';
-import '../models/providers/database_provider.dart';
+import '../providers/database_provider.dart';
 import '../theme.dart';
 import '../widgets/kaplan_appbar.dart';
 
@@ -18,9 +19,24 @@ class ProgramScreen extends StatefulWidget {
 
 class _ProgramScreenState extends State<ProgramScreen> {
   int _selectedDayIndex = 0;
-  final List<String> _weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
-  final List<String> _weekDayAbbr = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-  final ProgramService _programService = ProgramService();
+  final List<String> _weekDays = [
+    'Pazartesi',
+    'Salı',
+    'Çarşamba',
+    'Perşembe',
+    'Cuma',
+    'Cumartesi',
+    'Pazar'
+  ];
+  final List<String> _weekDayAbbr = [
+    'Pzt',
+    'Sal',
+    'Çar',
+    'Per',
+    'Cum',
+    'Cmt',
+    'Paz'
+  ];
   List<DailyProgram> _weeklyProgram = [];
   bool _isLoading = true;
 
@@ -28,8 +44,8 @@ class _ProgramScreenState extends State<ProgramScreen> {
   void initState() {
     super.initState();
     initializeDateFormatting('tr_TR', null);
-    _loadProgram();
-    
+    // _loadProgram(); // didChangeDependencies'te çağrılacak
+
     // Uygulamayı açtığımızda bugünü seçelim
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final today = DateTime.now().weekday - 1;
@@ -39,17 +55,27 @@ class _ProgramScreenState extends State<ProgramScreen> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadProgram(); // Provider bağımlılığı olduğu için burada yükle
+  }
+
   Future<void> _loadProgram() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final weeklyProgram = await _programService.getWeeklyProgram();
-      setState(() {
-        _weeklyProgram = weeklyProgram;
-        _isLoading = false;
-      });
+      final programService = Provider.of<ProgramService>(context,
+          listen: false); // YENİ: Provider'dan al
+      final weeklyProgram = await programService.getWeeklyProgram();
+      if (mounted) {
+        setState(() {
+          _weeklyProgram = weeklyProgram;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       print('Program yüklenirken hata: $e');
       setState(() {
@@ -72,7 +98,9 @@ class _ProgramScreenState extends State<ProgramScreen> {
     if (result != null) {
       // Programı güncelle
       final currentProgram = _weeklyProgram[_selectedDayIndex];
-      
+      final programService = Provider.of<ProgramService>(context,
+          listen: false); // YENİ: Provider'dan al
+
       setState(() {
         switch (type) {
           case 'morning':
@@ -89,18 +117,21 @@ class _ProgramScreenState extends State<ProgramScreen> {
             break;
         }
       });
-      
+
       // Değişiklikleri kaydet
-      await _programService.updateDailyProgram(_selectedDayIndex, currentProgram);
-      
+      await programService.updateDailyProgram(
+          _selectedDayIndex, currentProgram);
+
       // Bugünün programı değiştirilmişse ana sayfayı güncelle
       if (_selectedDayIndex == DateTime.now().weekday - 1) {
         // Burada anasayfanın güncellenmesi için bir bildirim veya event gönderilebilir
         // Örneğin bir GlobalKey veya Event Bus kullanılabilir
         // Şimdilik Provider üzerinden doğrudan güncelleyeceğiz
-        Provider.of<DatabaseProvider>(context, listen: false).notifyListeners();
+        // Provider.of<DatabaseProvider>(context, listen: false).notifyListeners(); // DatabaseProvider yerine ProgramService dinlenebilir veya başka bir state management yaklaşımı kullanılabilir.
+        // Ana sayfada ProgramService'i dinleyen bir yapı varsa bu otomatik olur.
+        // Şimdilik bu satırı yorumda bırakalım veya kaldıralım.
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Program güncellendi')),
       );
@@ -110,7 +141,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: KaplanAppBar(
         title: 'Haftalık Program',
@@ -123,14 +154,19 @@ class _ProgramScreenState extends State<ProgramScreen> {
               children: [
                 // Gün seçici
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        isDarkMode ? const Color(0xFF2C2C2C) : AppTheme.primaryColor.withOpacity(0.7),
-                        isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
+                        isDarkMode
+                            ? const Color(0xFF2C2C2C)
+                            : AppTheme.primaryColor.withOpacity(0.7),
+                        isDarkMode
+                            ? const Color(0xFF1F1F1F)
+                            : AppTheme.primaryColor,
                       ],
                     ),
                     borderRadius: const BorderRadius.only(
@@ -153,10 +189,11 @@ class _ProgramScreenState extends State<ProgramScreen> {
                         children: List.generate(7, (index) {
                           final isSelected = index == _selectedDayIndex;
                           final isToday = index == (DateTime.now().weekday - 1);
-                          
+
                           return GestureDetector(
                             onTap: () {
-                              print('Seçilen gün: $index (${_weekDays[index]})');
+                              print(
+                                  'Seçilen gün: $index (${_weekDays[index]})');
                               setState(() {
                                 _selectedDayIndex = index;
                               });
@@ -166,14 +203,14 @@ class _ProgramScreenState extends State<ProgramScreen> {
                               height: 40,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                  ? AppTheme.accentColor
-                                  : isToday 
-                                    ? AppTheme.accentColor.withOpacity(0.2) 
-                                    : Colors.transparent,
+                                    ? AppTheme.accentColor
+                                    : isToday
+                                        ? AppTheme.accentColor.withOpacity(0.2)
+                                        : Colors.transparent,
                                 shape: BoxShape.circle,
                                 border: !isSelected && isToday
-                                  ? Border.all(color: AppTheme.accentColor)
-                                  : null,
+                                    ? Border.all(color: AppTheme.accentColor)
+                                    : null,
                               ),
                               child: Center(
                                 child: Text(
@@ -181,10 +218,10 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: isSelected
-                                      ? Colors.white
-                                      : isToday
-                                        ? AppTheme.accentColor
-                                        : Colors.white,
+                                        ? Colors.white
+                                        : isToday
+                                            ? AppTheme.accentColor
+                                            : Colors.white,
                                   ),
                                 ),
                               ),
@@ -195,9 +232,9 @@ class _ProgramScreenState extends State<ProgramScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 // Program kartları
                 Expanded(
                   child: _weeklyProgram.isEmpty
@@ -209,62 +246,92 @@ class _ProgramScreenState extends State<ProgramScreen> {
                               // Sabah Egzersizi
                               _buildProgramCard(
                                 context: context,
-                                title: 'Sabah Egzersizi',
-                                icon: Icons.wb_sunny,
+                                title: _weeklyProgram[_selectedDayIndex]
+                                    .morningExercise
+                                    .title,
+                                icon: _weeklyProgram[_selectedDayIndex]
+                                    .morningExercise
+                                    .icon,
                                 color: AppTheme.morningExerciseColor,
-                                description: _weeklyProgram[_selectedDayIndex].morningExercise.description,
-                                onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].morningExercise, 'morning'),
+                                item: _weeklyProgram[_selectedDayIndex]
+                                    .morningExercise,
+                                onTap: () => _showEditDialog(
+                                    _weeklyProgram[_selectedDayIndex]
+                                        .morningExercise,
+                                    'morning'),
                               ),
-                              
+
                               const SizedBox(height: 16),
-                              
+
                               // Öğle Yemeği
                               _buildProgramCard(
                                 context: context,
-                                title: 'Öğle Yemeği',
-                                icon: Icons.restaurant,
+                                title: _weeklyProgram[_selectedDayIndex]
+                                    .lunch
+                                    .title,
+                                icon: _weeklyProgram[_selectedDayIndex]
+                                    .lunch
+                                    .icon,
                                 color: AppTheme.lunchColor,
-                                description: _weeklyProgram[_selectedDayIndex].lunch.description,
-                                onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].lunch, 'lunch'),
+                                item: _weeklyProgram[_selectedDayIndex].lunch,
+                                onTap: () => _showEditDialog(
+                                    _weeklyProgram[_selectedDayIndex].lunch,
+                                    'lunch'),
                               ),
-                              
+
                               const SizedBox(height: 16),
-                              
+
                               // Akşam Egzersizi
                               _buildProgramCard(
                                 context: context,
-                                title: 'Akşam Egzersizi',
-                                icon: Icons.fitness_center,
+                                title: _weeklyProgram[_selectedDayIndex]
+                                    .eveningExercise
+                                    .title,
+                                icon: _weeklyProgram[_selectedDayIndex]
+                                    .eveningExercise
+                                    .icon,
                                 color: AppTheme.eveningExerciseColor,
-                                description: _weeklyProgram[_selectedDayIndex].eveningExercise.description,
-                                onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].eveningExercise, 'evening'),
+                                item: _weeklyProgram[_selectedDayIndex]
+                                    .eveningExercise,
+                                onTap: () => _showEditDialog(
+                                    _weeklyProgram[_selectedDayIndex]
+                                        .eveningExercise,
+                                    'evening'),
                               ),
-                              
+
                               const SizedBox(height: 16),
-                              
+
                               // Akşam Yemeği
                               _buildProgramCard(
                                 context: context,
-                                title: 'Akşam Yemeği',
-                                icon: Icons.dinner_dining,
+                                title: _weeklyProgram[_selectedDayIndex]
+                                    .dinner
+                                    .title,
+                                icon: _weeklyProgram[_selectedDayIndex]
+                                    .dinner
+                                    .icon,
                                 color: AppTheme.dinnerColor,
-                                description: _weeklyProgram[_selectedDayIndex].dinner.description,
-                                onTap: () => _showEditDialog(_weeklyProgram[_selectedDayIndex].dinner, 'dinner'),
+                                item: _weeklyProgram[_selectedDayIndex].dinner,
+                                onTap: () => _showEditDialog(
+                                    _weeklyProgram[_selectedDayIndex].dinner,
+                                    'dinner'),
                               ),
-                              
+
                               const SizedBox(height: 24),
-                              
+
                               // Notlar ve tavsiyeler
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).brightness == Brightness.dark 
-                                      ? Colors.grey.shade800 
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.grey.shade800
                                       : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: Theme.of(context).brightness == Brightness.dark 
-                                        ? Colors.grey.shade700 
+                                    color: Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.grey.shade700
                                         : Colors.grey.shade300,
                                   ),
                                 ),
@@ -274,9 +341,10 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                     Row(
                                       children: [
                                         Icon(
-                                          Icons.info_outline, 
-                                          color: Theme.of(context).brightness == Brightness.dark 
-                                              ? Colors.lightBlue.shade300 
+                                          Icons.info_outline,
+                                          color: Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.lightBlue.shade300
                                               : Colors.blue,
                                         ),
                                         const SizedBox(width: 8),
@@ -285,9 +353,11 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
-                                            color: Theme.of(context).brightness == Brightness.dark 
-                                                ? Colors.white 
-                                                : Colors.black87,
+                                            color:
+                                                Theme.of(context).brightness ==
+                                                        Brightness.dark
+                                                    ? Colors.white
+                                                    : Colors.black87,
                                           ),
                                         ),
                                       ],
@@ -299,8 +369,9 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                       '• Her gün en az 30 dakika hareket etmeye çalışın.\n'
                                       '• Yemekten 2 saat önce uyumayın.',
                                       style: TextStyle(
-                                        color: Theme.of(context).brightness == Brightness.dark 
-                                            ? Colors.white70 
+                                        color: Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white70
                                             : Colors.black87,
                                       ),
                                     ),
@@ -321,11 +392,11 @@ class _ProgramScreenState extends State<ProgramScreen> {
     required String title,
     required IconData icon,
     required Color color,
-    required String description,
+    required ProgramItem item,
     required VoidCallback onTap,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -356,7 +427,9 @@ class _ProgramScreenState extends State<ProgramScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.7),
+                        color: isDarkMode
+                            ? Colors.black26
+                            : Colors.white.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -379,13 +452,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                   ],
                 ),
                 const Divider(height: 24),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: isDarkMode ? Colors.white70 : Colors.black87,
-                  ),
-                ),
+                _buildItemContent(context, item, isDarkMode),
               ],
             ),
           ),
@@ -393,4 +460,74 @@ class _ProgramScreenState extends State<ProgramScreen> {
       ),
     );
   }
-} 
+
+  /// ProgramItem tipine göre içeriği oluşturan yardımcı metod
+  Widget _buildItemContent(
+      BuildContext context, ProgramItem item, bool isDarkMode) {
+    // Log the item type and program sets
+    // debugPrint('[ProgramScreen] Building content for item: ${item.title}, type: ${item.type}');
+    if (item.type == ProgramItemType.workout &&
+        item.programSets != null &&
+        item.programSets!.isNotEmpty) {
+      // debugPrint('[ProgramScreen] Program sets: ${item.programSets?.length}');
+      // Antrenman içeriği
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: item.programSets!.map((set) {
+          final exerciseName =
+              set.exerciseDetails?.name ?? 'Egzersiz #${set.exerciseId}';
+          // Log exercise details
+          // debugPrint('[ProgramScreen] Set for exercise: $exerciseName, details: ${set.exerciseDetails}');
+          String details = '';
+          if (set.setsDescription != null && set.repsDescription != null) {
+            details +=
+                '${set.setsDescription} set x ${set.repsDescription} tekrar';
+          } else if (set.repsDescription != null) {
+            details +=
+                '${set.repsDescription}'; // Sadece tekrar veya süre varsa (örn: 30 dk Yürüyüş)
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.chevron_right,
+                    size: 16,
+                    color: isDarkMode ? Colors.white54 : Colors.black54),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                      children: <TextSpan>[
+                        TextSpan(
+                            text: '$exerciseName: ',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        TextSpan(text: details),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    } else {
+      // Yemek, dinlenme veya diğer içerik (açıklama)
+      // debugPrint('[ProgramScreen] Showing description: ${item.description}');
+      return Text(
+        item.description ?? 'Açıklama yok.',
+        style: TextStyle(
+          fontSize: 15,
+          color: isDarkMode ? Colors.white70 : Colors.black87,
+        ),
+      );
+    }
+  }
+}

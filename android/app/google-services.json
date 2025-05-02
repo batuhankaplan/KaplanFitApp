@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "636696194412",
+    "project_id": "kaplanfitapp",
+    "storage_bucket": "kaplanfitapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:636696194412:android:f7dece5fa1a6f04fb1d749",
+        "android_client_info": {
+          "package_name": "com.kaplancodding.KaplanFitApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDu-qdV-KZ9v3NIyefX3EGjHSiKQwGaol8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

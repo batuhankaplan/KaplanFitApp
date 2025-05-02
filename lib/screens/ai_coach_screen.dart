@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/database_service.dart';
 import '../services/ai_coach_service.dart';
-import '../models/providers/database_provider.dart';
 import '../models/chat_model.dart';
 import 'conversations_screen.dart';
 import '../widgets/kaplan_loading.dart';
@@ -31,8 +31,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
   void initState() {
     super.initState();
     _conversationId = widget.conversationId;
-    // Kolay erişim için mevcut _messages listesini kullanıyoruz,
-    // ama ChatMessage tipinde nesnelere dönüştürüyoruz
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeChat();
     });
@@ -43,28 +41,23 @@ class _AICoachScreenState extends State<AICoachScreen> {
       _isLoading = true;
     });
 
-    final databaseProvider =
-        Provider.of<DatabaseProvider>(context, listen: false);
+    final databaseService =
+        Provider.of<DatabaseService>(context, listen: false);
 
     try {
       if (_conversationId != null) {
-        // Mevcut sohbeti yükle
-        final conversation = await databaseProvider.database
-            .getChatConversation(_conversationId!);
+        final conversation =
+            await databaseService.getChatConversation(_conversationId!);
         if (conversation != null) {
           _conversationTitle = conversation.title;
 
-          // Tüm mesajları eksiksiz olarak yükle
-          final chatMessages = await databaseProvider.database
+          final chatMessages = await databaseService
               .getMessagesForConversation(_conversationId!);
 
-          // Debug kontrolü için mesaj sayısı
           debugPrint('Veritabanından ${chatMessages.length} mesaj yüklendi');
 
-          // Kullanıcı mesajı var mı kontrol et (hoşgeldin mesajı dışındaki mesajlar)
           final hasUserMessage = chatMessages.any((message) => message.isUser);
 
-          // Sıralama kontrolü - mesajları timestamp'e göre sırala
           chatMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
           setState(() {
@@ -72,11 +65,9 @@ class _AICoachScreenState extends State<AICoachScreen> {
           });
         } else {
           debugPrint('Uyarı: $_conversationId ID\'li konuşma bulunamadı');
-          // Konuşma bulunamadı, yeni bir konuşma oluştur
           await _createNewConversationInDatabase();
         }
       } else {
-        // Yeni sohbet oluştur
         await _createNewConversationInDatabase();
       }
     } catch (e) {
@@ -89,20 +80,17 @@ class _AICoachScreenState extends State<AICoachScreen> {
         _isLoading = false;
       });
 
-      // Mesajlar yüklendikten sonra en alta kaydır
       if (_messages.isNotEmpty) {
         _scrollToBottom();
       }
     }
   }
 
-  // Yeni konuşma oluşturma işlemini ayrı bir metoda aldım
   Future<void> _createNewConversationInDatabase() async {
-    final databaseProvider =
-        Provider.of<DatabaseProvider>(context, listen: false);
+    final databaseService =
+        Provider.of<DatabaseService>(context, listen: false);
     final now = DateTime.now();
 
-    // Başlığı değiştirdim - tarih kaldırıldı
     final newTitle = 'Yeni Sohbet';
 
     final newConversation = ChatConversation(
@@ -111,14 +99,13 @@ class _AICoachScreenState extends State<AICoachScreen> {
     );
 
     final newConversationId =
-        await databaseProvider.database.createChatConversation(newConversation);
+        await databaseService.createChatConversation(newConversation);
 
     setState(() {
       _conversationId = newConversationId;
       _conversationTitle = newTitle;
     });
 
-    // Hoşgeldin mesajını ekle
     final welcomeMessage = ChatMessage(
       conversationId: newConversationId,
       text:
@@ -127,7 +114,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
       timestamp: now,
     );
 
-    await databaseProvider.database.createChatMessage(welcomeMessage);
+    await databaseService.createChatMessage(welcomeMessage);
 
     setState(() {
       _messages.add(welcomeMessage);
@@ -164,7 +151,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
         _showApiKeyInput = false;
       });
 
-      // API anahtarı ayarlandı mesajını ekle
       _addMessage(
         'API anahtarı ayarlandı. Nasıl yardımcı olabilirim?',
         false,
@@ -172,12 +158,11 @@ class _AICoachScreenState extends State<AICoachScreen> {
     }
   }
 
-  // Kullanıcının ya da AI'ın mesajını mesaj listesine ve veri tabanına ekle
   Future<void> _addMessage(String text, bool isUser) async {
     if (_conversationId == null) return;
 
-    final databaseProvider =
-        Provider.of<DatabaseProvider>(context, listen: false);
+    final databaseService =
+        Provider.of<DatabaseService>(context, listen: false);
 
     final message = ChatMessage(
       conversationId: _conversationId!,
@@ -187,11 +172,8 @@ class _AICoachScreenState extends State<AICoachScreen> {
     );
 
     try {
-      // Mesajı veritabanına ekle
-      final messageId =
-          await databaseProvider.database.createChatMessage(message);
+      final messageId = await databaseService.createChatMessage(message);
 
-      // Mesajı UI'da göster
       setState(() {
         _messages.add(message);
       });
@@ -208,7 +190,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
     final messageText = _messageController.text.trim();
     if (messageText.isEmpty) return;
 
-    // Kullanıcı mesajını ekle
     await _addMessage(messageText, true);
     _messageController.clear();
 
@@ -216,28 +197,24 @@ class _AICoachScreenState extends State<AICoachScreen> {
       _isLoading = true;
     });
 
-    // İlk mesajsa ve başlık henüz değiştirilmediyse, konuşma başlığını güncelle
     if (_conversationId != null &&
         _messages.length <= 2 &&
         _conversationTitle.startsWith('Yeni Sohbet')) {
       _updateConversationTitle(messageText);
     }
 
-    // AI yanıtını al
     try {
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
-      final AICoachService aiCoachService =
-          AICoachService(databaseProvider.database)..apiKey = _apiKey;
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
+      final AICoachService aiCoachService = AICoachService(databaseService)
+        ..apiKey = _apiKey;
 
       final response = await aiCoachService.getCoachResponse(messageText);
 
-      // AI yanıtını ekle
       await _addMessage(response, false);
     } catch (e) {
       debugPrint('AI yanıtı alınırken hata: $e');
 
-      // Hata mesajını ekle
       await _addMessage("Üzgünüm, bir hata oluştu: $e", false);
     } finally {
       setState(() {
@@ -246,47 +223,33 @@ class _AICoachScreenState extends State<AICoachScreen> {
     }
   }
 
-  // Konuşma başlığını güncelleme metodu
   Future<void> _updateConversationTitle(String userMessage) async {
     if (_conversationId == null) return;
 
+    final databaseService =
+        Provider.of<DatabaseService>(context, listen: false);
+
+    // Başlığı kullanıcı mesajının ilk 30 karakteri yapalım
+    String newTitle = userMessage.length > 30
+        ? "${userMessage.substring(0, 27)}..."
+        : userMessage;
+
     try {
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
-
-      // Kullanıcı mesajından başlık oluştur
-      String newTitle = userMessage;
-      if (newTitle.length > 30) {
-        // Uzun mesajları kısalt
-        newTitle = newTitle.substring(0, 27) + '...';
-      }
-
-      // Veritabanında konuşma başlığını güncelle
-      await databaseProvider.database.updateChatConversation(
-        ChatConversation(
-          id: _conversationId!,
-          title: newTitle,
-          createdAt: DateTime.now(),
-        ),
+      await databaseService.updateChatConversationTitle(
+        _conversationId!,
+        newTitle,
       );
-
       setState(() {
         _conversationTitle = newTitle;
       });
-
       debugPrint('Konuşma başlığı güncellendi: $newTitle');
     } catch (e) {
       debugPrint('Konuşma başlığı güncellenirken hata: $e');
-      // Başlık güncellenemezse sessizce devam et
+      // Hata durumunda başlık güncellenmez, kullanıcı bilgilendirilmez
     }
   }
 
   Future<void> _goToConversations() async {
-    // Konuşmalar sayfasına gitmeden önce boş konuşmaları temizle
-    final databaseProvider =
-        Provider.of<DatabaseProvider>(context, listen: false);
-    await databaseProvider.cleanEmptyConversations();
-
     Navigator.of(context)
         .push(
       MaterialPageRoute(
@@ -294,7 +257,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
       ),
     )
         .then((_) {
-      // Konuşma ekranından döndükten sonra güncel bilgileri yükle
       _reloadCurrentConversation();
     });
   }
@@ -303,22 +265,20 @@ class _AICoachScreenState extends State<AICoachScreen> {
     if (_conversationId == null) return;
 
     try {
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
       final conversation =
-          await databaseProvider.database.getChatConversation(_conversationId!);
+          await databaseService.getChatConversation(_conversationId!);
 
       if (conversation != null) {
-        // Tüm mesajları eksiksiz olarak yükle
-        final chatMessages = await databaseProvider.database
-            .getMessagesForConversation(_conversationId!);
+        final chatMessages =
+            await databaseService.getMessagesForConversation(_conversationId!);
 
         setState(() {
           _conversationTitle = conversation.title;
           _messages = chatMessages;
         });
 
-        // Mesajlar yüklendikten sonra en alta kaydır
         if (_messages.isNotEmpty) {
           _scrollToBottom();
         }
@@ -330,12 +290,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
   Future<void> _createNewConversation() async {
     try {
-      // Yeni konuşma açmadan önce boş konuşmaları temizle
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
-      await databaseProvider.cleanEmptyConversations();
-
-      // Navigator.pushReplacement yerine Navigator.push kullanalım
       Navigator.of(context)
           .push(
         MaterialPageRoute(
@@ -343,7 +297,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
         ),
       )
           .then((_) {
-        // Konuşmalar ekranından döndükten sonra güncel verileri yükle
         if (_conversationId != null) {
           _reloadCurrentConversation();
         }
@@ -352,6 +305,55 @@ class _AICoachScreenState extends State<AICoachScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Yeni sohbet oluşturulurken hata: $e')),
       );
+    }
+  }
+
+  Future<void> _startNewConversation() async {
+    setState(() {
+      _conversationId = null;
+      _messages = [];
+      _conversationTitle = 'Yeni Sohbet';
+    });
+    FocusScope.of(context).unfocus();
+    print("Yeni sohbet başlatıldı.");
+  }
+
+  Future<void> _deleteConversation(int conversationId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Sohbeti Sil'),
+        content: Text(
+            'Bu sohbeti ve içindeki tüm mesajları silmek istiyor musunuz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Sil', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final databaseService =
+            Provider.of<DatabaseService>(context, listen: false);
+        await databaseService.deleteChatConversation(conversationId);
+        if (_conversationId == conversationId) {
+          await _startNewConversation();
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sohbet silindi')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sohbet silinirken hata: $e')),
+        );
+      }
     }
   }
 
@@ -550,18 +552,14 @@ class _AICoachScreenState extends State<AICoachScreen> {
     );
   }
 
-  // Kullanılabilir modelleri listelemek için metot
   Future<void> _listModels() async {
-    // API anahtarı kontrolünü kaldırıyoruz
-
-    final databaseProvider =
-        Provider.of<DatabaseProvider>(context, listen: false);
-    final AICoachService aiCoachService =
-        AICoachService(databaseProvider.database)..apiKey = _apiKey;
+    final databaseService =
+        Provider.of<DatabaseService>(context, listen: false);
+    final AICoachService aiCoachService = AICoachService(databaseService)
+      ..apiKey = _apiKey;
 
     final modelsList = await aiCoachService.listAvailableModels();
 
-    // Modeller mesajını ekle
     await _addMessage(modelsList, false);
   }
 }

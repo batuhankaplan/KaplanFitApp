@@ -8,6 +8,11 @@ class DailyTask {
   final DateTime date;
   final bool isCompleted;
   final TaskType type;
+  // Tahmini besin değerleri
+  final double? estimatedCalories;
+  final double? estimatedProtein;
+  final double? estimatedCarbs;
+  final double? estimatedFat;
 
   DailyTask({
     this.id,
@@ -16,6 +21,10 @@ class DailyTask {
     required this.date,
     this.isCompleted = false,
     required this.type,
+    this.estimatedCalories,
+    this.estimatedProtein,
+    this.estimatedCarbs,
+    this.estimatedFat,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +35,10 @@ class DailyTask {
       'date': date.millisecondsSinceEpoch,
       'isCompleted': isCompleted ? 1 : 0,
       'type': type.index,
+      'estimatedCalories': estimatedCalories,
+      'estimatedProtein': estimatedProtein,
+      'estimatedCarbs': estimatedCarbs,
+      'estimatedFat': estimatedFat,
     };
   }
 
@@ -37,6 +50,10 @@ class DailyTask {
       date: DateTime.fromMillisecondsSinceEpoch(map['date']),
       isCompleted: map['isCompleted'] == 1,
       type: TaskType.values[map['type']],
+      estimatedCalories: map['estimatedCalories'],
+      estimatedProtein: map['estimatedProtein'],
+      estimatedCarbs: map['estimatedCarbs'],
+      estimatedFat: map['estimatedFat'],
     );
   }
 
@@ -47,6 +64,10 @@ class DailyTask {
     DateTime? date,
     bool? isCompleted,
     TaskType? type,
+    double? estimatedCalories,
+    double? estimatedProtein,
+    double? estimatedCarbs,
+    double? estimatedFat,
   }) {
     return DailyTask(
       id: id ?? this.id,
@@ -55,6 +76,10 @@ class DailyTask {
       date: date ?? this.date,
       isCompleted: isCompleted ?? this.isCompleted,
       type: type ?? this.type,
+      estimatedCalories: estimatedCalories ?? this.estimatedCalories,
+      estimatedProtein: estimatedProtein ?? this.estimatedProtein,
+      estimatedCarbs: estimatedCarbs ?? this.estimatedCarbs,
+      estimatedFat: estimatedFat ?? this.estimatedFat,
     );
   }
 
@@ -62,4 +87,4 @@ class DailyTask {
 }
 
 // Define a type alias for easier reference
-typedef Task = DailyTask; 
+typedef Task = DailyTask;

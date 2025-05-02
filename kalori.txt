@@ -1,0 +1,26 @@
+Kalori ve Makro Planı (Detaylı Bilgilendirme ve Hesaplamalar)
+1. Bilgilendirme
+Bu belge, 175 cm boyunda, 106 kg ağırlığında, 28 yaşında bir erkek için hazırlanmıştır. Kişi uzun süredir spor yapmamış olup, haftada 3 gün ağırlık antrenmanı yapmayı planlamaktadır. Amacı hızlı ancak sağlıklı bir şekilde kilo vermektir. Bu doğrultuda günlük kalori ihtiyacı, makro besin dağılımı ve egzersiz planı hesaplanmıştır.
+2. Bazal Metabolizma Hızı (BMR) Hesaplaması
+Kullanılan formül: Mifflin-St Jeor Formülü
+Formül: BMR = (10 × kilo) + (6.25 × boy) − (5 × yaş) + 5
+Uygulama: BMR = (10 × 106) + (6.25 × 175) − (5 × 28) + 5 = 1060 + 1093.75 − 140 + 5 = 2018.75 kcal/gün
+3. Toplam Günlük Enerji Harcaması (TDEE)
+Kullanılan Formül: TDEE = BMR × Aktivite Katsayısı
+Aktivite katsayısı hafif/orta aktif birey için: 1.55
+Uygulama: TDEE = 2018.75 × 1.55 = 3130 kcal/gün
+4. Hedef Kalori ile Kilo Kaybı
+Hedef: Hızlı fakat sağlıklı kilo kaybı (günlük 750 kcal açık)
+Uygulama: Hedef Kalori = 3130 - 750 = 2380 kcal/gün
+5. Günlük Makro Dağılımı Hesaplamaları
+Protein: kilo × 2.2 gr
+Uygulama: 106 × 2.2 = 233 gr ⇒ 233 × 4 = 932 kcal
+Yağ: Günlük kalorinin %25’i
+Uygulama: 2380 × 0.25 = 595 kcal ⇒ 595 / 9 = 66 gr
+Karbonhidrat: Kalan kalori
+Uygulama: 2380 − 932 − 595 = 853 kcal ⇒ 853 / 4 = 213 gr
+6. Günlük Kalori ve Makro Tablosu
+Makro	Gram	Kalori
+Protein	233 gr	932 kcal
+Yağ	66 gr	595 kcal
+Karbonhidrat	213 gr	853 kcal

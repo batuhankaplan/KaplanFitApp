@@ -1,0 +1,543 @@
+Besin Adı	Kategori	Porsiyon (g)	Kalori (kcal)	Karbonhidrat (g)	Protein (g)	Yağ (g)
+Salatalık	Sebzeler	91	13.7	3.3	0.6	0.1
+Pirinç (pişmiş)	Tahıllar	160	208.0	45.0	4.6	0.4
+Tavuk Göğsü	Et Ürünleri	98	161.7	0.0	30.4	3.5
+Mercimek (pişmiş)	Baklagiller	156	218.4	37.4	18.7	0.8
+Makarna (haşlanmış)	Tahıllar	146	214.1	38.9	6.8	1.3
+Tam Buğday Ekmeği	Tahıllar	45	108.0	18.0	3.6	1.4
+Tam Buğday Ekmeği	Tahıllar	55	132.0	22.0	4.4	1.6
+Havuç	Sebzeler	108	44.3	10.8	1.0	0.2
+Yoğurt (tam yağlı)	Süt Ürünleri	194	130.0	9.7	5.8	6.8
+Havuç	Sebzeler	97	39.8	9.7	0.9	0.2
+Makarna (haşlanmış)	Tahıllar	160	234.7	42.7	7.5	1.4
+Tavuk Göğsü	Et Ürünleri	109	179.8	0.0	33.8	3.9
+Nohut (pişmiş)	Baklagiller	154	246.4	35.9	12.3	4.1
+Ceviz	Kuruyemişler	24	160.0	3.2	4.0	16.0
+Beyaz Peynir	Süt Ürünleri	43	114.4	0.9	6.0	9.5
+Domates	Sebzeler	156	28.1	6.0	1.4	0.3
+Ceviz	Kuruyemişler	22	146.7	2.9	3.7	14.7
+Tavuk Göğsü	Et Ürünleri	92	151.8	0.0	28.5	3.3
+Haşlanmış Yumurta	Yumurtalar	55	85.8	0.7	6.9	5.8
+Mercimek (pişmiş)	Baklagiller	143	200.2	34.3	17.2	0.8
+Tavuk Göğsü	Et Ürünleri	108	178.2	0.0	33.5	3.9
+Fındık	Kuruyemişler	32	192.0	5.3	4.3	18.1
+Tavuk Göğsü	Et Ürünleri	103	169.9	0.0	31.9	3.7
+Beyaz Peynir	Süt Ürünleri	59	156.9	1.2	8.3	13.0
+Mercimek (pişmiş)	Baklagiller	140	196.0	33.6	16.8	0.7
+Pirinç (pişmiş)	Tahıllar	141	183.3	39.7	4.0	0.4
+Mercimek (pişmiş)	Baklagiller	143	200.2	34.3	17.2	0.8
+Karpuz	Meyveler	204	61.2	15.3	1.2	0.2
+Karpuz	Meyveler	196	58.8	14.7	1.2	0.2
+Yoğurt (tam yağlı)	Süt Ürünleri	202	135.3	10.1	6.1	7.1
+Muz	Meyveler	115	100.6	25.9	1.2	0.3
+Bulgur (pişmiş)	Tahıllar	145	135.3	29.0	3.9	0.2
+Elma	Meyveler	160	83.2	22.4	0.3	0.2
+Makarna (haşlanmış)	Tahıllar	145	212.7	38.7	6.8	1.3
+Haşlanmış Yumurta	Yumurtalar	49	76.4	0.6	6.2	5.2
+Ceviz	Kuruyemişler	32	213.3	4.3	5.3	21.3
+Zeytinyağı	Yağlar	11	99.0	0.0	0.0	11.0
+Havuç	Sebzeler	107	43.9	10.7	1.0	0.2
+Salatalık	Sebzeler	102	15.3	3.7	0.7	0.1
+Muz	Meyveler	113	98.9	25.4	1.2	0.3
+Mercimek (pişmiş)	Baklagiller	150	210.0	36.0	18.0	0.8
+Pirinç (pişmiş)	Tahıllar	157	204.1	44.2	4.5	0.4
+Pirinç (pişmiş)	Tahıllar	146	189.8	41.1	4.2	0.4
+Haşlanmış Yumurta	Yumurtalar	42	65.5	0.5	5.3	4.5
+Makarna (haşlanmış)	Tahıllar	154	225.9	41.1	7.2	1.3
+Tam Buğday Ekmeği	Tahıllar	59	141.6	23.6	4.7	1.8
+Nohut (pişmiş)	Baklagiller	144	230.4	33.6	11.5	3.8
+Patates (haşlanmış)	Sebzeler	146	126.5	29.2	2.9	0.2
+Patates (haşlanmış)	Sebzeler	152	131.7	30.4	3.0	0.2
+Mercimek (pişmiş)	Baklagiller	147	205.8	35.3	17.6	0.8
+Pirinç (pişmiş)	Tahıllar	143	185.9	40.2	4.1	0.4
+Muz	Meyveler	128	112.0	28.8	1.4	0.3
+Domates	Sebzeler	147	26.5	5.7	1.3	0.3
+Elma	Meyveler	146	75.9	20.4	0.3	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	101	252.5	0.0	18.2	20.2
+Kuzu Pirzola	Et Ürünleri	91	267.5	0.0	23.3	19.1
+Dana Kıyma (yağlı)	Et Ürünleri	104	260.0	0.0	18.7	20.8
+Portakal	Meyveler	120	57.2	14.2	1.1	0.2
+Bulgur (pişmiş)	Tahıllar	155	144.7	31.0	4.1	0.2
+Fındık	Kuruyemişler	24	144.0	4.0	3.2	13.6
+Domates	Sebzeler	147	26.5	5.7	1.3	0.3
+Süt (tam yağlı)	Süt Ürünleri	198	128.7	9.9	6.5	7.1
+Nohut (pişmiş)	Baklagiller	148	236.8	34.5	11.8	3.9
+Tam Buğday Ekmeği	Tahıllar	54	129.6	21.6	4.3	1.6
+Mercimek (pişmiş)	Baklagiller	148	207.2	35.5	17.8	0.8
+Salatalık	Sebzeler	104	15.6	3.7	0.7	0.1
+Salatalık	Sebzeler	101	15.2	3.6	0.7	0.1
+Mercimek (pişmiş)	Baklagiller	153	214.2	36.7	18.4	0.8
+Patates (haşlanmış)	Sebzeler	143	123.9	28.6	2.9	0.2
+Tavuk Göğsü	Et Ürünleri	105	173.2	0.0	32.5	3.8
+Patates (haşlanmış)	Sebzeler	149	129.1	29.8	3.0	0.2
+Tavuk Göğsü	Et Ürünleri	91	150.2	0.0	28.2	3.3
+Kuzu Pirzola	Et Ürünleri	103	302.8	0.0	26.4	21.6
+Mercimek (pişmiş)	Baklagiller	140	196.0	33.6	16.8	0.7
+Nohut (pişmiş)	Baklagiller	145	232.0	33.8	11.6	3.9
+Fındık	Kuruyemişler	21	126.0	3.5	2.8	11.9
+Beyaz Peynir	Süt Ürünleri	57	151.6	1.1	8.0	12.5
+Mercimek (pişmiş)	Baklagiller	155	217.0	37.2	18.6	0.8
+Havuç	Sebzeler	104	42.6	10.4	0.9	0.2
+Havuç	Sebzeler	95	39.0	9.5	0.9	0.2
+Kuzu Pirzola	Et Ürünleri	92	270.5	0.0	23.6	19.3
+Nohut (pişmiş)	Baklagiller	158	252.8	36.9	12.6	4.2
+Patates (haşlanmış)	Sebzeler	152	131.7	30.4	3.0	0.2
+Zeytinyağı	Yağlar	0	0.0	0.0	0.0	0.0
+Yoğurt (tam yağlı)	Süt Ürünleri	200	134.0	10.0	6.0	7.0
+Domates	Sebzeler	149	26.8	5.8	1.3	0.3
+Havuç	Sebzeler	97	39.8	9.7	0.9	0.2
+Domates	Sebzeler	159	28.6	6.1	1.4	0.3
+Dana Kıyma (yağlı)	Et Ürünleri	108	270.0	0.0	19.4	21.6
+Mercimek (pişmiş)	Baklagiller	157	219.8	37.7	18.8	0.8
+Bulgur (pişmiş)	Tahıllar	151	140.9	30.2	4.0	0.2
+Portakal	Meyveler	123	58.7	14.6	1.1	0.2
+Havuç	Sebzeler	97	39.8	9.7	0.9	0.2
+Makarna (haşlanmış)	Tahıllar	158	231.7	42.1	7.4	1.4
+Dana Kıyma (yağlı)	Et Ürünleri	106	265.0	0.0	19.1	21.2
+Havuç	Sebzeler	102	41.8	10.2	0.9	0.2
+Fındık	Kuruyemişler	30	180.0	5.0	4.0	17.0
+Badem	Kuruyemişler	27	153.0	5.4	5.4	13.5
+Mercimek (pişmiş)	Baklagiller	145	203.0	34.8	17.4	0.8
+Zeytinyağı	Yağlar	8	72.0	0.0	0.0	8.0
+Portakal	Meyveler	123	58.7	14.6	1.1	0.2
+Kuzu Pirzola	Et Ürünleri	105	308.7	0.0	26.9	22.1
+Tam Buğday Ekmeği	Tahıllar	52	124.8	20.8	4.2	1.6
+Bulgur (pişmiş)	Tahıllar	141	131.6	28.2	3.8	0.2
+Mercimek (pişmiş)	Baklagiller	157	219.8	37.7	18.8	0.8
+Haşlanmış Yumurta	Yumurtalar	53	82.7	0.6	6.7	5.6
+Fındık	Kuruyemişler	38	228.0	6.3	5.1	21.5
+Bulgur (pişmiş)	Tahıllar	144	134.4	28.8	3.8	0.2
+Pirinç (pişmiş)	Tahıllar	155	201.5	43.6	4.4	0.4
+Patates (haşlanmış)	Sebzeler	153	132.6	30.6	3.1	0.2
+Havuç	Sebzeler	103	42.2	10.3	0.9	0.2
+Tavuk Göğsü	Et Ürünleri	105	173.2	0.0	32.5	3.8
+Ceviz	Kuruyemişler	37	246.7	4.9	6.2	24.7
+Ceviz	Kuruyemişler	25	166.7	3.3	4.2	16.7
+Dana Kıyma (yağlı)	Et Ürünleri	98	245.0	0.0	17.6	19.6
+Havuç	Sebzeler	102	41.8	10.2	0.9	0.2
+Zeytinyağı	Yağlar	9	81.0	0.0	0.0	9.0
+Patates (haşlanmış)	Sebzeler	148	128.3	29.6	3.0	0.2
+Kuzu Pirzola	Et Ürünleri	91	267.5	0.0	23.3	19.1
+Zeytinyağı	Yağlar	11	99.0	0.0	0.0	11.0
+Tam Buğday Ekmeği	Tahıllar	41	98.4	16.4	3.3	1.2
+Salatalık	Sebzeler	98	14.7	3.5	0.7	0.1
+Karpuz	Meyveler	204	61.2	15.3	1.2	0.2
+Patates (haşlanmış)	Sebzeler	153	132.6	30.6	3.1	0.2
+Domates	Sebzeler	152	27.4	5.9	1.3	0.3
+Havuç	Sebzeler	104	42.6	10.4	0.9	0.2
+Patates (haşlanmış)	Sebzeler	155	134.3	31.0	3.1	0.2
+Portakal	Meyveler	122	58.2	14.5	1.1	0.2
+Badem	Kuruyemişler	34	192.7	6.8	6.8	17.0
+Domates	Sebzeler	151	27.2	5.8	1.3	0.3
+Beyaz Peynir	Süt Ürünleri	48	127.7	1.0	6.7	10.6
+Süt (tam yağlı)	Süt Ürünleri	198	128.7	9.9	6.5	7.1
+Muz	Meyveler	113	98.9	25.4	1.2	0.3
+Fındık	Kuruyemişler	21	126.0	3.5	2.8	11.9
+Bulgur (pişmiş)	Tahıllar	150	140.0	30.0	4.0	0.2
+Kuzu Pirzola	Et Ürünleri	107	314.6	0.0	27.4	22.5
+Patates (haşlanmış)	Sebzeler	160	138.7	32.0	3.2	0.2
+Domates	Sebzeler	148	26.6	5.7	1.3	0.3
+Tavuk Göğsü	Et Ürünleri	98	161.7	0.0	30.4	3.5
+Muz	Meyveler	113	98.9	25.4	1.2	0.3
+Salatalık	Sebzeler	96	14.4	3.5	0.7	0.1
+Elma	Meyveler	159	82.7	22.3	0.3	0.2
+Beyaz Peynir	Süt Ürünleri	58	154.3	1.2	8.1	12.8
+Karpuz	Meyveler	209	62.7	15.7	1.3	0.2
+Kuzu Pirzola	Et Ürünleri	110	323.4	0.0	28.2	23.1
+Fındık	Kuruyemişler	34	204.0	5.7	4.5	19.3
+Ceviz	Kuruyemişler	20	133.3	2.7	3.3	13.3
+Muz	Meyveler	119	104.1	26.8	1.3	0.3
+Tavuk Göğsü	Et Ürünleri	98	161.7	0.0	30.4	3.5
+Badem	Kuruyemişler	27	153.0	5.4	5.4	13.5
+Bulgur (pişmiş)	Tahıllar	141	131.6	28.2	3.8	0.2
+Patates (haşlanmış)	Sebzeler	152	131.7	30.4	3.0	0.2
+Ceviz	Kuruyemişler	26	173.3	3.5	4.3	17.3
+Kuzu Pirzola	Et Ürünleri	95	279.3	0.0	24.3	19.9
+Havuç	Sebzeler	110	45.1	11.0	1.0	0.2
+Tavuk Göğsü	Et Ürünleri	103	169.9	0.0	31.9	3.7
+Yoğurt (tam yağlı)	Süt Ürünleri	199	133.3	9.9	6.0	7.0
+Tam Buğday Ekmeği	Tahıllar	42	100.8	16.8	3.4	1.3
+Kuzu Pirzola	Et Ürünleri	93	273.4	0.0	23.8	19.5
+Kuzu Pirzola	Et Ürünleri	105	308.7	0.0	26.9	22.1
+Haşlanmış Yumurta	Yumurtalar	40	62.4	0.5	5.0	4.2
+Bulgur (pişmiş)	Tahıllar	142	132.5	28.4	3.8	0.2
+Fındık	Kuruyemişler	21	126.0	3.5	2.8	11.9
+Fındık	Kuruyemişler	36	216.0	6.0	4.8	20.4
+Haşlanmış Yumurta	Yumurtalar	55	85.8	0.7	6.9	5.8
+Nohut (pişmiş)	Baklagiller	145	232.0	33.8	11.6	3.9
+Havuç	Sebzeler	101	41.4	10.1	0.9	0.2
+Salatalık	Sebzeler	98	14.7	3.5	0.7	0.1
+Haşlanmış Yumurta	Yumurtalar	51	79.6	0.6	6.4	5.4
+Tavuk Göğsü	Et Ürünleri	99	163.3	0.0	30.7	3.6
+Haşlanmış Yumurta	Yumurtalar	57	88.9	0.7	7.2	6.0
+Salatalık	Sebzeler	99	14.8	3.6	0.7	0.1
+Tam Buğday Ekmeği	Tahıllar	49	117.6	19.6	3.9	1.5
+Patates (haşlanmış)	Sebzeler	151	130.9	30.2	3.0	0.2
+Badem	Kuruyemişler	40	226.7	8.0	8.0	20.0
+Yoğurt (tam yağlı)	Süt Ürünleri	205	137.3	10.2	6.2	7.2
+Pirinç (pişmiş)	Tahıllar	151	196.3	42.5	4.3	0.4
+Badem	Kuruyemişler	22	124.7	4.4	4.4	11.0
+Bulgur (pişmiş)	Tahıllar	150	140.0	30.0	4.0	0.2
+Elma	Meyveler	148	77.0	20.7	0.3	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	98	245.0	0.0	17.6	19.6
+Zeytinyağı	Yağlar	8	72.0	0.0	0.0	8.0
+Salatalık	Sebzeler	110	16.5	4.0	0.8	0.1
+Süt (tam yağlı)	Süt Ürünleri	195	126.8	9.8	6.4	7.0
+Bulgur (pişmiş)	Tahıllar	145	135.3	29.0	3.9	0.2
+Domates	Sebzeler	146	26.3	5.6	1.3	0.3
+Salatalık	Sebzeler	108	16.2	3.9	0.8	0.1
+Yoğurt (tam yağlı)	Süt Ürünleri	192	128.6	9.6	5.8	6.7
+Beyaz Peynir	Süt Ürünleri	42	111.7	0.8	5.9	9.2
+Zeytinyağı	Yağlar	11	99.0	0.0	0.0	11.0
+Portakal	Meyveler	137	65.3	16.2	1.3	0.2
+Patates (haşlanmış)	Sebzeler	151	130.9	30.2	3.0	0.2
+Muz	Meyveler	110	96.2	24.8	1.2	0.3
+Kuzu Pirzola	Et Ürünleri	102	299.9	0.0	26.1	21.4
+Tam Buğday Ekmeği	Tahıllar	41	98.4	16.4	3.3	1.2
+Muz	Meyveler	124	108.5	27.9	1.3	0.3
+Makarna (haşlanmış)	Tahıllar	140	205.3	37.3	6.5	1.2
+Pirinç (pişmiş)	Tahıllar	142	184.6	39.9	4.1	0.4
+Badem	Kuruyemişler	38	215.3	7.6	7.6	19.0
+Nohut (pişmiş)	Baklagiller	150	240.0	35.0	12.0	4.0
+Portakal	Meyveler	123	58.7	14.6	1.1	0.2
+Tavuk Göğsü	Et Ürünleri	105	173.2	0.0	32.5	3.8
+Kuzu Pirzola	Et Ürünleri	105	308.7	0.0	26.9	22.1
+Patates (haşlanmış)	Sebzeler	148	128.3	29.6	3.0	0.2
+Makarna (haşlanmış)	Tahıllar	147	215.6	39.2	6.9	1.3
+Badem	Kuruyemişler	40	226.7	8.0	8.0	20.0
+Süt (tam yağlı)	Süt Ürünleri	191	124.2	9.6	6.3	6.9
+Tavuk Göğsü	Et Ürünleri	93	153.4	0.0	28.8	3.3
+Kuzu Pirzola	Et Ürünleri	92	270.5	0.0	23.6	19.3
+Karpuz	Meyveler	196	58.8	14.7	1.2	0.2
+Fındık	Kuruyemişler	27	162.0	4.5	3.6	15.3
+Tam Buğday Ekmeği	Tahıllar	48	115.2	19.2	3.8	1.4
+Makarna (haşlanmış)	Tahıllar	142	208.3	37.9	6.6	1.2
+Havuç	Sebzeler	97	39.8	9.7	0.9	0.2
+Karpuz	Meyveler	208	62.4	15.6	1.2	0.2
+Süt (tam yağlı)	Süt Ürünleri	202	131.3	10.1	6.7	7.3
+Portakal	Meyveler	135	64.4	16.0	1.2	0.2
+Mercimek (pişmiş)	Baklagiller	144	201.6	34.6	17.3	0.8
+Bulgur (pişmiş)	Tahıllar	150	140.0	30.0	4.0	0.2
+Domates	Sebzeler	152	27.4	5.9	1.3	0.3
+Zeytinyağı	Yağlar	16	144.0	0.0	0.0	16.0
+Beyaz Peynir	Süt Ürünleri	53	141.0	1.1	7.4	11.7
+Süt (tam yağlı)	Süt Ürünleri	200	130.0	10.0	6.6	7.2
+Mercimek (pişmiş)	Baklagiller	156	218.4	37.4	18.7	0.8
+Havuç	Sebzeler	99	40.6	9.9	0.9	0.2
+Badem	Kuruyemişler	28	158.7	5.6	5.6	14.0
+Kuzu Pirzola	Et Ürünleri	100	294.0	0.0	25.6	21.0
+Bulgur (pişmiş)	Tahıllar	158	147.5	31.6	4.2	0.2
+Makarna (haşlanmış)	Tahıllar	141	206.8	37.6	6.6	1.2
+Elma	Meyveler	148	77.0	20.7	0.3	0.2
+Ceviz	Kuruyemişler	31	206.7	4.1	5.2	20.7
+Dana Kıyma (yağlı)	Et Ürünleri	91	227.5	0.0	16.4	18.2
+Bulgur (pişmiş)	Tahıllar	146	136.3	29.2	3.9	0.2
+Mercimek (pişmiş)	Baklagiller	146	204.4	35.0	17.5	0.8
+Pirinç (pişmiş)	Tahıllar	158	205.4	44.5	4.5	0.4
+Fındık	Kuruyemişler	26	156.0	4.3	3.5	14.7
+Dana Kıyma (yağlı)	Et Ürünleri	108	270.0	0.0	19.4	21.6
+Badem	Kuruyemişler	24	136.0	4.8	4.8	12.0
+Badem	Kuruyemişler	33	187.0	6.6	6.6	16.5
+Domates	Sebzeler	157	28.3	6.1	1.4	0.3
+Fındık	Kuruyemişler	35	210.0	5.8	4.7	19.8
+Havuç	Sebzeler	97	39.8	9.7	0.9	0.2
+Zeytinyağı	Yağlar	13	117.0	0.0	0.0	13.0
+Beyaz Peynir	Süt Ürünleri	54	143.6	1.1	7.6	11.9
+Elma	Meyveler	144	74.9	20.2	0.3	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	94	235.0	0.0	16.9	18.8
+Pirinç (pişmiş)	Tahıllar	147	191.1	41.4	4.2	0.4
+Badem	Kuruyemişler	25	141.7	5.0	5.0	12.5
+Domates	Sebzeler	148	26.6	5.7	1.3	0.3
+Haşlanmış Yumurta	Yumurtalar	45	70.2	0.5	5.7	4.8
+Mercimek (pişmiş)	Baklagiller	141	197.4	33.8	16.9	0.8
+Yoğurt (tam yağlı)	Süt Ürünleri	197	132.0	9.8	5.9	6.9
+Makarna (haşlanmış)	Tahıllar	149	218.5	39.7	7.0	1.3
+Nohut (pişmiş)	Baklagiller	148	236.8	34.5	11.8	3.9
+Fındık	Kuruyemişler	38	228.0	6.3	5.1	21.5
+Makarna (haşlanmış)	Tahıllar	155	227.3	41.3	7.2	1.3
+Elma	Meyveler	159	82.7	22.3	0.3	0.2
+Domates	Sebzeler	150	27.0	5.8	1.3	0.3
+Domates	Sebzeler	158	28.4	6.1	1.4	0.3
+Kuzu Pirzola	Et Ürünleri	94	276.4	0.0	24.1	19.7
+Ceviz	Kuruyemişler	21	140.0	2.8	3.5	14.0
+Havuç	Sebzeler	98	40.2	9.8	0.9	0.2
+Süt (tam yağlı)	Süt Ürünleri	206	133.9	10.3	6.8	7.4
+Elma	Meyveler	158	82.2	22.1	0.3	0.2
+Fındık	Kuruyemişler	37	222.0	6.2	4.9	21.0
+Mercimek (pişmiş)	Baklagiller	146	204.4	35.0	17.5	0.8
+Dana Kıyma (yağlı)	Et Ürünleri	92	230.0	0.0	16.6	18.4
+Tavuk Göğsü	Et Ürünleri	101	166.7	0.0	31.3	3.6
+Dana Kıyma (yağlı)	Et Ürünleri	102	255.0	0.0	18.4	20.4
+Yoğurt (tam yağlı)	Süt Ürünleri	207	138.7	10.3	6.2	7.2
+Karpuz	Meyveler	194	58.2	14.6	1.2	0.2
+Muz	Meyveler	129	112.9	29.0	1.4	0.3
+Kuzu Pirzola	Et Ürünleri	90	264.6	0.0	23.0	18.9
+Portakal	Meyveler	124	59.1	14.7	1.1	0.2
+Badem	Kuruyemişler	38	215.3	7.6	7.6	19.0
+Makarna (haşlanmış)	Tahıllar	153	224.4	40.8	7.1	1.3
+Süt (tam yağlı)	Süt Ürünleri	206	133.9	10.3	6.8	7.4
+Patates (haşlanmış)	Sebzeler	152	131.7	30.4	3.0	0.2
+Tam Buğday Ekmeği	Tahıllar	51	122.4	20.4	4.1	1.5
+Karpuz	Meyveler	208	62.4	15.6	1.2	0.2
+Havuç	Sebzeler	110	45.1	11.0	1.0	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	95	237.5	0.0	17.1	19.0
+Bulgur (pişmiş)	Tahıllar	141	131.6	28.2	3.8	0.2
+Ceviz	Kuruyemişler	39	260.0	5.2	6.5	26.0
+Elma	Meyveler	157	81.6	22.0	0.3	0.2
+Makarna (haşlanmış)	Tahıllar	144	211.2	38.4	6.7	1.2
+Portakal	Meyveler	130	62.0	15.4	1.2	0.2
+Ceviz	Kuruyemişler	38	253.3	5.1	6.3	25.3
+Patates (haşlanmış)	Sebzeler	160	138.7	32.0	3.2	0.2
+Haşlanmış Yumurta	Yumurtalar	58	90.5	0.7	7.3	6.1
+Muz	Meyveler	119	104.1	26.8	1.3	0.3
+Badem	Kuruyemişler	22	124.7	4.4	4.4	11.0
+Mercimek (pişmiş)	Baklagiller	151	211.4	36.2	18.1	0.8
+Tam Buğday Ekmeği	Tahıllar	47	112.8	18.8	3.8	1.4
+Badem	Kuruyemişler	21	119.0	4.2	4.2	10.5
+Salatalık	Sebzeler	106	15.9	3.8	0.7	0.1
+Badem	Kuruyemişler	38	215.3	7.6	7.6	19.0
+Nohut (pişmiş)	Baklagiller	152	243.2	35.5	12.2	4.1
+Kuzu Pirzola	Et Ürünleri	90	264.6	0.0	23.0	18.9
+Badem	Kuruyemişler	20	113.3	4.0	4.0	10.0
+Dana Kıyma (yağlı)	Et Ürünleri	91	227.5	0.0	16.4	18.2
+Havuç	Sebzeler	105	43.0	10.5	0.9	0.2
+Bulgur (pişmiş)	Tahıllar	151	140.9	30.2	4.0	0.2
+Domates	Sebzeler	142	25.6	5.5	1.2	0.3
+Salatalık	Sebzeler	106	15.9	3.8	0.7	0.1
+Zeytinyağı	Yağlar	2	18.0	0.0	0.0	2.0
+Pirinç (pişmiş)	Tahıllar	152	197.6	42.8	4.4	0.4
+Mercimek (pişmiş)	Baklagiller	150	210.0	36.0	18.0	0.8
+Mercimek (pişmiş)	Baklagiller	150	210.0	36.0	18.0	0.8
+Bulgur (pişmiş)	Tahıllar	156	145.6	31.2	4.2	0.2
+Zeytinyağı	Yağlar	15	135.0	0.0	0.0	15.0
+Bulgur (pişmiş)	Tahıllar	151	140.9	30.2	4.0	0.2
+Mercimek (pişmiş)	Baklagiller	143	200.2	34.3	17.2	0.8
+Yoğurt (tam yağlı)	Süt Ürünleri	205	137.3	10.2	6.2	7.2
+Tam Buğday Ekmeği	Tahıllar	59	141.6	23.6	4.7	1.8
+Haşlanmış Yumurta	Yumurtalar	49	76.4	0.6	6.2	5.2
+Beyaz Peynir	Süt Ürünleri	45	119.7	0.9	6.3	9.9
+Nohut (pişmiş)	Baklagiller	151	241.6	35.2	12.1	4.0
+Fındık	Kuruyemişler	31	186.0	5.2	4.1	17.6
+Havuç	Sebzeler	97	39.8	9.7	0.9	0.2
+Haşlanmış Yumurta	Yumurtalar	48	74.9	0.6	6.0	5.1
+Ceviz	Kuruyemişler	22	146.7	2.9	3.7	14.7
+Dana Kıyma (yağlı)	Et Ürünleri	94	235.0	0.0	16.9	18.8
+Elma	Meyveler	149	77.5	20.9	0.3	0.2
+Tam Buğday Ekmeği	Tahıllar	56	134.4	22.4	4.5	1.7
+Nohut (pişmiş)	Baklagiller	153	244.8	35.7	12.2	4.1
+Tavuk Göğsü	Et Ürünleri	92	151.8	0.0	28.5	3.3
+Karpuz	Meyveler	196	58.8	14.7	1.2	0.2
+Domates	Sebzeler	147	26.5	5.7	1.3	0.3
+Zeytinyağı	Yağlar	7	63.0	0.0	0.0	7.0
+Tam Buğday Ekmeği	Tahıllar	41	98.4	16.4	3.3	1.2
+Kuzu Pirzola	Et Ürünleri	91	267.5	0.0	23.3	19.1
+Nohut (pişmiş)	Baklagiller	148	236.8	34.5	11.8	3.9
+Kuzu Pirzola	Et Ürünleri	99	291.1	0.0	25.3	20.8
+Badem	Kuruyemişler	33	187.0	6.6	6.6	16.5
+Yoğurt (tam yağlı)	Süt Ürünleri	195	130.7	9.8	5.8	6.8
+Dana Kıyma (yağlı)	Et Ürünleri	105	262.5	0.0	18.9	21.0
+Domates	Sebzeler	141	25.4	5.5	1.2	0.3
+Ceviz	Kuruyemişler	38	253.3	5.1	6.3	25.3
+Ceviz	Kuruyemişler	25	166.7	3.3	4.2	16.7
+Salatalık	Sebzeler	96	14.4	3.5	0.7	0.1
+Bulgur (pişmiş)	Tahıllar	155	144.7	31.0	4.1	0.2
+Elma	Meyveler	146	75.9	20.4	0.3	0.2
+Fındık	Kuruyemişler	32	192.0	5.3	4.3	18.1
+Beyaz Peynir	Süt Ürünleri	45	119.7	0.9	6.3	9.9
+Makarna (haşlanmış)	Tahıllar	145	212.7	38.7	6.8	1.3
+Elma	Meyveler	140	72.8	19.6	0.3	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	97	242.5	0.0	17.5	19.4
+Badem	Kuruyemişler	25	141.7	5.0	5.0	12.5
+Elma	Meyveler	155	80.6	21.7	0.3	0.2
+Tavuk Göğsü	Et Ürünleri	103	169.9	0.0	31.9	3.7
+Portakal	Meyveler	130	62.0	15.4	1.2	0.2
+Nohut (pişmiş)	Baklagiller	147	235.2	34.3	11.8	3.9
+Patates (haşlanmış)	Sebzeler	158	136.9	31.6	3.2	0.2
+Portakal	Meyveler	126	60.1	14.9	1.2	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	94	235.0	0.0	16.9	18.8
+Domates	Sebzeler	157	28.3	6.1	1.4	0.3
+Yoğurt (tam yağlı)	Süt Ürünleri	190	127.3	9.5	5.7	6.7
+Süt (tam yağlı)	Süt Ürünleri	204	132.6	10.2	6.7	7.3
+Pirinç (pişmiş)	Tahıllar	149	193.7	41.9	4.3	0.4
+Salatalık	Sebzeler	99	14.8	3.6	0.7	0.1
+Pirinç (pişmiş)	Tahıllar	154	200.2	43.3	4.4	0.4
+Badem	Kuruyemişler	37	209.7	7.4	7.4	18.5
+Elma	Meyveler	160	83.2	22.4	0.3	0.2
+Tam Buğday Ekmeği	Tahıllar	44	105.6	17.6	3.5	1.3
+Süt (tam yağlı)	Süt Ürünleri	197	128.1	9.8	6.5	7.1
+Mercimek (pişmiş)	Baklagiller	155	217.0	37.2	18.6	0.8
+Tam Buğday Ekmeği	Tahıllar	56	134.4	22.4	4.5	1.7
+Makarna (haşlanmış)	Tahıllar	148	217.1	39.5	6.9	1.3
+Muz	Meyveler	112	98.0	25.2	1.2	0.3
+Ceviz	Kuruyemişler	20	133.3	2.7	3.3	13.3
+Salatalık	Sebzeler	93	13.9	3.3	0.7	0.1
+Beyaz Peynir	Süt Ürünleri	41	109.1	0.8	5.7	9.0
+Pirinç (pişmiş)	Tahıllar	158	205.4	44.5	4.5	0.4
+Tam Buğday Ekmeği	Tahıllar	50	120.0	20.0	4.0	1.5
+Pirinç (pişmiş)	Tahıllar	142	184.6	39.9	4.1	0.4
+Karpuz	Meyveler	203	60.9	15.2	1.2	0.2
+Domates	Sebzeler	151	27.2	5.8	1.3	0.3
+Muz	Meyveler	125	109.4	28.1	1.4	0.3
+Yoğurt (tam yağlı)	Süt Ürünleri	205	137.3	10.2	6.2	7.2
+Nohut (pişmiş)	Baklagiller	150	240.0	35.0	12.0	4.0
+Nohut (pişmiş)	Baklagiller	152	243.2	35.5	12.2	4.1
+Tam Buğday Ekmeği	Tahıllar	48	115.2	19.2	3.8	1.4
+Makarna (haşlanmış)	Tahıllar	140	205.3	37.3	6.5	1.2
+Haşlanmış Yumurta	Yumurtalar	42	65.5	0.5	5.3	4.5
+Bulgur (pişmiş)	Tahıllar	149	139.1	29.8	4.0	0.2
+Makarna (haşlanmış)	Tahıllar	144	211.2	38.4	6.7	1.2
+Makarna (haşlanmış)	Tahıllar	159	233.2	42.4	7.4	1.4
+Tavuk Göğsü	Et Ürünleri	91	150.2	0.0	28.2	3.3
+Zeytinyağı	Yağlar	7	63.0	0.0	0.0	7.0
+Nohut (pişmiş)	Baklagiller	156	249.6	36.4	12.5	4.2
+Domates	Sebzeler	140	25.2	5.4	1.2	0.3
+Salatalık	Sebzeler	105	15.8	3.8	0.7	0.1
+Kuzu Pirzola	Et Ürünleri	90	264.6	0.0	23.0	18.9
+Beyaz Peynir	Süt Ürünleri	40	106.4	0.8	5.6	8.8
+Haşlanmış Yumurta	Yumurtalar	59	92.0	0.7	7.4	6.3
+Dana Kıyma (yağlı)	Et Ürünleri	107	267.5	0.0	19.3	21.4
+Yoğurt (tam yağlı)	Süt Ürünleri	199	133.3	9.9	6.0	7.0
+Ceviz	Kuruyemişler	30	200.0	4.0	5.0	20.0
+Havuç	Sebzeler	92	37.7	9.2	0.8	0.2
+Beyaz Peynir	Süt Ürünleri	47	125.0	0.9	6.6	10.3
+Elma	Meyveler	153	79.6	21.4	0.3	0.2
+Yoğurt (tam yağlı)	Süt Ürünleri	210	140.7	10.5	6.3	7.3
+Zeytinyağı	Yağlar	10	90.0	0.0	0.0	10.0
+Dana Kıyma (yağlı)	Et Ürünleri	94	235.0	0.0	16.9	18.8
+Patates (haşlanmış)	Sebzeler	157	136.1	31.4	3.1	0.2
+Patates (haşlanmış)	Sebzeler	159	137.8	31.8	3.2	0.2
+Havuç	Sebzeler	106	43.5	10.6	1.0	0.2
+Fındık	Kuruyemişler	37	222.0	6.2	4.9	21.0
+Muz	Meyveler	118	103.2	26.6	1.3	0.3
+Salatalık	Sebzeler	107	16.1	3.9	0.7	0.1
+Yoğurt (tam yağlı)	Süt Ürünleri	196	131.3	9.8	5.9	6.9
+Mercimek (pişmiş)	Baklagiller	151	211.4	36.2	18.1	0.8
+Bulgur (pişmiş)	Tahıllar	152	141.9	30.4	4.1	0.2
+Yoğurt (tam yağlı)	Süt Ürünleri	210	140.7	10.5	6.3	7.3
+Pirinç (pişmiş)	Tahıllar	147	191.1	41.4	4.2	0.4
+Muz	Meyveler	120	105.0	27.0	1.3	0.3
+Portakal	Meyveler	132	63.0	15.6	1.2	0.2
+Dana Kıyma (yağlı)	Et Ürünleri	92	230.0	0.0	16.6	18.4
+Fındık	Kuruyemişler	38	228.0	6.3	5.1	21.5
+Dana Kıyma (yağlı)	Et Ürünleri	91	227.5	0.0	16.4	18.2
+Süt (tam yağlı)	Süt Ürünleri	209	135.8	10.4	6.9	7.5
+Salatalık	Sebzeler	109	16.4	3.9	0.8	0.1
+Tavuk Göğsü	Et Ürünleri	92	151.8	0.0	28.5	3.3
+Portakal	Meyveler	133	63.4	15.8	1.2	0.2
+Kuzu Pirzola	Et Ürünleri	102	299.9	0.0	26.1	21.4
+Zeytinyağı	Yağlar	6	54.0	0.0	0.0	6.0
+Mercimek (pişmiş)	Baklagiller	153	214.2	36.7	18.4	0.8
+Yoğurt (tam yağlı)	Süt Ürünleri	208	139.4	10.4	6.2	7.3
+Domates	Sebzeler	160	28.8	6.2	1.4	0.3
+Elma	Meyveler	156	81.1	21.8	0.3	0.2
+Karpuz	Meyveler	199	59.7	14.9	1.2	0.2
+Karpuz	Meyveler	201	60.3	15.1	1.2	0.2
+Domates	Sebzeler	141	25.4	5.5	1.2	0.3
+Yoğurt (tam yağlı)	Süt Ürünleri	192	128.6	9.6	5.8	6.7
+Tam Buğday Ekmeği	Tahıllar	58	139.2	23.2	4.6	1.7
+Patates (haşlanmış)	Sebzeler	140	121.3	28.0	2.8	0.2
+Karpuz	Meyveler	193	57.9	14.5	1.2	0.2
+Badem	Kuruyemişler	39	221.0	7.8	7.8	19.5
+Pirinç (pişmiş)	Tahıllar	145	188.5	40.8	4.2	0.4
+Yoğurt (tam yağlı)	Süt Ürünleri	201	134.7	10.1	6.0	7.0
+Salatalık	Sebzeler	92	13.8	3.3	0.6	0.1
+Mercimek (pişmiş)	Baklagiller	160	224.0	38.4	19.2	0.9
+Mercimek (pişmiş)	Baklagiller	153	214.2	36.7	18.4	0.8
+Muz	Meyveler	129	112.9	29.0	1.4	0.3
+Elma	Meyveler	156	81.1	21.8	0.3	0.2
+Mercimek (pişmiş)	Baklagiller	153	214.2	36.7	18.4	0.8
+Badem	Kuruyemişler	38	215.3	7.6	7.6	19.0
+Mercimek (pişmiş)	Baklagiller	150	210.0	36.0	18.0	0.8
+Yoğurt (tam yağlı)	Süt Ürünleri	206	138.0	10.3	6.2	7.2
+Portakal	Meyveler	138	65.8	16.3	1.3	0.2
+Yoğurt (tam yağlı)	Süt Ürünleri	204	136.7	10.2	6.1	7.1
+Tam Buğday Ekmeği	Tahıllar	57	136.8	22.8	4.6	1.7
+Muz	Meyveler	130	113.8	29.2	1.4	0.3
+Muz	Meyveler	117	102.4	26.3	1.3	0.3
+Makarna (haşlanmış)	Tahıllar	145	212.7	38.7	6.8	1.3
+Portakal	Meyveler	121	57.7	14.3	1.1	0.2
+Fındık	Kuruyemişler	39	234.0	6.5	5.2	22.1
+Beyaz Peynir	Süt Ürünleri	48	127.7	1.0	6.7	10.6
+Muz	Meyveler	128	112.0	28.8	1.4	0.3
+Domates	Sebzeler	144	25.9	5.6	1.2	0.3
+Mercimek (pişmiş)	Baklagiller	152	212.8	36.5	18.2	0.8
+Süt (tam yağlı)	Süt Ürünleri	193	125.5	9.7	6.4	6.9
+Tam Buğday Ekmeği	Tahıllar	52	124.8	20.8	4.2	1.6
+Beyaz Peynir	Süt Ürünleri	49	130.3	1.0	6.9	10.8
+Fındık	Kuruyemişler	28	168.0	4.7	3.7	15.9
+Süt (tam yağlı)	Süt Ürünleri	207	134.6	10.3	6.8	7.5
+Pirinç (pişmiş)	Tahıllar	154	200.2	43.3	4.4	0.4
+Elma	Meyveler	148	77.0	20.7	0.3	0.2
+Zeytinyağı	Yağlar	7	63.0	0.0	0.0	7.0
+Domates	Sebzeler	151	27.2	5.8	1.3	0.3
+Kuzu Pirzola	Et Ürünleri	109	320.5	0.0	27.9	22.9
+Tavuk Göğsü	Et Ürünleri	109	179.8	0.0	33.8	3.9
+Yoğurt (tam yağlı)	Süt Ürünleri	207	138.7	10.3	6.2	7.2
+Bulgur (pişmiş)	Tahıllar	140	130.7	28.0	3.7	0.2
+Elma	Meyveler	147	76.4	20.6	0.3	0.2
+Yoğurt (tam yağlı)	Süt Ürünleri	193	129.3	9.7	5.8	6.8
+Havuç	Sebzeler	108	44.3	10.8	1.0	0.2
+Fındık	Kuruyemişler	30	180.0	5.0	4.0	17.0
+Ceviz	Kuruyemişler	36	240.0	4.8	6.0	24.0
+Bulgur (pişmiş)	Tahıllar	145	135.3	29.0	3.9	0.2
+Elma	Meyveler	160	83.2	22.4	0.3	0.2
+Haşlanmış Yumurta	Yumurtalar	54	84.2	0.6	6.8	5.7
+Dana Kıyma (yağlı)	Et Ürünleri	94	235.0	0.0	16.9	18.8
+Yoğurt (tam yağlı)	Süt Ürünleri	209	140.0	10.4	6.3	7.3
+Makarna (haşlanmış)	Tahıllar	151	221.5	40.3	7.0	1.3
+Zeytinyağı	Yağlar	18	162.0	0.0	0.0	18.0
+Makarna (haşlanmış)	Tahıllar	148	217.1	39.5	6.9	1.3
+Patates (haşlanmış)	Sebzeler	153	132.6	30.6	3.1	0.2
+Elma	Meyveler	151	78.5	21.1	0.3	0.2
+Bulgur (pişmiş)	Tahıllar	156	145.6	31.2	4.2	0.2
+Ceviz	Kuruyemişler	23	153.3	3.1	3.8	15.3
+Patates (haşlanmış)	Sebzeler	150	130.0	30.0	3.0	0.2
+Makarna (haşlanmış)	Tahıllar	147	215.6	39.2	6.9	1.3
+Ceviz	Kuruyemişler	33	220.0	4.4	5.5	22.0
+Patates (haşlanmış)	Sebzeler	159	137.8	31.8	3.2	0.2
+Elma	Meyveler	157	81.6	22.0	0.3	0.2
+Fındık	Kuruyemişler	28	168.0	4.7	3.7	15.9
+Haşlanmış Yumurta	Yumurtalar	54	84.2	0.6	6.8	5.7
+Ceviz	Kuruyemişler	27	180.0	3.6	4.5	18.0
+Badem	Kuruyemişler	32	181.3	6.4	6.4	16.0
+Zeytinyağı	Yağlar	0	0.0	0.0	0.0	0.0
+Süt (tam yağlı)	Süt Ürünleri	195	126.8	9.8	6.4	7.0
+Ceviz	Kuruyemişler	20	133.3	2.7	3.3	13.3
+Domates	Sebzeler	153	27.5	5.9	1.3	0.3
+Ceviz	Kuruyemişler	40	266.7	5.3	6.7	26.7
+Nohut (pişmiş)	Baklagiller	158	252.8	36.9	12.6	4.2
+Yoğurt (tam yağlı)	Süt Ürünleri	194	130.0	9.7	5.8	6.8
+Salatalık	Sebzeler	107	16.1	3.9	0.7	0.1
+Pirinç (pişmiş)	Tahıllar	157	204.1	44.2	4.5	0.4
+Patates (haşlanmış)	Sebzeler	154	133.5	30.8	3.1	0.2
+Badem	Kuruyemişler	22	124.7	4.4	4.4	11.0
+Bulgur (pişmiş)	Tahıllar	152	141.9	30.4	4.1	0.2
+Elma	Meyveler	150	78.0	21.0	0.3	0.2
+Elma	Meyveler	153	79.6	21.4	0.3	0.2
+Fındık	Kuruyemişler	29	174.0	4.8	3.9	16.4
+Kuzu Pirzola	Et Ürünleri	99	291.1	0.0	25.3	20.8
+Karpuz	Meyveler	193	57.9	14.5	1.2	0.2
+Pirinç (pişmiş)	Tahıllar	159	206.7	44.7	4.6	0.4
+Portakal	Meyveler	128	61.0	15.2	1.2	0.2
+Kaşar Peyniri	Süt Ürünleri	100	404.0	1.3	25.0	33.0
+Tulum Peyniri	Süt Ürünleri	100	380.0	2.0	22.0	32.0
+Lor Peyniri	Süt Ürünleri	100	75.0	1.8	12.0	1.0
+Çeçil Peyniri	Süt Ürünleri	100	280.0	2.0	20.0	22.0
+Beyaz Ekmek	Tahıllar	50	135.0	25.0	3.5	1.0
+Çavdar Ekmeği	Tahıllar	50	120.0	22.0	3.8	0.8
+Kepek Ekmeği	Tahıllar	50	115.0	20.0	3.6	0.9
+Ayçiçek Yağı	Yağlar	10	90.0	0.0	0.0	10.0
+Tereyağı	Yağlar	10	75.0	0.0	0.1	8.3
+Margarin	Yağlar	10	81.0	0.0	0.0	9.0
+Sucuk	Et Ürünleri	50	215.0	1.0	9.0	20.0
+Pastırma	Et Ürünleri	50	140.0	0.0	12.0	9.0
+Hindi Füme	Et Ürünleri	50	100.0	1.0	10.0	6.0
+Fasulye (kuru, pişmiş)	Baklagiller	150	240.0	35.0	13.0	0.6
+Barbunya (pişmiş)	Baklagiller	150	210.0	30.0	11.0	0.5
+Yeşil Mercimek (haşlanmış)	Baklagiller	150	210.0	34.0	18.0	0.7
+Simit	Unlu Mamuller	100	420.0	70.0	10.0	14.0
+Poğaça	Unlu Mamuller	100	410.0	45.0	8.0	20.0
+Açma	Unlu Mamuller	100	430.0	46.0	7.0	22.0
+Baklava	Tatlılar	100	450.0	50.0	5.0	25.0
+Kadayıf	Tatlılar	100	380.0	45.0	6.0	18.0
+Revani	Tatlılar	100	390.0	44.0	5.0	20.0

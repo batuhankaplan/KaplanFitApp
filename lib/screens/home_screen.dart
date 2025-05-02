@@ -13,12 +13,20 @@ import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import 'package:intl/intl.dart';
 import '../utils/animations.dart';
-import '../models/providers/database_provider.dart';
+import '../providers/database_provider.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'dart:io';
 import 'program_screen.dart';
 import 'stats_screen.dart';
+import '../models/program_model.dart';
+import '../models/user_model.dart';
+import '../services/program_service.dart';
+import 'goal_tracking_screen.dart';
+import '../services/database_service.dart';
+import '../services/exercise_service.dart';
+import 'profile_screen.dart';
+import 'workout_program_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -43,14 +51,13 @@ class _HomeScreenState extends State<HomeScreen>
   int? dinnerMealId;
 
   // Program içerikleri
-  String morningProgram = '';
-  String lunchMenu = '';
-  String eveningProgram = '';
-  String dinnerMenu = '';
+  String morningProgram = 'Program yükleniyor...';
+  String lunchMenu = 'Program yükleniyor...';
+  String eveningProgram = 'Program yükleniyor...';
+  String dinnerMenu = 'Program yükleniyor...';
 
   // Su tüketimi için state
   int _waterIntake = 0;
-  final int _waterGoal = 2000; // ml
 
   // Motivasyon mesajları
   final List<String> _motivationalMessages = [
@@ -90,11 +97,13 @@ class _HomeScreenState extends State<HomeScreen>
     _selectedMotivationalMessage = _motivationalMessages[
         DateTime.now().millisecondsSinceEpoch % _motivationalMessages.length];
 
-    // Su tüketim değerini yükle
-    _loadWaterIntake();
+    // Verileri yükle (görevler, su vb.)
+    _loadData();
 
-    // Görevleri başlat
-    _initTasks();
+    // Artık kullanıcı kontrolünü burada yapmıyoruz, Splash Screen hallediyor.
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _checkUserAndNavigate();
+    // });
   }
 
   @override
@@ -105,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  /* // ESKİ: DatabaseProvider kaldırıldığı için bu kod artık geçerli değil.
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -116,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen>
     databaseProvider.removeListener(_refreshProgram);
     databaseProvider.addListener(_refreshProgram);
   }
+  */
 
   // Kaydedilmiş görev durumlarını yükle
   Future<void> _loadSavedTaskStates() async {
@@ -246,122 +257,60 @@ class _HomeScreenState extends State<HomeScreen>
                 KFSlideAnimation(
                   offsetBegin: Offset(0, 0.1),
                   delay: Duration(milliseconds: 200),
-                  child: _buildTaskCard(
-                    context,
-                    icon: Icons.directions_run,
+                  child: _TaskItem(
+                    icon: Icons.directions_run_rounded,
                     title: 'Sabah Egzersizi',
-                    subtitle: morningProgram.isNotEmpty
-                        ? morningProgram
-                        : '30 dakika kardio',
                     time: '08:00',
                     isDone: isMorningExerciseDone,
                     color: AppTheme.morningExerciseColor,
+                    description: morningProgram,
                     onTap: () {
-                      // Görev nesnesi oluştur
-                      Task task = Task(
-                          id: 1, // Sabit ID
-                          title: 'Sabah Egzersizi',
-                          description: morningProgram.isNotEmpty
-                              ? morningProgram
-                              : '30 dakika kardio',
-                          date: DateTime.now(),
-                          isCompleted:
-                              !isMorningExerciseDone, // Durumu tersine çevir
-                          type: TaskType.morningExercise);
-
-                      // _onTaskChanged fonksiyonunu çağır
-                      _onTaskChanged(task, !isMorningExerciseDone);
+                      _toggleTaskCompletion(TaskType.morningExercise);
                     },
                   ),
                 ),
                 KFSlideAnimation(
                   offsetBegin: Offset(0, 0.1),
                   delay: Duration(milliseconds: 250),
-                  child: _buildTaskCard(
-                    context,
-                    icon: Icons.restaurant,
+                  child: _TaskItem(
+                    icon: Icons.restaurant_menu_rounded,
                     title: 'Sağlıklı Öğle Yemeği',
-                    subtitle: lunchMenu.isNotEmpty
-                        ? lunchMenu
-                        : 'Protein ve sebze ağırlıklı',
                     time: '13:00',
                     isDone: isLunchDone,
                     color: AppTheme.lunchColor,
+                    description: lunchMenu,
                     onTap: () {
-                      // Görev nesnesi oluştur
-                      Task task = Task(
-                          id: 2, // Sabit ID
-                          title: 'Sağlıklı Öğle Yemeği',
-                          description: lunchMenu.isNotEmpty
-                              ? lunchMenu
-                              : 'Protein ve sebze ağırlıklı',
-                          date: DateTime.now(),
-                          isCompleted: !isLunchDone, // Durumu tersine çevir
-                          type: TaskType.lunch);
-
-                      // _onTaskChanged fonksiyonunu çağır
-                      _onTaskChanged(task, !isLunchDone);
+                      _toggleTaskCompletion(TaskType.lunch);
                     },
                   ),
                 ),
                 KFSlideAnimation(
                   offsetBegin: Offset(0, 0.1),
                   delay: Duration(milliseconds: 300),
-                  child: _buildTaskCard(
-                    context,
-                    icon: Icons.fitness_center,
+                  child: _TaskItem(
+                    icon: Icons.fitness_center_rounded,
                     title: 'Akşam Antrenmanı',
-                    subtitle: eveningProgram.isNotEmpty
-                        ? eveningProgram
-                        : '45 dakika güç antrenmanı',
                     time: '18:00',
                     isDone: isEveningExerciseDone,
                     color: AppTheme.eveningExerciseColor,
+                    description: eveningProgram,
                     onTap: () {
-                      // Görev nesnesi oluştur
-                      Task task = Task(
-                          id: 3, // Sabit ID
-                          title: 'Akşam Antrenmanı',
-                          description: eveningProgram.isNotEmpty
-                              ? eveningProgram
-                              : '45 dakika güç antrenmanı',
-                          date: DateTime.now(),
-                          isCompleted:
-                              !isEveningExerciseDone, // Durumu tersine çevir
-                          type: TaskType.eveningExercise);
-
-                      // _onTaskChanged fonksiyonunu çağır
-                      _onTaskChanged(task, !isEveningExerciseDone);
+                      _toggleTaskCompletion(TaskType.eveningExercise);
                     },
                   ),
                 ),
                 KFSlideAnimation(
                   offsetBegin: Offset(0, 0.1),
                   delay: Duration(milliseconds: 350),
-                  child: _buildTaskCard(
-                    context,
-                    icon: Icons.dinner_dining,
+                  child: _TaskItem(
+                    icon: Icons.dinner_dining_rounded,
                     title: 'Akşam Yemeği',
-                    subtitle: dinnerMenu.isNotEmpty
-                        ? dinnerMenu
-                        : 'Hafif ve sağlıklı',
                     time: '20:00',
                     isDone: isDinnerDone,
                     color: AppTheme.dinnerColor,
+                    description: dinnerMenu,
                     onTap: () {
-                      // Görev nesnesi oluştur
-                      Task task = Task(
-                          id: 4, // Sabit ID
-                          title: 'Akşam Yemeği',
-                          description: dinnerMenu.isNotEmpty
-                              ? dinnerMenu
-                              : 'Hafif ve sağlıklı',
-                          date: DateTime.now(),
-                          isCompleted: !isDinnerDone, // Durumu tersine çevir
-                          type: TaskType.dinner);
-
-                      // _onTaskChanged fonksiyonunu çağır
-                      _onTaskChanged(task, !isDinnerDone);
+                      _toggleTaskCompletion(TaskType.dinner);
                     },
                   ),
                 ),
@@ -416,80 +365,73 @@ class _HomeScreenState extends State<HomeScreen>
     final dayOfWeek = DateFormat('EEEE', 'tr_TR').format(now);
     final dateFormatted = DateFormat('d MMMM yyyy', 'tr_TR').format(now);
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center, // Dikeyde ortala
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    KFSlideAnimation(
-                      offsetBegin: const Offset(0, 0.2),
-                      child: Text(
-                        'Merhaba, ${user?.name ?? 'Kaplan'}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    KFSlideAnimation(
-                      offsetBegin: const Offset(0, 0.2),
-                      delay: const Duration(milliseconds: 50),
-                      child: Text(
-                        '$dateFormatted, $dayOfWeek',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.white70 : Colors.black54,
-                        ),
-                      ),
-                    ),
-                  ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize
+                  .min, // Column'un dikeyde minimum yer kaplamasını sağla
+              children: [
+                KFSlideAnimation(
+                  offsetBegin: const Offset(0, 0.2),
+                  child: _buildWelcomeTitle(),
                 ),
-              ),
-              // Profil resmi yerine menü butonu eklendi
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: KFSlideAnimation(
-                  offsetBegin: const Offset(0, 0.1),
-                  delay: const Duration(milliseconds: 100),
-                  child: InkWell(
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => _buildMenuSheet(context),
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? AppTheme.primaryColor.withOpacity(0.3)
-                            : AppTheme.primaryColor.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppTheme.primaryColor,
-                          width: 2,
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(10.0),
-                      child: Icon(
-                        Icons.menu,
-                        color: AppTheme.primaryColor,
-                        size: 24,
-                      ),
+                const SizedBox(height: 4),
+                KFSlideAnimation(
+                  offsetBegin: const Offset(0, 0.2),
+                  delay: const Duration(milliseconds: 50),
+                  child: Text(
+                    '$dateFormatted, $dayOfWeek',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDarkMode ? Colors.white70 : Colors.black54,
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+          // Menü butonu - Padding'i Row içinde tutalım
+          KFSlideAnimation(
+            offsetBegin: const Offset(0, 0.1),
+            delay: const Duration(milliseconds: 100),
+            child: Material(
+              color: Colors.transparent, // Arka plan rengini şeffaf yap
+              shape: CircleBorder(), // Şeklini daire yap
+              clipBehavior:
+                  Clip.antiAlias, // Tıklama efektinin taşmasını engelle
+              child: InkWell(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => _buildMenuSheet(context),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? AppTheme.primaryColor.withOpacity(0.3)
+                        : AppTheme.primaryColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppTheme.primaryColor,
+                      width: 2,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(10.0),
+                  child: Icon(
+                    Icons.menu,
+                    color: AppTheme.primaryColor,
+                    size: 24,
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -539,6 +481,23 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           ListTile(
             leading: Icon(
+              Icons.fitness_center_rounded,
+              color: AppTheme.primaryColor,
+            ),
+            title: Text('Antrenman Programı'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const WorkoutProgramScreen(),
+                  settings: RouteSettings(name: "WorkoutProgramScreen"),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(
               Icons.bar_chart_rounded,
               color: AppTheme.primaryColor,
             ),
@@ -550,6 +509,23 @@ class _HomeScreenState extends State<HomeScreen>
                 MaterialPageRoute(
                   builder: (context) => const StatsScreen(),
                   settings: RouteSettings(name: "StatsScreen"),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.check_circle_outline_rounded,
+              color: AppTheme.primaryColor,
+            ),
+            title: Text('Hedef Takibi'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GoalTrackingScreen(),
+                  settings: RouteSettings(name: "GoalTrackingScreen"),
                 ),
               );
             },
@@ -841,25 +817,41 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildStatCards(BuildContext context) {
-    // Provider'ları al
-    final activityProvider = Provider.of<ActivityProvider>(context);
-    final nutritionProvider = Provider.of<NutritionProvider>(context);
+    // Provider'ları güvenli bir şekilde kontrol edelim
+    ActivityProvider? activityProvider;
+    NutritionProvider? nutritionProvider;
+
+    try {
+      activityProvider = Provider.of<ActivityProvider>(context);
+    } catch (e) {
+      print('ActivityProvider bulunamadı: $e');
+    }
+
+    try {
+      nutritionProvider = Provider.of<NutritionProvider>(context);
+    } catch (e) {
+      print('NutritionProvider bulunamadı: $e');
+    }
 
     // Bugünün tarihi
     final today = DateTime.now();
 
     // Bugünkü toplam kalori alımını hesapla
     int totalCalories = 0;
-    final meals = nutritionProvider.meals;
-    for (var meal in meals) {
-      totalCalories += meal.calories?.toInt() ?? 0;
+    if (nutritionProvider != null) {
+      final meals = nutritionProvider.meals;
+      for (var meal in meals) {
+        totalCalories += meal.calories?.toInt() ?? 0;
+      }
     }
 
     // Bugünkü toplam aktivite dakikasını hesapla
     int totalActivityMinutes = 0;
-    final activities = activityProvider.activities;
-    for (var activity in activities) {
-      totalActivityMinutes += activity.durationMinutes?.toInt() ?? 0;
+    if (activityProvider != null) {
+      final activities = activityProvider.activities;
+      for (var activity in activities) {
+        totalActivityMinutes += activity.durationMinutes?.toInt() ?? 0;
+      }
     }
 
     return Column(
@@ -956,7 +948,15 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildWaterIntakeCard(BuildContext context, int waterIntake) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final percentage = (_waterIntake / _waterGoal).clamp(0.0, 1.0);
+    final user = Provider.of<UserProvider>(context, listen: false).user;
+
+    // Hedefi UserProvider'dan al (Litre ise ml'ye çevir), null ise varsayılan 2000 ml
+    final double targetWaterLiters =
+        user?.targetWaterIntake ?? 2.0; // Varsayılan 2 Litre
+    final int waterGoalMl =
+        (targetWaterLiters * 1000).toInt().clamp(1, 100000); // Min 1 ml hedef
+
+    final percentage = (waterIntake / waterGoalMl).clamp(0.0, 1.0);
 
     return Container(
       padding: EdgeInsets.all(16),
@@ -1003,7 +1003,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
               Text(
-                '$_waterIntake / $_waterGoal ml',
+                '$_waterIntake / $waterGoalMl ml',
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).textTheme.bodySmall?.color,
@@ -1060,7 +1060,7 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildWaterButton(BuildContext context, int amount, Color color) {
-    final buttonText = amount > 0 ? '+$amount' : '$amount';
+    final buttonText = amount > 0 ? '+' + amount.toString() : amount.toString();
 
     return Material(
       color: Colors.transparent,
@@ -1068,7 +1068,11 @@ class _HomeScreenState extends State<HomeScreen>
         onTap: () {
           // Su ekleme/çıkarma işlemi
           HapticFeedback.lightImpact();
-          _updateWaterIntake(amount);
+          if (amount > 0) {
+            _addWater(amount);
+          } else if (amount < 0) {
+            _removeWater(amount.abs());
+          }
 
           final message = amount > 0
               ? '$amount ml su eklendi'
@@ -1101,206 +1105,249 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Future<void> _initTasks() async {
+  // Görevleri ProgramService'ten yükle ve durumu başlat
+  // Bu metot artık _loadData içine entegre edildi, kullanılmıyor
+  // Future<void> _initTasks() async {
+  //   setState(() {
+  //     isLoading = true; // Yükleme başlıyor
+  //   });
+  //
+  //   try {
+  //     // UserProvider'dan kullanıcı bilgisini al
+  //     final userProvider = Provider.of<UserProvider>(context, listen: false);
+  //     final user = userProvider.user;
+  //
+  //     // ProgramService'i Provider'dan al
+  //     final programService =
+  //         Provider.of<ProgramService>(context, listen: false);
+  //
+  //     // Haftalık programı al (initialize zaten main'de çağrılmış olmalı)
+  //     final weeklyProgram = await programService.getWeeklyProgram();
+  //     final today = DateTime.now();
+  //     final todayIndex = today.weekday - 1; // Pzt=0, Sal=1, ..., Paz=6
+  //
+  //     print("Bugünün indeksi: $todayIndex");
+  //
+  //     // WeeklyProgram listesi null değilse ve bugünün indexi geçerliyse devam et
+  //     if (weeklyProgram.length > todayIndex) {
+  //       final dailyProgram = weeklyProgram[todayIndex];
+  //       print("Günlük program bulundu");
+  //
+  //       // Görevleri state'e ata (ProgramItem'dan description veya title al)
+  //       if (mounted) {
+  //         setState(() {
+  //           // Sabah görevi (Antrenman ise title, değilse description veya title)
+  //           morningProgram = (dailyProgram.morningExercise.type ==
+  //                   ProgramItemType.workout
+  //               ? dailyProgram.morningExercise.title
+  //               : dailyProgram.morningExercise.description?.isNotEmpty == true
+  //                   ? dailyProgram.morningExercise.description!
+  //                   : dailyProgram.morningExercise.title);
+  //           // Öğle Yemeği (Description veya title)
+  //           lunchMenu = dailyProgram.lunch.description?.isNotEmpty == true
+  //               ? dailyProgram.lunch.description!
+  //               : dailyProgram.lunch.title;
+  //           // Akşam görevi (Antrenman ise title, değilse description veya title)
+  //           eveningProgram = (dailyProgram.eveningExercise.type ==
+  //                   ProgramItemType.workout
+  //               ? dailyProgram.eveningExercise.title
+  //               : dailyProgram.eveningExercise.description?.isNotEmpty == true
+  //                   ? dailyProgram.eveningExercise.description!
+  //                   : dailyProgram.eveningExercise.title);
+  //           // Akşam Yemeği (Description veya title)
+  //           dinnerMenu = dailyProgram.dinner.description?.isNotEmpty == true
+  //               ? dailyProgram.dinner.description!
+  //               : dailyProgram.dinner.title;
+  //         });
+  //         print("Sabah görevi: $morningProgram");
+  //         print("Öğle görevi: $lunchMenu");
+  //         print("Akşam görevi: $eveningProgram");
+  //         print("Akşam yemeği görevi: $dinnerMenu");
+  //       } else {
+  //         print("Bugün için program bulunamadı veya program eksik.");
+  //         if (mounted) {
+  //           setState(() {
+  //             morningProgram = 'Program Yok';
+  //             lunchMenu = 'Program Yok';
+  //             eveningProgram = 'Program Yok';
+  //             dinnerMenu = 'Program Yok';
+  //           });
+  //         }
+  //       }
+  //
+  //       // Kaydedilmiş görev durumlarını yükle
+  //       await _loadSavedTaskStates(); // Program yüklendikten sonra durumları yükle
+  //     } else {
+  //       print("Bugün için program bulunamadı veya program eksik.");
+  //       if (mounted) {
+  //         setState(() {
+  //           morningProgram = 'Program Yok';
+  //           lunchMenu = 'Program Yok';
+  //           eveningProgram = 'Program Yok';
+  //           dinnerMenu = 'Program Yok';
+  //         });
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print("Görevleri başlatırken hata: $e");
+  //     if (mounted) {
+  //       setState(() {
+  //         morningProgram = 'Hata';
+  //         lunchMenu = 'Hata';
+  //         eveningProgram = 'Hata';
+  //         dinnerMenu = 'Hata';
+  //         isLoading = false; // Hata durumunda yüklemeyi bitir
+  //       });
+  //     }
+  //   }
+  //
+  //   // YENİ: Görevleri _loadData içinde yükle
+  //   final userProvider = Provider.of<UserProvider>(context, listen: false);
+  //   final user = userProvider.user;
+  //   await _loadDailyTasks(user?.id ?? 0); // UserId geçildi
+  //
+  //   // Bugün için su tüketimini veritabanından yükle
+  //   final today = DateTime.now();
+  //   final dbService = DatabaseService();
+  //   final savedIntake = await dbService.getWaterLogForDay(today, user?.id ?? 0);
+  //   if (mounted) {
+  //     setState(() {
+  //       _waterIntake = savedIntake;
+  //     });
+  //   }
+  //
+  //   // Yükleme bitti
+  //   if (mounted) {
+  //     setState(() {
+  //       isLoading = false;
+  //     });
+  //   }
+  // }
+
+  // Program güncellendiğinde görevleri yenilemek için (DatabaseProvider dinleyicisi)
+  void _refreshProgram() {
+    print("Veritabanı değişikliği algılandı, program yenileniyor...");
+    _loadData();
+  }
+
+  // Aktivite türüne, süreye ve kiloya göre yakılan kaloriyi hesapla
+  double? _calculateCaloriesBurned(
+      FitActivityType type, int durationMinutes, double? userWeightKg) {
+    if (userWeightKg == null || userWeightKg <= 0 || durationMinutes <= 0) {
+      return null; // Geçersiz girdi
+    }
+
+    // MET değerleri (Metabolic Equivalent of Task) - Yaklaşık değerler
+    // Kaynak: Çeşitli fitness kaynakları, ortalama değerler alınmıştır.
+    double metValue = 3.0; // Varsayılan (other için)
+    switch (type) {
+      case FitActivityType.walking:
+        metValue = 3.5;
+        break;
+      case FitActivityType.running:
+        metValue = 7.0; // Hıza göre değişir
+        break;
+      case FitActivityType.swimming:
+        metValue = 7.0; // Tempoya göre değişir
+        break;
+      case FitActivityType.weightTraining:
+        metValue = 4.5; // Yoğunluğa göre değişir
+        break;
+      case FitActivityType.cycling:
+        metValue = 6.0; // Hıza/Dirence göre değişir
+        break;
+      case FitActivityType.yoga:
+        metValue = 2.5;
+        break;
+      case FitActivityType.other:
+        metValue = 3.0;
+        break;
+    }
+
+    // Kalori = MET * Kilo (kg) * Süre (saat)
+    double calories = metValue * userWeightKg * (durationMinutes / 60.0);
+    return calories;
+  }
+
+  // Görev tamamlama durumunu değiştir
+  Future<void> _toggleTaskCompletion(TaskType taskType) async {
+    final user = Provider.of<UserProvider>(context, listen: false).user;
+    if (user == null || user.id == null) {
+      print("Görev tamamlama işlemi için kullanıcı bulunamadı.");
+      return;
+    }
+
+    bool currentState;
+    // int? recordId; // Kayıt ID'sine artık gerek yok
+    // String recordKey; // Kayıt ID'sine artık gerek yok
+
+    switch (taskType) {
+      case TaskType.morningExercise:
+        currentState = isMorningExerciseDone;
+        // recordId = morningExerciseId; // Kaldırıldı
+        // recordKey = 'morningExerciseId'; // Kaldırıldı
+        break;
+      case TaskType.lunch:
+        currentState = isLunchDone;
+        // recordId = lunchMealId; // Kaldırıldı
+        // recordKey = 'lunchMealId'; // Kaldırıldı
+        break;
+      case TaskType.eveningExercise:
+        currentState = isEveningExerciseDone;
+        // recordId = eveningExerciseId; // Kaldırıldı
+        // recordKey = 'eveningExerciseId'; // Kaldırıldı
+        break;
+      case TaskType.dinner:
+        currentState = isDinnerDone;
+        // recordId = dinnerMealId; // Kaldırıldı
+        // recordKey = 'dinnerMealId'; // Kaldırıldı
+        break;
+      default:
+        return;
+    }
+
+    final newState = !currentState;
+    // final dbService = DatabaseService(); // DB servisine gerek kalmadı (şimdilik)
+    // final prefs = await SharedPreferences.getInstance(); // _savingTaskStates içinde zaten var
+
+    // Durumu güncelle
     setState(() {
-      isLoading = true; // Yükleme başladı
+      switch (taskType) {
+        case TaskType.morningExercise:
+          isMorningExerciseDone = newState;
+          break;
+        case TaskType.lunch:
+          isLunchDone = newState;
+          break;
+        case TaskType.eveningExercise:
+          isEveningExerciseDone = newState;
+          break;
+        case TaskType.dinner:
+          isDinnerDone = newState;
+          break;
+        default:
+          break;
+      }
     });
 
+    // SharedPreferences'e SADECE görev durumunu kaydet
+    await _savingTaskStates(); // Bu fonksiyon zaten ID'leri kaydetmiyordu, sadece bool durumları
+
+    // Aktivite veya Öğün kaydını ekle/sil KISMI KALDIRILDI
+    /* // Bu bölüm tamamen kaldırıldı
     try {
-      // Önce SharedPreferences'den görev durumlarını yükle
-      await _loadSavedTaskStates();
-
-      // ProgramService üzerinden günün programını al
-      final programService =
-          Provider.of<DatabaseProvider>(context, listen: false).programService;
-
-      // Bugünün haftanın günü indeksini al (0-Pazartesi, 6-Pazar)
-      final today = DateTime.now().weekday - 1;
-      print('Bugünün indeksi: $today'); // Hata ayıklama için log
-
-      // Günlük programı al
-      final dailyProgram = await programService.getDailyProgram(today);
-
-      if (dailyProgram != null) {
-        print('Günlük program bulundu');
-
-        setState(() {
-          // Günün programını açıklama metinlerine uygula
-          final morningExercise = dailyProgram.morningExercise;
-          final lunch = dailyProgram.lunch;
-          final eveningExercise = dailyProgram.eveningExercise;
-          final dinner = dailyProgram.dinner;
-
-          // Açıklamaları kaydet
-          if (morningExercise.description.isNotEmpty) {
-            morningProgram = morningExercise.description;
-            print('Sabah egzersizi: $morningProgram');
-          }
-
-          if (lunch.description.isNotEmpty) {
-            lunchMenu = lunch.description;
-            print('Öğle yemeği: $lunchMenu');
-          }
-
-          if (eveningExercise.description.isNotEmpty) {
-            eveningProgram = eveningExercise.description;
-            print('Akşam egzersizi: $eveningProgram');
-          }
-
-          if (dinner.description.isNotEmpty) {
-            dinnerMenu = dinner.description;
-            print('Akşam yemeği: $dinnerMenu');
-          }
-
-          isLoading = false; // Yükleme tamamlandı
-        });
-      } else {
-        print('Günlük program bulunamadı');
-        setState(() {
-          isLoading = false; // Yükleme tamamlandı
-        });
+      if (taskType == TaskType.morningExercise ||
+          taskType == TaskType.eveningExercise) {
+         // ... Aktivite ekleme/silme kodu ...
+      } else if (taskType == TaskType.lunch || taskType == TaskType.dinner) {
+        // ... Öğün ekleme/silme kodu ...
       }
     } catch (e) {
-      print('Program başlatma hatası: $e');
-      setState(() {
-        isLoading = false; // Yükleme tamamlandı
-      });
+       // ... Hata yönetimi ...
     }
-  }
+    */
 
-  // Program güncellendiğinde çağrılacak metot
-  void _refreshProgram() {
-    _initTasks();
-  }
-
-  void _onTaskChanged(Task task, bool isCompleted) {
-    final activityProvider =
-        Provider.of<ActivityProvider>(context, listen: false);
-    final nutritionProvider =
-        Provider.of<NutritionProvider>(context, listen: false);
-
-    // Görev tipine göre durumu güncelle
-    if (task.type == TaskType.morningExercise) {
-      setState(() {
-        isMorningExerciseDone = isCompleted;
-      });
-    } else if (task.type == TaskType.lunch) {
-      setState(() {
-        isLunchDone = isCompleted;
-      });
-    } else if (task.type == TaskType.eveningExercise) {
-      setState(() {
-        isEveningExerciseDone = isCompleted;
-      });
-    } else if (task.type == TaskType.dinner) {
-      setState(() {
-        isDinnerDone = isCompleted;
-      });
-    }
-
-    // Görev durumunu güncelle
-    Task updatedTask = Task(
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        date: task.date,
-        isCompleted: isCompleted,
-        type: task.type);
-    activityProvider.updateTask(updatedTask);
-
-    // Durumları kaydet
-    _savingTaskStates();
-
-    if (isCompleted) {
-      // Eğer görev tamamlandıysa, ilgili aktivite veya yemek kaydını ekle
-      if (task.type == TaskType.morningExercise ||
-          task.type == TaskType.eveningExercise) {
-        final FitActivityType activityType =
-            task.type == TaskType.morningExercise
-                ? FitActivityType.walking
-                : FitActivityType.running;
-
-        // Yeni aktivite oluştur ve ID'sini sakla
-        activityProvider
-            .addActivity(ActivityRecord(
-          type: activityType,
-          durationMinutes: 30, // Varsayılan değer
-          date: DateTime.now(),
-          notes: 'Günlük görev: ${task.title}',
-          taskId: task.id,
-        ))
-            .then((activityId) {
-          if (task.type == TaskType.morningExercise) {
-            setState(() {
-              morningExerciseId = activityId;
-            });
-          } else {
-            setState(() {
-              eveningExerciseId = activityId;
-            });
-          }
-          _savingTaskStates(); // ID'yi kaydedince tekrar kaydet
-        });
-      } else if (task.type == TaskType.lunch || task.type == TaskType.dinner) {
-        final FitMealType mealType = task.type == TaskType.lunch
-            ? FitMealType.lunch
-            : FitMealType.dinner;
-
-        // Yeni öğün oluştur ve ID'sini sakla
-        nutritionProvider
-            .addMeal(MealRecord(
-          type: mealType,
-          foods: ['Günlük öğün'],
-          calories: 500, // Varsayılan değer
-          date: DateTime.now(),
-          taskId: task.id,
-        ))
-            .then((mealId) {
-          if (task.type == TaskType.lunch) {
-            setState(() {
-              lunchMealId = mealId;
-            });
-          } else {
-            setState(() {
-              dinnerMealId = mealId;
-            });
-          }
-          _savingTaskStates(); // ID'yi kaydedince tekrar kaydet
-        });
-      }
-    } else {
-      // Görev tamamlanmadı olarak işaretlendiyse, ilgili aktivite veya yemek kaydını sil
-      if (task.type == TaskType.morningExercise) {
-        if (morningExerciseId != null) {
-          activityProvider.deleteActivityByTaskId(task.id);
-          setState(() {
-            morningExerciseId = null;
-          });
-        }
-      } else if (task.type == TaskType.eveningExercise) {
-        if (eveningExerciseId != null) {
-          activityProvider.deleteActivityByTaskId(task.id);
-          setState(() {
-            eveningExerciseId = null;
-          });
-        }
-      } else if (task.type == TaskType.lunch) {
-        if (lunchMealId != null) {
-          nutritionProvider.deleteMealByTaskId(task.id);
-          setState(() {
-            lunchMealId = null;
-          });
-        }
-      } else if (task.type == TaskType.dinner) {
-        if (dinnerMealId != null) {
-          nutritionProvider.deleteMealByTaskId(task.id);
-          setState(() {
-            dinnerMealId = null;
-          });
-        }
-      }
-      _savingTaskStates(); // Güncellemeleri kaydet
-    }
+    print("Görev durumu güncellendi: $taskType -> $newState"); // Loglama
   }
 
   Widget _buildGreetingCard() {
@@ -1361,28 +1408,599 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Su tüketim değerini yükle
+  // Tüm verileri yükle
+  Future<void> _loadData() async {
+    // Yükleme başladığında isLoading'i true yap
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
+
+    try {
+      // Görev durumlarını yükle
+      await _loadSavedTaskStates();
+
+      // Su tüketimini yükle
+      await _loadWaterIntake();
+
+      // Veritabanı servisi
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
+
+      // UserProvider'dan kullanıcı ID'sini al
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.user?.id;
+
+      // Program servisini yüklemeye çalış
+      try {
+        final programService =
+            Provider.of<ProgramService>(context, listen: false);
+        // Programdan ve veritabanından günlük görevleri yükle
+        if (userId != null) {
+          await _loadDailyTasks(userId);
+        } else {
+          print("Kullanıcı ID'si bulunamadığı için görevler yüklenemedi.");
+          // Kullanıcı yoksa varsayılan metinleri göster
+          if (mounted) {
+            setState(() {
+              morningProgram = 'Giriş yapın';
+              lunchMenu = 'Giriş yapın';
+              eveningProgram = 'Giriş yapın';
+              dinnerMenu = 'Giriş yapın';
+            });
+          }
+        }
+      } catch (e) {
+        print('ProgramService hatası: $e');
+        // Program servisi bulunamadığında basit içerikler göster
+        if (mounted) {
+          setState(() {
+            morningProgram = 'Program Hatası';
+            lunchMenu = 'Program Hatası';
+            eveningProgram = 'Program Hatası';
+            dinnerMenu = 'Program Hatası';
+          });
+        }
+      }
+
+      // Yükleme tamamlandı
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e, stacktrace) {
+      // Hata ve stacktrace yakala
+      print('_loadData sırasında hata: $e');
+      print('_loadData Stacktrace: $stacktrace');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          // Hata durumunda görev metinlerini güncelle
+          morningProgram = 'Yükleme Hatası';
+          lunchMenu = 'Yükleme Hatası';
+          eveningProgram = 'Yükleme Hatası';
+          dinnerMenu = 'Yükleme Hatası';
+        });
+      }
+    }
+  }
+
+  // Su tüketimi yükleme (Veritabanından)
   Future<void> _loadWaterIntake() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    setState(() {
-      _waterIntake = prefs.getInt('water_intake_$today') ?? 0;
-    });
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user;
+    if (user == null || user.id == null) {
+      if (mounted) setState(() => _waterIntake = 0);
+      return;
+    }
+
+    try {
+      final dbService = Provider.of<DatabaseService>(context, listen: false);
+      final today = DateTime.now();
+      final savedIntake = await dbService.getWaterLogForDay(today, user.id!);
+      if (mounted) {
+        setState(() {
+          _waterIntake = savedIntake;
+        });
+      }
+    } catch (e) {
+      print("Su tüketimi yüklenirken hata: $e");
+      if (mounted) {
+        setState(() {
+          _waterIntake = 0; // Hata durumunda sıfırla
+        });
+      }
+    }
   }
 
-  // Su tüketim değerini kaydet
-  Future<void> _saveWaterIntake() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    await prefs.setInt('water_intake_$today', _waterIntake);
+  // Su ekle
+  Future<void> _addWater(int amount) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user;
+
+    if (user == null || user.id == null)
+      return; // Kullanıcı veya ID yoksa işlem yapma
+
+    final newIntake = _waterIntake + amount;
+    if (mounted) {
+      setState(() {
+        _waterIntake = newIntake;
+      });
+    }
+    // Veritabanına kaydet
+    final dbService = DatabaseService();
+    await dbService.insertOrUpdateWaterLog(DateTime.now(), newIntake, user.id!);
   }
 
-  // Su tüketim değerini güncelle
-  void _updateWaterIntake(int amount) {
-    setState(() {
-      _waterIntake =
-          (_waterIntake + amount).clamp(0, 5000); // Max 5 litre olarak sınırla
-    });
-    _saveWaterIntake();
+  // Su çıkar (opsiyonel, yanlış ekleme durumu için)
+  Future<void> _removeWater(int amount) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user;
+    if (user == null || user.id == null) return;
+
+    final newIntake =
+        (_waterIntake - amount).clamp(0, 100000); // Negatif olmasın
+    if (mounted) {
+      setState(() {
+        _waterIntake = newIntake;
+      });
+    }
+    // Veritabanına kaydet
+    final dbService = DatabaseService();
+    await dbService.insertOrUpdateWaterLog(DateTime.now(), newIntake, user.id!);
+  }
+
+  // Günlük görevleri veritabanından yükle
+  Future<void> _loadDailyTasks(int userId) async {
+    final dbService = DatabaseService();
+    final today = DateTime.now();
+    final tasks = await dbService.getTasksForDay(today);
+
+    // ProgramService'den bugünün programını al
+    final programService = Provider.of<ProgramService>(context, listen: false);
+    final todayProgram = await programService.getTodayProgram();
+
+    // Varsayılan değerler (eğer programda varsa onları kullan, yoksa veritabanından al)
+    String tempMorningTask = 'Program yükleniyor...';
+    String tempNoonTask = 'Program yükleniyor...';
+    String tempEveningTask = 'Program yükleniyor...';
+    String tempDinnerMenu = 'Program yükleniyor...';
+
+    // Önce program bilgilerini ata (eğer varsa)
+    if (todayProgram != null) {
+      // Sabah görevi (Antrenman ise title, değilse description veya title)
+      tempMorningTask =
+          (todayProgram.morningExercise.type == ProgramItemType.workout
+              ? todayProgram.morningExercise.title
+              : todayProgram.morningExercise.description?.isNotEmpty == true
+                  ? todayProgram.morningExercise.description!
+                  : todayProgram.morningExercise.title);
+
+      // Öğle Yemeği (Description veya title)
+      tempNoonTask = todayProgram.lunch.description?.isNotEmpty == true
+          ? todayProgram.lunch.description!
+          : todayProgram.lunch.title;
+
+      // Akşam görevi (Antrenman ise title, değilse description veya title)
+      tempEveningTask =
+          (todayProgram.eveningExercise.type == ProgramItemType.workout
+              ? todayProgram.eveningExercise.title
+              : todayProgram.eveningExercise.description?.isNotEmpty == true
+                  ? todayProgram.eveningExercise.description!
+                  : todayProgram.eveningExercise.title);
+
+      // Akşam Yemeği (Description veya title)
+      tempDinnerMenu = todayProgram.dinner.description?.isNotEmpty == true
+          ? todayProgram.dinner.description!
+          : todayProgram.dinner.title;
+    }
+
+    // Veritabanından gelen görevlerle güncelle (eğer varsa)
+    for (var task in tasks) {
+      switch (task.type) {
+        case TaskType.morningExercise:
+          if (task.description.isNotEmpty) {
+            tempMorningTask = task.description;
+          } else if (task.title.isNotEmpty) {
+            tempMorningTask = task.title;
+          }
+          break;
+        case TaskType.lunch:
+          if (task.description.isNotEmpty) {
+            tempNoonTask = task.description;
+          } else if (task.title.isNotEmpty) {
+            tempNoonTask = task.title;
+          }
+          break;
+        case TaskType.eveningExercise:
+          if (task.description.isNotEmpty) {
+            tempEveningTask = task.description;
+          } else if (task.title.isNotEmpty) {
+            tempEveningTask = task.title;
+          }
+          break;
+        case TaskType.dinner:
+          if (task.description.isNotEmpty) {
+            tempDinnerMenu = task.description;
+          } else if (task.title.isNotEmpty) {
+            tempDinnerMenu = task.title;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        morningProgram = tempMorningTask;
+        lunchMenu = tempNoonTask;
+        eveningProgram = tempEveningTask;
+        dinnerMenu = tempDinnerMenu;
+      });
+
+      // Debug amaçlı
+      print(
+          "Yüklenen görevler: Sabah: $morningProgram, Öğle: $lunchMenu, Akşam: $eveningProgram, Akşam Yemeği: $dinnerMenu");
+    }
+  }
+
+  // Günlük görevler listesini oluşturan widget
+  Widget _buildTaskList(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final user = userProvider.user; // Null olabilir
+
+    // Görevleri tutacak liste
+    List<Widget> taskItems = [];
+
+    // Sabah Egzersizi
+    taskItems.add(
+      KFSlideAnimation(
+        offsetBegin: Offset(0, 0.1),
+        delay: Duration(milliseconds: 200),
+        child: _TaskItem(
+          icon: Icons.directions_run_rounded,
+          title: 'Sabah Egzersizi',
+          time: '08:00', // Zamanı programdan alabiliriz?
+          isDone: isMorningExerciseDone,
+          color: AppTheme.morningExerciseColor,
+          description: morningProgram, // YENİ: Açıklamayı ekle
+          onTap: () {
+            _toggleTaskCompletion(TaskType.morningExercise);
+          },
+        ),
+      ),
+    );
+
+    // Öğle Yemeği
+    taskItems.add(
+      KFSlideAnimation(
+        offsetBegin: Offset(0, 0.1),
+        delay: Duration(milliseconds: 250),
+        child: _TaskItem(
+          icon: Icons.restaurant_menu_rounded,
+          title: 'Sağlıklı Öğle Yemeği',
+          time: '13:00',
+          isDone: isLunchDone,
+          color: AppTheme.lunchColor,
+          description: lunchMenu, // YENİ: Açıklamayı ekle
+          onTap: () {
+            _toggleTaskCompletion(TaskType.lunch);
+          },
+        ),
+      ),
+    );
+
+    // Akşam Antrenmanı
+    taskItems.add(
+      KFSlideAnimation(
+        offsetBegin: Offset(0, 0.1),
+        delay: Duration(milliseconds: 300),
+        child: _TaskItem(
+          icon: Icons.fitness_center_rounded,
+          title: 'Akşam Antrenmanı',
+          time: '18:00',
+          isDone: isEveningExerciseDone,
+          color: AppTheme.eveningExerciseColor,
+          description: eveningProgram, // YENİ: Açıklamayı ekle
+          onTap: () {
+            _toggleTaskCompletion(TaskType.eveningExercise);
+          },
+        ),
+      ),
+    );
+
+    // Akşam Yemeği
+    taskItems.add(
+      KFSlideAnimation(
+        offsetBegin: Offset(0, 0.1),
+        delay: Duration(milliseconds: 350),
+        child: _TaskItem(
+          icon: Icons.dinner_dining_rounded,
+          title: 'Akşam Yemeği',
+          time: '20:00',
+          isDone: isDinnerDone,
+          color: AppTheme.dinnerColor,
+          description: dinnerMenu, // YENİ: Açıklamayı ekle
+          onTap: () {
+            _toggleTaskCompletion(TaskType.dinner);
+          },
+        ),
+      ),
+    );
+
+    // Su Takip Widget'ı
+    taskItems.add(
+      KFSlideAnimation(
+        offsetBegin: Offset(0, 0.1),
+        delay: Duration(milliseconds: 400),
+        child: _buildWaterTrackingCard(
+            context, (user?.targetWaterIntake ?? 2500).toInt()),
+      ),
+    );
+
+    return Column(children: taskItems);
+  }
+
+  // Tek bir görev kartını oluşturan widget
+  Widget _TaskItem({
+    required IconData icon,
+    required String title,
+    required String time,
+    required bool isDone,
+    required Color color,
+    required String description, // YENİ: Açıklama parametresi
+    required VoidCallback onTap,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Görev türüne göre AppTheme'den renkleri kullan
+    Color cardColor;
+    if (title.contains('Sabah Egzersizi')) {
+      cardColor = AppTheme.morningExerciseColor;
+    } else if (title.contains('Öğle Yemeği')) {
+      cardColor = AppTheme.lunchColor;
+    } else if (title.contains('Akşam Antrenmanı')) {
+      cardColor = AppTheme.eveningExerciseColor;
+    } else if (title.contains('Akşam Yemeği')) {
+      cardColor = AppTheme.dinnerColor;
+    } else {
+      cardColor = color;
+    }
+
+    final backgroundColor =
+        isDarkMode ? cardColor.withOpacity(0.2) : cardColor.withOpacity(0.1);
+    final iconColor = isDone ? Colors.grey : cardColor;
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: isDone
+          ? (isDarkMode
+              ? AppTheme.completedTaskColor
+              : Colors.grey.withOpacity(0.1))
+          : backgroundColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: iconColor.withOpacity(0.8),
+                radius: 24,
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isDone ? Colors.grey : textColor,
+                        decoration: isDone ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      // Açıklama kısmını daha iyi göstermek için düzenliyoruz
+                      // "-" veya "Bu görev için detay yok" yerine daha anlamlı bir mesaj göster
+                      description.isEmpty || description == '-'
+                          ? 'Henüz program detayı yüklenmedi'
+                          : description == 'Program Yok'
+                              ? 'Bugün için program bulunamadı'
+                              : description == 'Hata'
+                                  ? 'Program yüklenirken hata oluştu'
+                                  : description,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color:
+                            isDone ? Colors.grey : textColor.withOpacity(0.7),
+                        decoration: isDone ? TextDecoration.lineThrough : null,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    time,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDone ? Colors.grey : textColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDone ? cardColor : Colors.grey.shade400,
+                        width: 2,
+                      ),
+                      color: isDone ? cardColor : Colors.transparent,
+                    ),
+                    child: isDone
+                        ? const Icon(Icons.check, color: Colors.white, size: 16)
+                        : null,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Su takip kartı
+  Widget _buildWaterTrackingCard(BuildContext context, int targetWaterMl) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final user = Provider.of<UserProvider>(context, listen: false).user;
+
+    final percentage = (_waterIntake / targetWaterMl).clamp(0.0, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          if (!isDarkMode)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.waterReminderColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.water_drop_rounded,
+                      color: AppTheme.waterReminderColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Su Tüketimi',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '$_waterIntake / $targetWaterMl ml',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildWaterProgressBar(context, percentage),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildWaterButton(context, -150, Colors.red.shade300),
+              _buildWaterButton(context, 150, AppTheme.waterReminderColor),
+              _buildWaterButton(context, 250, AppTheme.waterReminderColor),
+              _buildWaterButton(context, 500, AppTheme.waterReminderColor),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Kullanıcıyı karşılayan başlık
+  Widget _buildWelcomeTitle() {
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = userProvider.user;
+    final now = DateTime.now();
+    int hour = now.hour;
+
+    String greeting;
+    if (hour < 12) {
+      greeting = 'Günaydın';
+    } else if (hour < 18) {
+      greeting = 'İyi Günler';
+    } else {
+      greeting = 'İyi Akşamlar';
+    }
+
+    // Kullanıcı adı varsa göster, yoksa genel bir karşılama mesajı göster
+    String userName = '';
+    if (user != null && user.name.trim().isNotEmpty) {
+      // Kullanıcının ilk adını al (boşluklara göre)
+      final nameParts = user.name.split(' ');
+      if (nameParts.isNotEmpty && nameParts[0].trim().isNotEmpty) {
+        userName = nameParts[0];
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          greeting,
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          userName.isNotEmpty ? '$userName' : 'Hoş Geldiniz',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _selectedMotivationalMessage,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
   }
 }

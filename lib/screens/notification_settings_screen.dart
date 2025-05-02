@@ -77,7 +77,22 @@ class _NotificationSettingsScreenState
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: KaplanAppBar(title: 'Bildirim Ayarları', isDarkMode: isDarkMode),
+      appBar: AppBar(
+        title: const Text('Bildirim Ayarları'),
+        backgroundColor: AppTheme.primaryColor,
+        elevation: 4,
+        shadowColor: Colors.black26,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+        ),
+        centerTitle: true,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+      ),
       backgroundColor:
           isDarkMode ? AppTheme.darkBackgroundColor : const Color(0xFFF8F8FC),
       body: SafeArea(
@@ -108,19 +123,6 @@ class _NotificationSettingsScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header ekleme
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                          child: Text(
-                            'Bildirim Ayarları',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: isDarkMode ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
-
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(

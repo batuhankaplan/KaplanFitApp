@@ -21,14 +21,15 @@ class StatsScreen extends StatefulWidget {
   State<StatsScreen> createState() => _StatsScreenState();
 }
 
-class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStateMixin {
+class _StatsScreenState extends State<StatsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedTabIndex = 0;
   String _selectedTimeRange = 'Haftalık';
   TimeRange _selectedTimeRangeEnum = TimeRange.week;
   DateTime _startDate = DateTime.now().subtract(const Duration(days: 6));
   DateTime _endDate = DateTime.now();
-  
+
   @override
   void initState() {
     super.initState();
@@ -42,18 +43,18 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     });
     _updateDateRange(TimeRange.week);
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
-  
+
   void _updateDateRange(TimeRange range) {
     setState(() {
       _selectedTimeRangeEnum = range;
       final now = DateTime.now();
-      
+
       switch (range) {
         case TimeRange.week:
           _selectedTimeRange = 'Haftalık';
@@ -80,43 +81,67 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     final nutritionProvider = Provider.of<NutritionProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     // Aktivite ve beslenme verilerini provider'dan alıyoruz
     // Seçilen tarih aralığına göre filtreleme yapılacak
-    activityProvider.setDateRange(_startDate, _endDate);
-    nutritionProvider.setDateRange(_startDate, _endDate);
-    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Ensure the widget is still mounted
+        // Check if dates actually changed to avoid unnecessary updates
+        final currentActivityRange = activityProvider.getCurrentDateRange();
+        if (currentActivityRange.start != _startDate ||
+            currentActivityRange.end != _endDate) {
+          activityProvider.setDateRange(_startDate, _endDate);
+        }
+
+        final currentNutritionRange = nutritionProvider.getCurrentDateRange();
+        if (currentNutritionRange.start != _startDate ||
+            currentNutritionRange.end != _endDate) {
+          nutritionProvider.setDateRange(_startDate, _endDate);
+        }
+      }
+    });
+
     // Aktiviteler - tüm aktiviteleri alalım, filtrelemeyi provider yapacak
     final allActivities = activityProvider.getAllActivities();
-    final filteredActivities = allActivities.where((activity) => 
-      activity.date.isAfter(_startDate) && 
-      activity.date.isBefore(_endDate.add(Duration(days: 1)))
-    ).toList();
-    
-    final totalDuration = filteredActivities.fold<int>(0, (sum, activity) => sum + activity.durationMinutes);
-    final avgDuration = filteredActivities.isEmpty ? 0 : totalDuration ~/ filteredActivities.length;
-    
+    final filteredActivities = allActivities
+        .where((activity) =>
+            activity.date.isAfter(_startDate) &&
+            activity.date.isBefore(_endDate.add(Duration(days: 1))))
+        .toList();
+
+    final totalDuration = filteredActivities.fold<int>(
+        0, (sum, activity) => sum + activity.durationMinutes);
+    final avgDuration = filteredActivities.isEmpty
+        ? 0
+        : totalDuration ~/ filteredActivities.length;
+
     // Beslenme
     final allMeals = nutritionProvider.getAllMeals();
-    final filteredMeals = allMeals.where((meal) => 
-      meal.date.isAfter(_startDate) && 
-      meal.date.isBefore(_endDate.add(Duration(days: 1)))
-    ).toList();
-    
-    final totalCalories = filteredMeals.fold<int>(0, (sum, meal) => sum + (meal.calories ?? 0));
-    final avgCalories = filteredMeals.isEmpty ? 0 : totalCalories ~/ filteredMeals.length;
-    
+    final filteredMeals = allMeals
+        .where((meal) =>
+            meal.date.isAfter(_startDate) &&
+            meal.date.isBefore(_endDate.add(Duration(days: 1))))
+        .toList();
+
+    final totalCalories =
+        filteredMeals.fold<int>(0, (sum, meal) => sum + (meal.calories ?? 0));
+    final avgCalories =
+        filteredMeals.isEmpty ? 0 : totalCalories ~/ filteredMeals.length;
+
     // Aktivite türlerine göre gruplandırma
     Map<DateTime, Map<FitActivityType, int>> activityDataByDate = {};
     for (var activity in filteredActivities) {
-      final date = DateTime(activity.date.year, activity.date.month, activity.date.day);
+      final date =
+          DateTime(activity.date.year, activity.date.month, activity.date.day);
       if (!activityDataByDate.containsKey(date)) {
         activityDataByDate[date] = {};
       }
-      activityDataByDate[date]![activity.type] = 
-        (activityDataByDate[date]![activity.type] ?? 0) + activity.durationMinutes;
+      activityDataByDate[date]![activity.type] =
+          (activityDataByDate[date]![activity.type] ?? 0) +
+              activity.durationMinutes;
     }
-    
+
     // Öğün türlerine göre gruplandırma
     Map<DateTime, Map<FitMealType, int>> mealDataByDate = {};
     for (var meal in filteredMeals) {
@@ -124,18 +149,19 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       if (!mealDataByDate.containsKey(date)) {
         mealDataByDate[date] = {};
       }
-      mealDataByDate[date]![meal.type] = 
-        (mealDataByDate[date]![meal.type] ?? 0) + (meal.calories ?? 0);
+      mealDataByDate[date]![meal.type] =
+          (mealDataByDate[date]![meal.type] ?? 0) + (meal.calories ?? 0);
     }
-    
+
     // Kilo değişimi
     final user = userProvider.user;
     final weightHistory = user?.weightHistory ?? [];
-    final filteredWeightHistory = weightHistory.where((record) => 
-      record.date.isAfter(_startDate) && 
-      record.date.isBefore(_endDate.add(Duration(days: 1)))
-    ).toList();
-    
+    final filteredWeightHistory = weightHistory
+        .where((record) =>
+            record.date.isAfter(_startDate) &&
+            record.date.isBefore(_endDate.add(Duration(days: 1))))
+        .toList();
+
     return Scaffold(
       appBar: KaplanAppBar(
         title: 'İstatistikler',
@@ -148,15 +174,19 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
           children: [
             // Üst panel - Tab Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(30),
                 child: Material(
-                  color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.9),
+                  color: isDarkMode
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.white.withOpacity(0.9),
                   child: TabBar(
                     controller: _tabController,
                     labelColor: Colors.white,
-                    unselectedLabelColor: isDarkMode ? Colors.white60 : Colors.black54,
+                    unselectedLabelColor:
+                        isDarkMode ? Colors.white60 : Colors.black54,
                     indicatorSize: TabBarIndicatorSize.tab,
                     indicator: BoxDecoration(
                       borderRadius: BorderRadius.circular(30),
@@ -176,7 +206,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             children: [
                               Icon(Icons.restaurant_menu, size: 16),
                               SizedBox(width: 4),
-                              Text('Beslenme'),
+                              Text('Beslenme', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -189,7 +219,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             children: [
                               Icon(Icons.directions_run, size: 16),
                               SizedBox(width: 4),
-                              Text('Aktivite'),
+                              Text('Aktivite', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -202,7 +232,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             children: [
                               Icon(Icons.monitor_weight, size: 16),
                               SizedBox(width: 4),
-                              Text('Kilo'),
+                              Text('Kilo', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -212,13 +242,14 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                 ),
               ),
             ),
-            
+
             // Zaman aralığı seçici
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: _buildTimeRangeSelector(),
             ),
-            
+
             // Tarih aralığı gösterimi
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
@@ -228,8 +259,8 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isDarkMode 
-                          ? Colors.black.withOpacity(0.3) 
+                      color: isDarkMode
+                          ? Colors.black.withOpacity(0.3)
                           : Colors.white.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
@@ -251,7 +282,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                 ],
               ),
             ),
-            
+
             // Tab içeriği
             Expanded(
               child: TabBarView(
@@ -269,22 +300,27 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             children: [
                               Expanded(
                                 child: Card(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
                                   child: Container(
                                     padding: EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppTheme.primaryColor.withOpacity(0.7),
-                                          AppTheme.primaryColor.withOpacity(0.9),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.7),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.9),
                                         ],
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.restaurant, color: Colors.white, size: 32),
+                                        Icon(Icons.restaurant,
+                                            color: Colors.white, size: 32),
                                         SizedBox(height: 8),
                                         Text(
                                           'Toplam Kalori',
@@ -309,22 +345,27 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               SizedBox(width: 16),
                               Expanded(
                                 child: Card(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
                                   child: Container(
                                     padding: EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppTheme.primaryColor.withOpacity(0.7),
-                                          AppTheme.primaryColor.withOpacity(0.9),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.7),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.9),
                                         ],
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.calendar_today, color: Colors.white, size: 32),
+                                        Icon(Icons.calendar_today,
+                                            color: Colors.white, size: 32),
                                         SizedBox(height: 8),
                                         Text(
                                           'Günlük Ortalama',
@@ -348,7 +389,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               ),
                             ],
                           ),
-                          
+
                           SizedBox(height: 24),
                           Text(
                             'Kalori Alımı',
@@ -362,14 +403,15 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               padding: EdgeInsets.all(8),
                               child: filteredMeals.isEmpty
                                   ? Center(child: Text('Veri bulunamadı'))
-                                  : _buildNutritionLineChart(mealDataByDate, isDarkMode),
+                                  : _buildNutritionLineChart(
+                                      mealDataByDate, isDarkMode),
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   // AKTİVİTE İSTATİSTİKLERİ
                   SingleChildScrollView(
                     child: Padding(
@@ -382,22 +424,27 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             children: [
                               Expanded(
                                 child: Card(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
                                   child: Container(
                                     padding: EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppTheme.primaryColor.withOpacity(0.7),
-                                          AppTheme.primaryColor.withOpacity(0.9),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.7),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.9),
                                         ],
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.timer, color: Colors.white, size: 32),
+                                        Icon(Icons.timer,
+                                            color: Colors.white, size: 32),
                                         SizedBox(height: 8),
                                         Text(
                                           'Toplam Süre',
@@ -422,22 +469,27 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               SizedBox(width: 16),
                               Expanded(
                                 child: Card(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16)),
                                   child: Container(
                                     padding: EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(16),
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppTheme.primaryColor.withOpacity(0.7),
-                                          AppTheme.primaryColor.withOpacity(0.9),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.7),
+                                          AppTheme.primaryColor
+                                              .withOpacity(0.9),
                                         ],
                                       ),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.trending_up, color: Colors.white, size: 32),
+                                        Icon(Icons.trending_up,
+                                            color: Colors.white, size: 32),
                                         SizedBox(height: 8),
                                         Text(
                                           'Günlük Ortalama',
@@ -461,7 +513,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               ),
                             ],
                           ),
-                          
+
                           SizedBox(height: 24),
                           Text(
                             'Aktivite Türlerine Göre Süreler',
@@ -473,14 +525,15 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             child: Container(
                               height: 300,
                               padding: EdgeInsets.all(8),
-                              child: _buildActivityLineChart(activityDataByDate, isDarkMode),
+                              child: _buildActivityLineChart(
+                                  activityDataByDate, isDarkMode),
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   // KİLO İSTATİSTİKLERİ
                   SingleChildScrollView(
                     child: Padding(
@@ -494,20 +547,25 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               children: [
                                 Expanded(
                                   child: Card(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(16)),
                                     child: Container(
                                       padding: EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
                                         gradient: LinearGradient(
                                           colors: [
-                                            AppTheme.primaryColor.withOpacity(0.7),
-                                            AppTheme.primaryColor.withOpacity(0.9),
+                                            AppTheme.primaryColor
+                                                .withOpacity(0.7),
+                                            AppTheme.primaryColor
+                                                .withOpacity(0.9),
                                           ],
                                         ),
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Mevcut Kilo',
@@ -533,20 +591,25 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                                 SizedBox(width: 16),
                                 Expanded(
                                   child: Card(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(16)),
                                     child: Container(
                                       padding: EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
                                         gradient: LinearGradient(
                                           colors: [
-                                            AppTheme.primaryColor.withOpacity(0.7),
-                                            AppTheme.primaryColor.withOpacity(0.9),
+                                            AppTheme.primaryColor
+                                                .withOpacity(0.7),
+                                            AppTheme.primaryColor
+                                                .withOpacity(0.9),
                                           ],
                                         ),
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'BMI',
@@ -579,7 +642,6 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                               ],
                             ),
                           ],
-                          
                           SizedBox(height: 24),
                           Text(
                             'Kilo Değişimi',
@@ -591,7 +653,8 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                             child: Container(
                               height: 300,
                               padding: EdgeInsets.all(8),
-                              child: _buildWeightChart(filteredWeightHistory, isDarkMode),
+                              child: _buildWeightChart(
+                                  filteredWeightHistory, isDarkMode),
                             ),
                           ),
                         ],
@@ -606,40 +669,44 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   // Zaman aralığı butonları için yeni widget
   Widget _buildTimeRangeSelector() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.9),
+        color: isDarkMode
+            ? Colors.black.withOpacity(0.2)
+            : Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(40),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildTimeRangeButton('Haftalık', TimeRange.week, Icons.calendar_view_week),
-          _buildTimeRangeButton('Aylık', TimeRange.month, Icons.calendar_view_month),
+          _buildTimeRangeButton(
+              'Haftalık', TimeRange.week, Icons.calendar_view_week),
+          _buildTimeRangeButton(
+              'Aylık', TimeRange.month, Icons.calendar_view_month),
           _buildTimeRangeButton('Yıllık', TimeRange.year, Icons.calendar_today),
         ],
       ),
     );
   }
-  
+
   // Tek zaman butonu
   Widget _buildTimeRangeButton(String title, TimeRange range, IconData icon) {
     final isSelected = _selectedTimeRangeEnum == range;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: () => _updateDateRange(range),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          gradient: isSelected 
+          gradient: isSelected
               ? LinearGradient(
                   colors: [
                     AppTheme.accentColor,
@@ -649,9 +716,9 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected 
+          color: isSelected
               ? null
-              : isDarkMode 
+              : isDarkMode
                   ? Colors.transparent
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
@@ -670,20 +737,20 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
             Icon(
               icon,
               size: 16,
-              color: isSelected 
-                  ? Colors.white 
-                  : isDarkMode 
-                      ? Colors.white70 
+              color: isSelected
+                  ? Colors.white
+                  : isDarkMode
+                      ? Colors.white70
                       : Colors.black54,
             ),
             SizedBox(width: 6),
             Text(
               title,
               style: TextStyle(
-                color: isSelected 
-                    ? Colors.white 
-                    : isDarkMode 
-                        ? Colors.white70 
+                color: isSelected
+                    ? Colors.white
+                    : isDarkMode
+                        ? Colors.white70
                         : Colors.black54,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 14,
@@ -694,9 +761,11 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   // Aktivite çizgi grafiği
-  Widget _buildActivityLineChart(Map<DateTime, Map<FitActivityType, int>> activityDataByDate, bool isDarkMode) {
+  Widget _buildActivityLineChart(
+      Map<DateTime, Map<FitActivityType, int>> activityDataByDate,
+      bool isDarkMode) {
     if (activityDataByDate.isEmpty) {
       return Center(
         child: Text(
@@ -705,29 +774,29 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ),
       );
     }
-    
+
     // Tüm tarihleri sırala
     final dates = activityDataByDate.keys.toList()
       ..sort((a, b) => a.compareTo(b));
-    
+
     // Tüm aktivite türleri
     final activityTypes = FitActivityType.values.toList();
-    
+
     // Her aktivite türü için ayrı çizgi oluştur
     final lineBarData = <LineChartBarData>[];
-    
+
     for (final type in activityTypes) {
       final spots = <FlSpot>[];
-      
+
       for (int i = 0; i < dates.length; i++) {
         final date = dates[i];
         final minutes = activityDataByDate[date]?[type] ?? 0;
-        
+
         if (minutes > 0) {
           spots.add(FlSpot(i.toDouble(), minutes.toDouble()));
         }
       }
-      
+
       if (spots.isNotEmpty) {
         lineBarData.add(
           LineChartBarData(
@@ -744,7 +813,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         );
       }
     }
-    
+
     // Eğer hiç veri yoksa, boş bir grafik göster
     if (lineBarData.isEmpty) {
       return Center(
@@ -754,7 +823,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ),
       );
     }
-    
+
     return LineChart(
       LineChartData(
         lineBarsData: lineBarData,
@@ -766,18 +835,19 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                 if (value.toInt() >= dates.length || value.toInt() < 0) {
                   return const SizedBox();
                 }
-                
+
                 final date = dates[value.toInt()];
                 String text;
-                
+
                 if (_selectedTimeRangeEnum == TimeRange.week) {
-                  text = DateFormat('E', 'tr_TR').format(date); // Gün kısaltması
+                  text =
+                      DateFormat('E', 'tr_TR').format(date); // Gün kısaltması
                 } else if (_selectedTimeRangeEnum == TimeRange.month) {
                   text = DateFormat('d MMM', 'tr_TR').format(date); // 15 Oca
                 } else {
                   text = DateFormat('MMM', 'tr_TR').format(date); // Oca
                 }
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
@@ -837,9 +907,10 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   // Beslenme çizgi grafiği
-  Widget _buildNutritionLineChart(Map<DateTime, Map<FitMealType, int>> mealDataByDate, bool isDarkMode) {
+  Widget _buildNutritionLineChart(
+      Map<DateTime, Map<FitMealType, int>> mealDataByDate, bool isDarkMode) {
     if (mealDataByDate.isEmpty) {
       return Center(
         child: Text(
@@ -848,29 +919,28 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ),
       );
     }
-    
+
     // Tüm tarihleri sırala
-    final dates = mealDataByDate.keys.toList()
-      ..sort((a, b) => a.compareTo(b));
-    
+    final dates = mealDataByDate.keys.toList()..sort((a, b) => a.compareTo(b));
+
     // Tüm öğün türleri
     final mealTypes = FitMealType.values.toList();
-    
+
     // Her öğün türü için ayrı çizgi oluştur
     final lineBarData = <LineChartBarData>[];
-    
+
     for (final type in mealTypes) {
       final spots = <FlSpot>[];
-      
+
       for (int i = 0; i < dates.length; i++) {
         final date = dates[i];
         final calories = mealDataByDate[date]?[type] ?? 0;
-        
+
         if (calories > 0) {
           spots.add(FlSpot(i.toDouble(), calories.toDouble()));
         }
       }
-      
+
       if (spots.isNotEmpty) {
         lineBarData.add(
           LineChartBarData(
@@ -887,7 +957,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         );
       }
     }
-    
+
     // Eğer hiç veri yoksa, boş bir grafik göster
     if (lineBarData.isEmpty) {
       return Center(
@@ -897,7 +967,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ),
       );
     }
-    
+
     return LineChart(
       LineChartData(
         lineBarsData: lineBarData,
@@ -909,18 +979,19 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                 if (value.toInt() >= dates.length || value.toInt() < 0) {
                   return const SizedBox();
                 }
-                
+
                 final date = dates[value.toInt()];
                 String text;
-                
+
                 if (_selectedTimeRangeEnum == TimeRange.week) {
-                  text = DateFormat('E', 'tr_TR').format(date); // Gün kısaltması
+                  text =
+                      DateFormat('E', 'tr_TR').format(date); // Gün kısaltması
                 } else if (_selectedTimeRangeEnum == TimeRange.month) {
                   text = DateFormat('d MMM', 'tr_TR').format(date); // 15 Oca
                 } else {
                   text = DateFormat('MMM', 'tr_TR').format(date); // Oca
                 }
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
@@ -980,7 +1051,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   // Kilo grafiği
   Widget _buildWeightChart(List<WeightRecord> weightRecords, bool isDarkMode) {
     if (weightRecords.isEmpty) {
@@ -991,17 +1062,17 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ),
       );
     }
-    
+
     // Kayıtları tarihe göre sırala
     weightRecords.sort((a, b) => a.date.compareTo(b.date));
-    
+
     // Nokta verileri oluştur
     final spots = <FlSpot>[];
-    
+
     for (int i = 0; i < weightRecords.length; i++) {
       spots.add(FlSpot(i.toDouble(), weightRecords[i].weight));
     }
-    
+
     return LineChart(
       LineChartData(
         lineBarsData: [
@@ -1022,21 +1093,23 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
-                if (value.toInt() >= weightRecords.length || value.toInt() < 0) {
+                if (value.toInt() >= weightRecords.length ||
+                    value.toInt() < 0) {
                   return const SizedBox();
                 }
-                
+
                 final date = weightRecords[value.toInt()].date;
                 String text;
-                
+
                 if (_selectedTimeRangeEnum == TimeRange.week) {
-                  text = DateFormat('E', 'tr_TR').format(date); // Gün kısaltması
+                  text =
+                      DateFormat('E', 'tr_TR').format(date); // Gün kısaltması
                 } else if (_selectedTimeRangeEnum == TimeRange.month) {
                   text = DateFormat('d MMM', 'tr_TR').format(date); // 15 Oca
                 } else {
                   text = DateFormat('MMM', 'tr_TR').format(date); // Oca
                 }
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
@@ -1096,7 +1169,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       ),
     );
   }
-  
+
   Color _getColorForActivityType(FitActivityType type) {
     switch (type) {
       case FitActivityType.walking:
@@ -1115,7 +1188,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         return Colors.grey;
     }
   }
-  
+
   Color _getColorForMealType(FitMealType type) {
     switch (type) {
       case FitMealType.breakfast:
@@ -1136,4 +1209,4 @@ enum TimeRange {
   week,
   month,
   year,
-} 
+}

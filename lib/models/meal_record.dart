@@ -8,6 +8,9 @@ class MealRecord {
   final int? calories;
   final int? taskId;
   final String? notes;
+  final double? proteinGrams;
+  final double? carbsGrams;
+  final double? fatGrams;
 
   MealRecord({
     this.id,
@@ -17,6 +20,9 @@ class MealRecord {
     this.calories,
     this.taskId,
     this.notes,
+    this.proteinGrams,
+    this.carbsGrams,
+    this.fatGrams,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,6 +34,9 @@ class MealRecord {
       'calories': calories,
       'taskId': taskId,
       'notes': notes,
+      'proteinGrams': proteinGrams,
+      'carbsGrams': carbsGrams,
+      'fatGrams': fatGrams,
     };
   }
 
@@ -40,6 +49,35 @@ class MealRecord {
       calories: map['calories'],
       taskId: map['taskId'],
       notes: map['notes'],
+      proteinGrams: map['proteinGrams'],
+      carbsGrams: map['carbsGrams'],
+      fatGrams: map['fatGrams'],
     );
   }
-} 
+
+  MealRecord copyWith({
+    int? id,
+    FitMealType? type,
+    List<String>? foods,
+    DateTime? date,
+    int? calories,
+    int? taskId,
+    String? notes,
+    double? proteinGrams,
+    double? carbsGrams,
+    double? fatGrams,
+  }) {
+    return MealRecord(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      foods: foods ?? this.foods,
+      date: date ?? this.date,
+      calories: calories ?? this.calories,
+      taskId: taskId ?? this.taskId,
+      notes: notes ?? this.notes,
+      proteinGrams: proteinGrams ?? this.proteinGrams,
+      carbsGrams: carbsGrams ?? this.carbsGrams,
+      fatGrams: fatGrams ?? this.fatGrams,
+    );
+  }
+}

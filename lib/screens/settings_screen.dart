@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import '../providers/user_provider.dart';
-import '../main.dart';
 import '../theme.dart';
 import 'profile_screen.dart';
 import 'notification_settings_screen.dart';
 import 'faq_screen.dart';
+import '../models/user_model.dart';
+import 'goal_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -25,6 +27,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadProfileImage();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   // Profil resmi yükle
@@ -55,7 +62,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final user = userProvider.user;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -81,32 +87,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
 
-            // Tema Seçimi
-            Card(
-              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: SwitchListTile(
-                title: Text('Koyu Tema'),
-                subtitle: Text(themeProvider.isDarkMode ? 'Açık' : 'Kapalı'),
-                secondary: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    themeProvider.isDarkMode
-                        ? Icons.dark_mode
-                        : Icons.light_mode,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-                value: themeProvider.isDarkMode,
-                onChanged: (value) {
-                  themeProvider.toggleTheme();
-                },
-              ),
-            ),
-
             _buildSettingsOption(
               context,
               'Bildirimler',
@@ -117,6 +97,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const NotificationSettingsScreen()),
+                );
+              },
+            ),
+
+            _buildSettingsOption(
+              context,
+              'Hedefler',
+              Icons.track_changes,
+              Colors.teal,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const GoalSettingsScreen()),
                 );
               },
             ),

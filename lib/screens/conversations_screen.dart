@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/providers/database_provider.dart';
+import '../providers/database_provider.dart';
 import '../models/chat_model.dart';
 import 'ai_coach_screen.dart';
 import '../widgets/kaplan_loading.dart';
@@ -31,9 +31,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
       final databaseProvider =
           Provider.of<DatabaseProvider>(context, listen: false);
 
-      // Önce boş konuşmaları temizle
-      await databaseProvider.cleanEmptyConversations();
-
       // Sonra konuşmaları yükle
       final conversations =
           await databaseProvider.database.getAllChatConversations();
@@ -58,8 +55,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     try {
       final databaseProvider =
           Provider.of<DatabaseProvider>(context, listen: false);
-      // Önce boş konuşmaları temizle
-      await databaseProvider.cleanEmptyConversations();
 
       // Yeni bir konuşma başlatmak için doğrudan AICoachScreen'e yönlendir
       Navigator.of(context)

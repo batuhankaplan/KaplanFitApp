@@ -7,9 +7,23 @@ class UserModel {
   final String? profileImagePath;
   final String? email; // E-posta adresi
   final String? phoneNumber; // Telefon numarası
+  final String? gender; // YENİ: Cinsiyet ('Erkek' veya 'Kadın')
   final DateTime? createdAt;
   DateTime? lastWeightUpdate;
   List<WeightRecord> weightHistory;
+
+  // Beslenme Hedefleri
+  final double? targetCalories;
+  final double? targetProtein;
+  final double? targetCarbs;
+  final double? targetFat;
+  final double? targetWeight; // Yeni: Hedef Kilo
+  final double?
+      weeklyWeightGoal; // Yeni: Haftalık Kilo Hedefi (örn. -0.5, 0.5 kg)
+  final String? activityLevel; // Yeni: Aktivite Seviyesi (örn. 'Az Aktif')
+  final double? targetWaterIntake; // Yeni: Günlük Su Hedefi (Litre)
+  final double? weeklyActivityGoal; // Yeni: Haftalık Aktivite Hedefi (Dakika)
+  final bool autoCalculateNutrition; // YENİ: Otomatik hesaplama durumu
 
   UserModel({
     this.id,
@@ -20,9 +34,20 @@ class UserModel {
     this.profileImagePath,
     this.email,
     this.phoneNumber,
+    this.gender, // YENİ
     this.createdAt,
     this.lastWeightUpdate,
     this.weightHistory = const [],
+    this.targetCalories,
+    this.targetProtein,
+    this.targetCarbs,
+    this.targetFat,
+    this.targetWeight,
+    this.weeklyWeightGoal, // Yeni
+    this.activityLevel, // Yeni
+    this.targetWaterIntake, // Yeni
+    this.weeklyActivityGoal, // Yeni: Haftalık aktivite hedefi
+    this.autoCalculateNutrition = false, // YENİ: Varsayılan değer false
   });
 
   Map<String, dynamic> toMap() {
@@ -35,8 +60,21 @@ class UserModel {
       'profileImagePath': profileImagePath,
       'email': email,
       'phoneNumber': phoneNumber,
+      'gender': gender, // YENİ
       'createdAt': createdAt?.millisecondsSinceEpoch,
       'lastWeightUpdate': lastWeightUpdate?.millisecondsSinceEpoch,
+      'targetCalories': targetCalories,
+      'targetProtein': targetProtein,
+      'targetCarbs': targetCarbs,
+      'targetFat': targetFat,
+      'targetWeight': targetWeight,
+      'weeklyWeightGoal': weeklyWeightGoal, // Yeni
+      'activityLevel': activityLevel, // Yeni
+      'targetWaterIntake': targetWaterIntake, // Yeni
+      'weeklyActivityGoal':
+          weeklyActivityGoal, // Yeni: Haftalık aktivite hedefi
+      'autoCalculateNutrition':
+          autoCalculateNutrition ? 1 : 0, // YENİ: Integer olarak kaydet
     };
   }
 
@@ -50,12 +88,25 @@ class UserModel {
       profileImagePath: map['profileImagePath'],
       email: map['email'],
       phoneNumber: map['phoneNumber'],
-      createdAt: map['createdAt'] != null 
-          ? DateTime.fromMillisecondsSinceEpoch(map['createdAt']) 
+      gender: map['gender'], // YENİ
+      createdAt: map['createdAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
           : null,
       lastWeightUpdate: map['lastWeightUpdate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['lastWeightUpdate'])
           : null,
+      targetCalories: map['targetCalories'],
+      targetProtein: map['targetProtein'],
+      targetCarbs: map['targetCarbs'],
+      targetFat: map['targetFat'],
+      targetWeight: map['targetWeight'],
+      weeklyWeightGoal: map['weeklyWeightGoal'], // Yeni
+      activityLevel: map['activityLevel'], // Yeni
+      targetWaterIntake: map['targetWaterIntake'], // Yeni
+      weeklyActivityGoal:
+          map['weeklyActivityGoal'], // Yeni: Haftalık aktivite hedefi
+      autoCalculateNutrition:
+          map['autoCalculateNutrition'] == 1, // YENİ: Integer'dan bool'a çevir
     );
   }
 
@@ -89,9 +140,20 @@ class UserModel {
     String? profileImagePath,
     String? email,
     String? phoneNumber,
+    String? gender, // YENİ
     DateTime? createdAt,
     DateTime? lastWeightUpdate,
     List<WeightRecord>? weightHistory,
+    double? targetCalories,
+    double? targetProtein,
+    double? targetCarbs,
+    double? targetFat,
+    double? targetWeight,
+    double? weeklyWeightGoal,
+    String? activityLevel,
+    double? targetWaterIntake,
+    double? weeklyActivityGoal,
+    bool? autoCalculateNutrition, // YENİ
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -102,9 +164,21 @@ class UserModel {
       profileImagePath: profileImagePath ?? this.profileImagePath,
       email: email ?? this.email,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      gender: gender ?? this.gender, // YENİ
       createdAt: createdAt ?? this.createdAt,
       lastWeightUpdate: lastWeightUpdate ?? this.lastWeightUpdate,
       weightHistory: weightHistory ?? this.weightHistory,
+      targetCalories: targetCalories ?? this.targetCalories,
+      targetProtein: targetProtein ?? this.targetProtein,
+      targetCarbs: targetCarbs ?? this.targetCarbs,
+      targetFat: targetFat ?? this.targetFat,
+      targetWeight: targetWeight ?? this.targetWeight,
+      weeklyWeightGoal: weeklyWeightGoal ?? this.weeklyWeightGoal,
+      activityLevel: activityLevel ?? this.activityLevel,
+      targetWaterIntake: targetWaterIntake ?? this.targetWaterIntake,
+      weeklyActivityGoal: weeklyActivityGoal ?? this.weeklyActivityGoal,
+      autoCalculateNutrition:
+          autoCalculateNutrition ?? this.autoCalculateNutrition, // YENİ
     );
   }
 }
@@ -135,4 +209,4 @@ class WeightRecord {
       date: DateTime.fromMillisecondsSinceEpoch(map['date']),
     );
   }
-} 
+}

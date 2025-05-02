@@ -4,83 +4,89 @@ import '../theme.dart';
 import '../widgets/kaplan_loading.dart';
 
 class SplashScreen extends StatefulWidget {
-  final Widget nextScreen;
+  final Widget? nextScreen;
 
   const SplashScreen({
     Key? key,
-    required this.nextScreen,
+    this.nextScreen,
   }) : super(key: key);
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeInAnimation;
   late Animation<double> _slideAnimation;
   late Animation<double> _scaleAnimation;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     // Durum çubuğunu şeffaf yap
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
-    
+
     // Animasyonları ayarla
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-    
+
     _fadeInAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
-    
+
     _slideAnimation = Tween<double>(begin: 50, end: 0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Interval(0.2, 0.6, curve: Curves.easeOut),
       ),
     );
-    
+
     _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: Interval(0.2, 0.8, curve: Curves.easeOut),
       ),
     );
-    
+
     // Animasyonları başlat
     _controller.forward();
-    
+
     // Sonraki ekrana git
     _navigateToMain();
   }
-  
+
   _navigateToMain() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      // Geçiş animasyonu ile yeni ekrana geç
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: Duration(milliseconds: 1000),
-          pageBuilder: (_, animation, secondaryAnimation) => FadeTransition(
-            opacity: animation,
-            child: widget.nextScreen,
+      if (widget.nextScreen != null) {
+        // Geçiş animasyonu ile belirtilen ekrana geç
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            transitionDuration: Duration(milliseconds: 1000),
+            pageBuilder: (_, animation, secondaryAnimation) => FadeTransition(
+              opacity: animation,
+              child: widget.nextScreen!,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        // nextScreen belirtilmemişse /home rotasına geç
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
     }
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
@@ -90,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -130,7 +136,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   },
                 ),
               ),
-              
+
               Positioned(
                 bottom: -50,
                 left: -20,
@@ -154,7 +160,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   },
                 ),
               ),
-              
+
               // Ana içerik
               Center(
                 child: AnimatedBuilder(
@@ -175,7 +181,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTheme.primaryColor.withOpacity(0.3),
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.3),
                                     blurRadius: 30,
                                     spreadRadius: 5,
                                   ),
@@ -207,7 +214,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               ),
                             ),
                             SizedBox(height: 30),
-                            
+
                             // Uygulama adı
                             Text(
                               'KaplanFit',
@@ -226,7 +233,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               ),
                             ),
                             SizedBox(height: 8),
-                            
+
                             // Slogan
                             Text(
                               'Sağlıklı Yaşamın Anahtarı',
@@ -237,7 +244,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               ),
                             ),
                             SizedBox(height: 50),
-                            
+
                             // Yükleme animasyonu
                             KaplanLoading(
                               size: 70,
@@ -250,7 +257,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   },
                 ),
               ),
-              
+
               // Sürüm bilgisi
               Positioned(
                 bottom: 20,
@@ -279,4 +286,4 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       ),
     );
   }
-} 
+}

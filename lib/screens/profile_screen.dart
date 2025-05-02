@@ -17,14 +17,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
-  final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String? _profileImagePath;
   bool _isLoading = false;
-  double _bmi = 0;
-  String _bmiCategory = '';
 
   @override
   void initState() {
@@ -36,8 +32,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _ageController.dispose();
-    _heightController.dispose();
-    _weightController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
@@ -50,13 +44,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _nameController.text = user.name;
         _ageController.text = user.age.toString();
-        _heightController.text = user.height.toString();
-        _weightController.text = user.weight.toString();
         _emailController.text = user.email ?? '';
         _phoneController.text = user.phoneNumber ?? '';
         _profileImagePath = user.profileImagePath;
-        _bmi = user.bmi;
-        _bmiCategory = user.bmiCategory;
       });
     }
   }
@@ -64,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (pickedFile != null) {
       setState(() {
         _profileImagePath = pickedFile.path;
@@ -72,59 +62,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _calculateBMI() {
-    try {
-      final weight = double.parse(_weightController.text);
-      final height = double.parse(_heightController.text);
-      
-      if (weight > 0 && height > 0) {
-        final bmi = weight / ((height / 100) * (height / 100));
-        setState(() {
-          _bmi = bmi;
-          _bmiCategory = _getBMICategory(bmi);
-        });
-      }
-    } catch (e) {
-      // Geçersiz değerler için hesaplama yapma
-    }
-  }
-  
-  String _getBMICategory(double bmi) {
-    if (bmi < 18.5) {
-      return "Zayıf";
-    } else if (bmi < 25) {
-      return "Normal";
-    } else if (bmi < 30) {
-      return "Fazla Kilolu";
-    } else if (bmi < 35) {
-      return "Obez (Sınıf I)";
-    } else if (bmi < 40) {
-      return "Obez (Sınıf II)";
-    } else {
-      return "Aşırı Obez (Sınıf III)";
-    }
-  }
-
-  // BMI kategorisine göre renk belirle
-  Color _getBMIColor(double bmi) {
-    if (bmi <= 0) {
-      return Colors.grey;
-    } else if (bmi < 18.5) {
-      return Colors.blue;
-    } else if (bmi < 25) {
-      return Colors.green;
-    } else if (bmi < 30) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
-  }
-
   Future<void> _saveUserData() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
@@ -132,62 +74,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final currentUser = userProvider.user;
-      
+
       // Form verilerini al
       final String name = _nameController.text;
       final int age = int.parse(_ageController.text);
-      final double height = double.parse(_heightController.text);
-      final double weight = double.parse(_weightController.text);
       final String email = _emailController.text.trim();
       final String phoneNumber = _phoneController.text.trim();
-      
+
       UserModel updatedUser;
-      
+
       if (currentUser != null) {
         // Mevcut kullanıcıyı güncelle
         updatedUser = currentUser.copyWith(
           name: name,
           age: age,
-          height: height,
-          weight: weight,
           email: email.isNotEmpty ? email : null,
           phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
           profileImagePath: _profileImagePath,
-          lastWeightUpdate: DateTime.now(),
+          weeklyActivityGoal: currentUser.weeklyActivityGoal ?? 150.0,
         );
       } else {
-        // Yeni kullanıcı oluştur
+        // Yeni kullanıcı oluştur - varsayılan değerlerle doldur
         updatedUser = UserModel(
           name: name,
           age: age,
-          height: height,
-          weight: weight,
+          height: 170.0, // Varsayılan boy
+          weight: 70.0, // Varsayılan kilo
           email: email.isNotEmpty ? email : null,
           phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
           profileImagePath: _profileImagePath,
-          lastWeightUpdate: DateTime.now(),
           createdAt: DateTime.now(),
+          lastWeightUpdate: DateTime.now(),
+          weeklyActivityGoal:
+              150.0, // Haftalık aktivite hedefi (varsayılan 150 dakika)
+          targetCalories: 2000.0, // Varsayılan kalori hedefi
+          targetProtein: 100.0, // Varsayılan protein hedefi (g)
+          targetCarbs: 250.0, // Varsayılan karbonhidrat hedefi (g)
+          targetFat: 70.0, // Varsayılan yağ hedefi (g)
+          targetWaterIntake: 2.5, // Varsayılan su hedefi (litre)
+          targetWeight: 65.0, // Varsayılan hedef kilo
+          weeklyWeightGoal:
+              -0.5, // Varsayılan haftalık kilo hedefi (kilo kaybı)
+          activityLevel: 'Orta Aktif', // Varsayılan aktivite seviyesi
         );
       }
-      
+
+      // Hata ayıklama: Kullanıcı verilerini görelim
+      print("Kaydedilecek kullanıcı: ${updatedUser.toMap()}");
+
+      // Kullanıcıyı kaydet ve tam olarak tamamlanmasını bekle
       await userProvider.saveUser(updatedUser);
-      
+
+      // Kısa bir gecikme ekleyerek veritabanı işlemlerinin tamamlanmasını bekleyebiliriz
+      await Future.delayed(const Duration(milliseconds: 500));
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profil bilgileri kaydedildi')),
         );
-        
-        // Ana ekrana veya profil görünümüne dön
-        Navigator.pop(context);
+
+        // Ana sayfaya git ve navigation stack'ini temizle - direk anasayfaya geç
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } catch (e) {
+      print("Profil kaydetme hatası: $e");
       if (mounted) {
+        // Daha detaylı hata mesajını göstermeyelim, basit bir mesaj verelim
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e')),
+          const SnackBar(
+              content: Text(
+                  'Profil kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.')),
         );
-      }
-    } finally {
-      if (mounted) {
+
         setState(() {
           _isLoading = false;
         });
@@ -199,313 +158,242 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(user == null ? 'Profil Oluştur' : 'Profil Düzenle'),
+        actions: [
+          // Eğer mevcut bir kullanıcı varsa çıkış yap butonu göster
+          if (user != null)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => _showLogoutConfirmationDialog(context),
+              tooltip: 'Çıkış Yap',
+            ),
+        ],
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Profil resmi seçme
-                  KFSlideAnimation(
-                    offsetBegin: const Offset(0, -0.2),
-                    child: GestureDetector(
-                      onTap: _pickImage,
-                      child: Stack(
-                        children: [
-                          KFPulseAnimation(
-                            duration: const Duration(milliseconds: 2000),
-                            maxScale: 1.05,
-                            child: CircleAvatar(
-                              radius: 60,
-                              backgroundColor: Colors.grey.shade200,
-                              backgroundImage: _profileImagePath != null
-                                  ? FileImage(File(_profileImagePath!))
-                                  : null,
-                              child: _profileImagePath == null
-                                  ? Icon(
-                                      Icons.person,
-                                      size: 60,
-                                      color: Colors.grey.shade600,
-                                    )
-                                  : null,
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.edit,
-                                color: Colors.white,
-                                size: 20,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Profil resmi seçme
+                    KFSlideAnimation(
+                      offsetBegin: const Offset(0, -0.2),
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Stack(
+                          children: [
+                            KFPulseAnimation(
+                              duration: const Duration(milliseconds: 2000),
+                              maxScale: 1.05,
+                              child: CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.grey.shade200,
+                                backgroundImage: _profileImagePath != null
+                                    ? FileImage(File(_profileImagePath!))
+                                    : null,
+                                child: _profileImagePath == null
+                                    ? Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.grey.shade600,
+                                      )
+                                    : null,
                               ),
                             ),
-                          ),
-                        ],
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Form alanları - animasyonlu liste olarak gösterelim
-                  KFAnimatedList(
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Ad Soyad',
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen adınızı ve soyadınızı girin';
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _ageController,
-                        decoration: const InputDecoration(
-                          labelText: 'Yaş',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen yaşınızı girin';
-                          }
-                          if (int.tryParse(value) == null) {
-                            return 'Geçerli bir yaş girin';
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _heightController,
-                        decoration: const InputDecoration(
-                          labelText: 'Boy (cm)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen boyunuzu girin';
-                          }
-                          try {
-                            final height = double.parse(value);
-                            if (height <= 0 || height > 250) {
-                              return 'Geçerli bir boy girin (1-250 cm)';
-                            }
-                          } catch (e) {
-                            return 'Geçerli bir sayı girin';
-                          }
-                          return null;
-                        },
-                        onChanged: (_) => _calculateBMI(),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _weightController,
-                        decoration: const InputDecoration(
-                          labelText: 'Kilo (kg)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Lütfen kilonuzu girin';
-                          }
-                          try {
-                            final weight = double.parse(value);
-                            if (weight <= 0 || weight > 300) {
-                              return 'Geçerli bir kilo girin (1-300 kg)';
-                            }
-                          } catch (e) {
-                            return 'Geçerli bir sayı girin';
-                          }
-                          return null;
-                        },
-                        onChanged: (_) => _calculateBMI(),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // BMI göstergesi
-                      const SizedBox(height: 32),
 
-                      // BMI göstergesi animasyonlu olarak
-                      KFSlideAnimation(
-                        offsetBegin: const Offset(0, 0.3),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            gradient: LinearGradient(
-                              colors: [
-                                _getBMIColor(_bmi).withOpacity(0.7),
-                                _getBMIColor(_bmi).withOpacity(0.4),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
+                    const SizedBox(height: 32),
+
+                    // Form alanları - animasyonlu liste olarak gösterelim
+                    KFAnimatedList(
+                      children: [
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Ad Soyad',
+                            border: OutlineInputBorder(),
                           ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Vücut Kitle İndeksi (BMI)',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Lütfen adınızı ve soyadınızı girin';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        TextFormField(
+                          controller: _ageController,
+                          decoration: const InputDecoration(
+                            labelText: 'Yaş',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Lütfen yaşınızı girin';
+                            }
+                            if (int.tryParse(value) == null) {
+                              return 'Geçerli bir yaş girin';
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // E-posta alanı
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'E-posta (opsiyonel)',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value != null && value.isNotEmpty) {
+                              // Basit bir e-posta validasyonu
+                              if (!value.contains('@') ||
+                                  !value.contains('.')) {
+                                return 'Geçerli bir e-posta adresi girin';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Telefon numarası alanı
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Telefon Numarası (opsiyonel)',
+                            border: OutlineInputBorder(),
+                            hintText: '05XX XXX XX XX',
+                          ),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value != null && value.isNotEmpty) {
+                              // Basit bir telefon numarası validasyonu
+                              if (value.replaceAll(' ', '').length < 10) {
+                                return 'Geçerli bir telefon numarası girin';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Kaydet butonu
+                        KFSlideAnimation(
+                          offsetBegin: const Offset(0, 0.5),
+                          duration: const Duration(milliseconds: 600),
+                          delay: const Duration(milliseconds: 300),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: _saveUserData,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'KAYDET',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                children: [
-                                  Column(
-                                    children: [
-                                      Text(
-                                        _bmi.toStringAsFixed(1),
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const Text(
-                                        'BMI',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Column(
-                                    children: [
-                                      Text(
-                                        _bmiCategory,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const Text(
-                                        'Kategori',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // E-posta alanı
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'E-posta (opsiyonel)',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value != null && value.isNotEmpty) {
-                            // Basit bir e-posta validasyonu
-                            if (!value.contains('@') || !value.contains('.')) {
-                              return 'Geçerli bir e-posta adresi girin';
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Telefon numarası alanı
-                      TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Telefon Numarası (opsiyonel)',
-                          border: OutlineInputBorder(),
-                          hintText: '05XX XXX XX XX',
-                        ),
-                        keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          if (value != null && value.isNotEmpty) {
-                            // Basit bir telefon numarası validasyonu
-                            if (value.replaceAll(' ', '').length < 10) {
-                              return 'Geçerli bir telefon numarası girin';
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Kaydet butonu
-                      KFSlideAnimation(
-                        offsetBegin: const Offset(0, 0.5),
-                        duration: const Duration(milliseconds: 600),
-                        delay: const Duration(milliseconds: 300),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _saveUserData,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'KAYDET',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
     );
   }
-} 
+
+  // YENİ: Çıkış yapmak için onay diyaloğu göster
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Çıkış Yap'),
+        content: const Text(
+            'Mevcut profilden çıkış yapmak istediğinize emin misiniz? Bu işlem mevcut oturumu sonlandıracak.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('İPTAL'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Diyaloğu kapat
+              Navigator.of(context).pop();
+
+              try {
+                // Çıkış yap işlemini gerçekleştir
+                await Provider.of<UserProvider>(context, listen: false)
+                    .logout();
+
+                // Başarılı çıkış mesajı göster
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Çıkış yapıldı')),
+                );
+
+                // Profil sayfasından çık (ana sayfaya dön)
+                Navigator.of(context).pop();
+              } catch (e) {
+                // Hata mesajı göster
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Çıkış yapılırken hata oluştu: $e')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('ÇIKIŞ YAP'),
+          ),
+        ],
+      ),
+    );
+  }
+}
