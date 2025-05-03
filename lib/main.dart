@@ -187,7 +187,7 @@ class _MainScreenState extends State<MainScreen> {
               Icons.calendar_today_rounded,
               color: AppTheme.primaryColor,
             ),
-            title: Text('Program'),
+            title: Text('Haftalık Program'),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -310,7 +310,9 @@ void main() async {
         // ... (Provider listesi önceki düzeltmedeki gibi)
         Provider<DatabaseService>.value(value: databaseService),
         Provider<ExerciseService>.value(value: exerciseService),
-        Provider<ProgramService>.value(value: programService),
+        ChangeNotifierProvider<ProgramService>(
+          create: (context) => programService,
+        ),
 
         ChangeNotifierProvider<UserProvider>.value(
             value: userProvider), // value ile verelim

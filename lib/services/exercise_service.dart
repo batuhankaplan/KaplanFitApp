@@ -174,15 +174,23 @@ class ExerciseService {
 
       // Filtreleme koşulları
       if (query != null && query.isNotEmpty) {
-        // Firestore'da LIKE sorgusu doğrudan yok. Başlangıç eşleşmesi veya
-        // daha kompleks arama (örn. Algolia) gerekir.
-        // Şimdilik başlangıç eşleşmesi (case-insensitive için name_lowercase alanı varsayalım):
+        // Name alanına göre basit arama yapalım
+        // Firebase'de tam metin araması yerine basit bir filtreleme kullanıyoruz
         final lowercaseQuery = query.toLowerCase();
-        collectionRef = collectionRef
-            .where('name_lowercase', isGreaterThanOrEqualTo: lowercaseQuery)
-            .where('name_lowercase',
-                isLessThanOrEqualTo: lowercaseQuery + '\uf8ff');
+
+        // Doğrudan tüm belgeleri çekelim ve client tarafında filtreleme yapalım
+        final snapshot = await collectionRef.get();
+        final allExercises =
+            snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)).toList();
+
+        // İsme göre client-side filtreleme
+        return allExercises
+            .where((exercise) =>
+                exercise.name.toLowerCase().contains(lowercaseQuery))
+            .toList();
       }
+
+      // Diğer filtrelemelere devam
       if (targetMuscleGroup != null && targetMuscleGroup.isNotEmpty) {
         collectionRef = collectionRef.where('targetMuscleGroup',
             isEqualTo: targetMuscleGroup);
@@ -201,11 +209,6 @@ class ExerciseService {
       return snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)).toList();
     } catch (e) {
       print("Firestore'dan egzersizler alınırken hata: $e");
-      // Index eksikliği hatası olabilir
-      if (e.toString().contains('index')) {
-        print(
-            "Firestore Hatası: '$_collectionPath' koleksiyonunda sorgu için index gerekiyor olabilir (örn. name artan, targetMuscleGroup artan vb.). Firestore konsolundan oluşturun.");
-      }
       return [];
     }
   }
@@ -276,33 +279,33 @@ class ExerciseService {
     }
   }
 
-  /// Verilen ID listesindeki egzersizleri Firestore'dan getirir.
-  Future<List<Exercise>> getExercisesByIds(List<String> ids) async {
-    if (ids.isEmpty) {
-      return [];
-    }
+  /// Belirli ID'lere sahip egzersizleri Firestore'dan getirir.
+  Future<List<Exercise>?> getExercisesByIds(List<String> exerciseIds) async {
     try {
-      // Firestore 'whereIn' sorgusu 10 elemanla sınırlıydı, şimdi 30.
-      // Çok fazla ID varsa, sorguyu parçalara ayırmak gerekebilir.
-      List<Exercise> results = [];
-      List<List<String>> chunks = [];
-      for (var i = 0; i < ids.length; i += 30) {
-        chunks.add(ids.sublist(i, i + 30 > ids.length ? ids.length : i + 30));
+      if (exerciseIds.isEmpty) {
+        return [];
       }
 
-      for (var chunk in chunks) {
+      // Firestore'da 'in' operatörüyle 10'dan fazla öğe sorgulanamayacağı için
+      // ID'leri 10'lu gruplara bölelim
+      final List<Exercise> results = [];
+      for (int i = 0; i < exerciseIds.length; i += 10) {
+        final chunk = exerciseIds.sublist(
+            i, i + 10 > exerciseIds.length ? exerciseIds.length : i + 10);
+
         final snapshot = await _firestore
             .collection(_collectionPath)
             .where(FieldPath.documentId, whereIn: chunk)
             .get();
+
         results.addAll(snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)));
       }
 
-      // Orijinal ID sırasına göre döndürmek isteğe bağlı, şimdilik ID'leri bulmak yeterli.
+      print("${results.length} adet egzersiz ID'ye göre alındı.");
       return results;
     } catch (e) {
-      print("ID listesiyle egzersizler alınırken hata: $e");
-      return [];
+      print("ID'lere göre egzersizler alınırken hata: $e");
+      return null;
     }
   }
 }

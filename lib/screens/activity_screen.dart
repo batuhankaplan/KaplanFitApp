@@ -889,15 +889,37 @@ class _ActivityScreenState extends State<ActivityScreen>
         foregroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
       ),
       onPressed: () async {
-        final selectedExercise = await Navigator.push<Exercise>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const ExerciseLibraryScreen(isSelectionMode: true),
-          ),
-        );
+        try {
+          // Yeni bir route ve stack oluşturmak için pushAndRemoveUntil değil pushReplacement kullanabiliriz
+          final selectedExercise = await Navigator.of(context).push<dynamic>(
+            MaterialPageRoute(
+              builder: (context) =>
+                  ExerciseLibraryScreen(isSelectionMode: true),
+            ),
+          );
 
-        if (selectedExercise != null) {
-          onExerciseSelected(selectedExercise);
+          // Sonuç kontrolü
+          if (selectedExercise != null) {
+            if (selectedExercise is Exercise) {
+              print("Aktiviteler - Seçilen egzersiz: ${selectedExercise.name}");
+              onExerciseSelected(selectedExercise);
+            } else {
+              print(
+                  "Aktiviteler - Dönen sonuç Exercise tipinde değil: ${selectedExercise.runtimeType}");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(
+                        "Beklenmeyen egzersiz tipi. Lütfen tekrar deneyin.")),
+              );
+            }
+          } else {
+            print("Aktiviteler - Egzersiz seçilmedi (null sonuç)");
+          }
+        } catch (e) {
+          print("Aktiviteler - Egzersiz seçme hatası: $e");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Egzersiz seçme işleminde hata: $e")),
+          );
         }
       },
     );

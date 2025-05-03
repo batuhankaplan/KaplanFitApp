@@ -10,6 +10,7 @@ import '../widgets/kaplan_appbar.dart'; // KaplanAppBar kullanacağız
 import '../theme.dart';
 import 'package:collection/collection.dart'; // groupBy için
 import 'package:url_launcher/url_launcher.dart';
+import 'edit_program_category_screen.dart'; // Bu satırı ekleyin
 
 class WorkoutProgramScreen extends StatefulWidget {
   const WorkoutProgramScreen({Key? key}) : super(key: key);
@@ -19,16 +20,15 @@ class WorkoutProgramScreen extends StatefulWidget {
 }
 
 class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
-  List<ProgramItem> _workoutPrograms = [];
   Map<String, Exercise> _exerciseDetails =
-      {}; // exerciseId -> Exercise (Liste yerine tekil)
+      {}; // Build'de kullanmak için state'e taşı
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     print("[WorkoutProgramScreen] initState called.");
-    _loadWorkoutPrograms();
+    _loadInitialExerciseDetails();
   }
 
   @override
@@ -36,92 +36,145 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
     super.dispose();
   }
 
-  Future<void> _loadWorkoutPrograms() async {
+  Future<void> _loadInitialExerciseDetails() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
-
+    setState(() => _isLoading = true); // Yükleme başlangıcı
+    Map<String, Exercise> loadedDetails = {}; // Geçici map
     try {
       final programService =
           Provider.of<ProgramService>(context, listen: false);
       final exerciseService =
           Provider.of<ExerciseService>(context, listen: false);
 
-      // ProgramService'den tüm ProgramItem'ları al ve sadece workout olanları filtrele
-      // getAllProgramItems ProgramService'e eklendi varsayımıyla devam ediyoruz.
-      final allProgramItems = programService.getAllProgramItems();
-      _workoutPrograms = allProgramItems
-          .where((item) => item.type == ProgramItemType.workout)
+      final allProgramItems =
+          programService.getAllProgramItemsIncludingUnassigned();
+      final workoutPrograms = allProgramItems
+          .where((item) =>
+              item.type == ProgramItemType.workout &&
+              (item.title?.isNotEmpty ?? false))
           .toList();
 
-      // Workout programlarındaki tüm egzersiz ID'lerini topla (null olmayanları)
       Set<String> exerciseIds = {};
-      for (var workout in _workoutPrograms) {
-        if (workout.programSets != null) {
-          for (var set in workout.programSets!) {
-            if (set.exerciseId != null) {
-              exerciseIds.add(set.exerciseId!);
-            }
+      for (var workout in workoutPrograms) {
+        workout.programSets?.forEach((set) {
+          if (set.exerciseId != null) {
+            exerciseIds.add(set.exerciseId!);
           }
-        }
+        });
       }
 
-      // ExerciseService'ten egzersiz detaylarını çek
       if (exerciseIds.isNotEmpty) {
-        // Yeni eklenen getExercisesByIds metodunu kullan
+        print(
+            "[WorkoutScreen][_loadInitialExerciseDetails] Fetching details for ${exerciseIds.length} exercise IDs...");
         final List<Exercise>? detailsList =
             await exerciseService.getExercisesByIds(exerciseIds.toList());
 
-        // Dönen Listeyi Map'e çevir
         if (detailsList != null) {
-          _exerciseDetails = Map.fromEntries(detailsList
-                  .where((ex) => ex.id != null) // Null ID'leri filtrele
-                  .map((ex) => MapEntry(ex.id!, ex)) // MapEntry oluştur
-              );
+          loadedDetails = Map.fromEntries(detailsList // Geçici map'e ata
+              .where((ex) => ex.id != null)
+              .map((ex) => MapEntry(ex.id!, ex)));
+          print(
+              "[WorkoutScreen][_loadInitialExerciseDetails] Loaded details for ${loadedDetails.length} exercises.");
         } else {
-          _exerciseDetails = {}; // Detaylar null ise boş map ata
+          print(
+              "[WorkoutScreen][_loadInitialExerciseDetails] Exercise details list was null.");
         }
+      } else {
+        print(
+            "[WorkoutScreen][_loadInitialExerciseDetails] No exercise IDs found.");
       }
-    } catch (e) {
-      print("Antrenman programları yüklenirken hata: $e");
-      // Hata mesajı gösterilebilir
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Antrenman programları yüklenemedi.')),
-        );
-      }
+    } catch (e, stackTrace) {
+      print("Initial exercise details load error: $e\nStackTrace: $stackTrace");
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _exerciseDetails = loadedDetails; // State'i güncelle
+          _isLoading = false; // Yükleme bitti
+        });
       }
     }
   }
 
-  // Programları kategorilere göre grupla (Örn: Göğüs & Arka Kol)
-  Map<String, List<ProgramItem>> _groupProgramsByCategory() {
-    return groupBy(_workoutPrograms, (ProgramItem item) {
-      String titleLower = item.title.toLowerCase();
-      if (titleLower.contains('göğüs') || titleLower.contains('arka kol')) {
-        return 'Göğüs & Arka Kol';
-      } else if (titleLower.contains('sırt') || titleLower.contains('ön kol')) {
-        return 'Sırt & Ön Kol';
-      } else if (titleLower.contains('omuz') ||
-          titleLower.contains('bacak') ||
-          titleLower.contains('karın')) {
-        return 'Omuz & Bacak & Karın';
-      } else if (titleLower.contains('bel sağlığı') ||
-          titleLower.contains('pelvic tilt') ||
-          titleLower.contains('cat-camel') ||
-          titleLower.contains('bird-dog')) {
-        // Bel Sağlığı egzersizlerini ayrı grupla
-        return 'Bel Sağlığı Egzersizleri';
-      } else if (titleLower.contains('kardiyo') ||
-          titleLower.contains('yüzme') ||
-          titleLower.contains('yürüyüş') ||
-          titleLower.contains('esneme')) {
-        // Kardiyo ve diğer aktiviteleri ayrı grupla
-        return 'Kardiyo & Diğer Aktiviteler';
+  Map<String, List<ProgramItem>> _groupProgramsByCategory(
+      List<ProgramItem> workoutPrograms) {
+    print(
+        "[WorkoutScreen][_groupProgramsByCategory] Grouping ${workoutPrograms.length} workout items...");
+    return groupBy(workoutPrograms, (ProgramItem item) {
+      String categoryResult = item.title ?? 'Diğer Antrenmanlar';
+      return categoryResult;
+    });
+  }
+
+  void _showAddCategoryDialog(BuildContext context) {
+    final TextEditingController categoryNameController =
+        TextEditingController();
+
+    showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Yeni Kategori Ekle'),
+          content: TextField(
+            controller: categoryNameController,
+            decoration: InputDecoration(
+              labelText: 'Kategori Adı',
+              hintText: 'Örn: Bacak Günü',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+          ),
+          actions: <Widget>[
+            TextButton(
+                child: Text('İptal'),
+                onPressed: () {
+                  categoryNameController.dispose();
+                  Navigator.of(context).pop();
+                }),
+            TextButton(
+              child: Text('Ekle'),
+              onPressed: () {
+                final newCategoryName = categoryNameController.text.trim();
+                if (newCategoryName.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Kategori adı boş olamaz')),
+                  );
+                } else {
+                  categoryNameController.dispose();
+                  Navigator.of(context).pop(newCategoryName);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    ).then((newCategoryName) {
+      if (newCategoryName != null && newCategoryName.isNotEmpty) {
+        if (!mounted) return;
+
+        final newId = 'category_${DateTime.now().millisecondsSinceEpoch}';
+        final newProgramItem = ProgramItem(
+          id: newId,
+          title: newCategoryName,
+          type: ProgramItemType.workout,
+          programSets: [],
+          icon: Icons.fitness_center,
+          color: Colors.purple,
+        );
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EditProgramCategoryScreen(
+                  categoryName: newCategoryName,
+                  programItems: [newProgramItem],
+                ),
+              ),
+            );
+          }
+        });
       }
-      return 'Diğer Antrenmanlar'; // Kalanları grupla
     });
   }
 
@@ -129,52 +182,87 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
   Widget build(BuildContext context) {
     print("[WorkoutProgramScreen] build called. isLoading: $_isLoading");
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final groupedPrograms = _groupProgramsByCategory();
+
+    final programService = context.watch<ProgramService>();
+
+    final allProgramItems =
+        programService.getAllProgramItemsIncludingUnassigned();
+    final workoutPrograms = allProgramItems
+        .where((item) =>
+            item.type == ProgramItemType.workout &&
+            (item.title?.isNotEmpty ?? false))
+        .toList();
+
+    final groupedPrograms = _groupProgramsByCategory(workoutPrograms);
+
     final categoryOrder = [
       'Göğüs & Arka Kol',
       'Sırt & Ön Kol',
       'Omuz & Bacak & Karın',
       'Bel Sağlığı Egzersizleri',
-      'Kardiyo & Diğer Aktiviteler', // Yeni kategoriyi ekle
-      'Diğer Antrenmanlar' // Diğer kategorisini de ekle
+      'Kardiyo & Diğer Aktiviteler',
     ];
-    // Kategorileri filtrele ve sırala
-    final availableCategories = groupedPrograms.keys
-        .where((key) => key != 'Diğer Antrenmanlar')
-        .toList(); // 'Diğer Antrenmanlar' hariç tut
-    final sortedCategories = availableCategories
-      ..sort((a, b) {
-        int indexA = categoryOrder.indexOf(a);
-        int indexB = categoryOrder.indexOf(b);
-        // Eğer kategori order listesinde yoksa sona ata
-        if (indexA == -1) indexA = categoryOrder.length;
-        if (indexB == -1) indexB = categoryOrder.length;
-        return indexA.compareTo(indexB);
-      });
+
+    List<String> sortedCategories = groupedPrograms.keys.toList();
+    sortedCategories.sort((a, b) {
+      int indexA = categoryOrder.indexOf(a);
+      int indexB = categoryOrder.indexOf(b);
+      if (indexA == -1 && a != 'Diğer Antrenmanlar')
+        indexA = categoryOrder.length;
+      if (indexB == -1 && b != 'Diğer Antrenmanlar')
+        indexB = categoryOrder.length;
+      if (a == 'Diğer Antrenmanlar') indexA = categoryOrder.length + 1;
+      if (b == 'Diğer Antrenmanlar') indexB = categoryOrder.length + 1;
+      return indexA.compareTo(indexB);
+    });
 
     return Scaffold(
+      backgroundColor:
+          isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey[100],
       appBar: KaplanAppBar(
         title: 'Antrenman Programı',
         isDarkMode: isDarkMode,
-        isRequiredPage: true,
+        showBackButton: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit,
+                color: isDarkMode ? Colors.white : Colors.black),
+            tooltip: 'Kategorileri Düzenle',
+            onPressed: () => _showCategoryEditDialog(context, sortedCategories),
+          ),
+          IconButton(
+            icon: Icon(Icons.add,
+                color: isDarkMode ? Colors.white : Colors.black),
+            tooltip: 'Yeni Kategori Ekle',
+            onPressed: () => _showAddCategoryDialog(context),
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
-          : _workoutPrograms.isEmpty
-              ? Center(child: Text('Yüklenecek antrenman programı bulunamadı.'))
+          : workoutPrograms.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Yüklenecek antrenman programı bulunamadı.'),
+                      SizedBox(height: 10),
+                      ElevatedButton.icon(
+                          onPressed: () => _showAddCategoryDialog(context),
+                          icon: Icon(Icons.add),
+                          label: Text('İlk Kategoriyi Ekle'))
+                    ],
+                  ),
+                )
               : ListView.builder(
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.fromLTRB(0, 12, 0, 80),
                   itemCount: sortedCategories.length,
                   itemBuilder: (context, index) {
                     final category = sortedCategories[index];
-                    final programsInCategory = groupedPrograms[category];
-
-                    if (programsInCategory == null ||
-                        programsInCategory.isEmpty) {
-                      return SizedBox.shrink();
-                    }
+                    final programsInCategory = groupedPrograms[category] ?? [];
 
                     return Container(
+                      key: ValueKey('container_$category'),
                       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: isDarkMode ? Color(0xFF1E1E2E) : Colors.white,
@@ -197,86 +285,134 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                               ),
                         ),
                         child: ExpansionTile(
-                          title: Text(
-                            category,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: isDarkMode ? Colors.white : Colors.black87,
-                            ),
+                          key: ValueKey(category),
+                          initiallyExpanded: false,
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  category,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                           leading: Icon(
                             _getCategoryIcon(category),
                             color: AppTheme.primaryColor,
                           ),
-                          children: programsInCategory.expand((programItem) {
-                            if (programItem.programSets == null ||
-                                programItem.programSets!.isEmpty) {
-                              return <Widget>[];
-                            }
+                          children: programsInCategory.isEmpty
+                              ? [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0, vertical: 8.0),
+                                    child: Text(
+                                      'Bu kategoride henüz egzersiz yok. Düzenle ikonuna basarak ekleyebilirsiniz.',
+                                      style: TextStyle(color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  )
+                                ]
+                              : programsInCategory.expand((programItem) {
+                                  if (programItem.programSets == null ||
+                                      programItem.programSets!.isEmpty) {
+                                    return <Widget>[];
+                                  }
+                                  programItem.programSets!.sort(
+                                      (a, b) => (a.order).compareTo(b.order));
 
-                            return programItem.programSets!.map((set) {
-                              final exercise = _exerciseDetails[set.exerciseId];
-                              if (exercise == null) {
-                                print(
-                                    "Exercise detail not found for ID: ${set.exerciseId}");
-                                return SizedBox.shrink();
-                              }
-                              return Container(
-                                margin: EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDarkMode
-                                      ? Colors.black12
-                                      : Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isDarkMode
-                                        ? Colors.white10
-                                        : Colors.grey.shade200,
-                                  ),
-                                ),
-                                child: ListTile(
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  leading: CircleAvatar(
-                                    backgroundColor:
-                                        AppTheme.primaryColor.withOpacity(0.2),
-                                    child: Icon(
-                                      Icons.fitness_center,
-                                      color: AppTheme.primaryColor,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    exercise.name,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      color: isDarkMode
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${set.setsDescription} x ${set.repsDescription}',
-                                    style: TextStyle(
-                                      color: isDarkMode
-                                          ? Colors.white60
-                                          : Colors.black54,
-                                    ),
-                                  ),
-                                  trailing: exercise.videoUrl != null
-                                      ? Icon(
-                                          Icons.play_circle_outline,
-                                          color: AppTheme.primaryColor,
-                                        )
-                                      : null,
-                                  onTap: () => _showExerciseDetails(exercise),
-                                ),
-                              );
-                            }).toList();
-                          }).toList(),
+                                  return programItem.programSets!.map((set) {
+                                    final exercise =
+                                        _exerciseDetails[set.exerciseId];
+
+                                    if (exercise == null) {
+                                      return ListTile(
+                                          title: Text(
+                                              "Egzersiz ID: ${set.exerciseId} bulunamadı"));
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0, vertical: 4.0),
+                                      child: InkWell(
+                                        onTap: () =>
+                                            _showExerciseDetails(exercise),
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isDarkMode
+                                                ? Colors.white.withOpacity(0.05)
+                                                : Colors.grey.shade100,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              CircleAvatar(
+                                                radius: 20,
+                                                backgroundColor: AppTheme
+                                                    .primaryColor
+                                                    .withOpacity(0.1),
+                                                child: Icon(
+                                                  Icons.fitness_center,
+                                                  size: 20,
+                                                  color: AppTheme.primaryColor,
+                                                ),
+                                              ),
+                                              SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      exercise.name,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: isDarkMode
+                                                            ? Colors.white
+                                                            : Colors.black87,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '${set.setsDescription ?? '-'} x ${set.repsDescription ?? '-'}' +
+                                                          (set.restTimeDescription !=
+                                                                  null
+                                                              ? ' | Dinlenme: ${set.restTimeDescription}'
+                                                              : ''),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: isDarkMode
+                                                            ? Colors.white60
+                                                            : Colors.black54,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (exercise.videoUrl != null)
+                                                Icon(
+                                                  Icons.play_circle_outline,
+                                                  color: AppTheme.primaryColor
+                                                      .withOpacity(0.7),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList();
+                                }).toList(),
                         ),
                       ),
                     );
@@ -285,7 +421,6 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
     );
   }
 
-  // Kategoriye göre ikon döndüren yardımcı fonksiyon
   IconData _getCategoryIcon(String category) {
     switch (category) {
       case 'Göğüs & Arka Kol':
@@ -295,15 +430,14 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
       case 'Omuz & Bacak & Karın':
         return Icons.directions_run;
       case 'Bel Sağlığı Egzersizleri':
-        return Icons.self_improvement; // Yeni ikon
+        return Icons.self_improvement;
       case 'Kardiyo & Diğer Aktiviteler':
-        return Icons.directions_walk; // Yeni ikon
+        return Icons.directions_walk;
       default:
         return Icons.loop;
     }
   }
 
-  // Egzersiz detaylarını gösteren dialog
   void _showExerciseDetails(Exercise exercise) {
     showDialog(
       context: context,
@@ -358,7 +492,6 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
     );
   }
 
-  // Video oynatıcı dialog
   void _showVideoPlayer(String videoUrl) {
     String? videoId = YoutubePlayer.convertUrlToId(videoUrl);
 
@@ -378,9 +511,6 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
       flags: YoutubePlayerFlags(
         autoPlay: true,
         mute: false,
-        // isLive: false, // Canlı yayın değilse
-        // forceHD: false,
-        // enableCaption: true,
       ),
     );
 
@@ -396,14 +526,12 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
             playedColor: AppTheme.primaryColor,
             handleColor: AppTheme.primaryColor.withOpacity(0.8),
           ),
-          onReady: () {
-            // _controller.addListener(listener);
-          },
+          onReady: () {},
         ),
         actions: [
           TextButton(
             onPressed: () {
-              _controller.pause(); // Videoyu durdur
+              _controller.pause();
               Navigator.pop(context);
             },
             child: Text('Kapat'),
@@ -411,12 +539,72 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
         ],
       ),
     ).then((_) {
-      // Dialog kapandığında kontrolcüyü temizle
-      _controller.dispose();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controller.dispose();
+      });
     });
   }
-}
 
+  void _showCategoryEditDialog(BuildContext context, List<String> categories) {
+    final programService = context.read<ProgramService>();
+    final allProgramItems =
+        programService.getAllProgramItemsIncludingUnassigned();
+    final workoutPrograms = allProgramItems
+        .where((item) =>
+            item.type == ProgramItemType.workout &&
+            (item.title?.isNotEmpty ?? false))
+        .toList();
+    final groupedPrograms = _groupProgramsByCategory(workoutPrograms);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Düzenlenecek Kategoriyi Seçin'),
+          content: Container(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                final programsInCategory = groupedPrograms[category] ?? [];
+
+                int exerciseCount = 0;
+                for (var item in programsInCategory) {
+                  exerciseCount += item.programSets?.length ?? 0;
+                }
+
+                return ListTile(
+                  title: Text(category),
+                  subtitle: Text('${exerciseCount} egzersiz'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditProgramCategoryScreen(
+                          categoryName: category,
+                          programItems: programsInCategory,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('İptal'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
 // ProgramService'te olması gereken yardımcı metotlar (varsayılan)
 // Bu metotların ProgramService içinde olduğundan emin olun.
@@ -430,4 +618,4 @@ extension ProgramServiceExtension on ProgramService {
     return allItems;
   }
 }
-*/ 
+*/

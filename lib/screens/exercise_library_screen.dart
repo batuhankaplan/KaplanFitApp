@@ -19,23 +19,44 @@ class ExerciseLibraryScreen extends StatefulWidget {
 }
 
 class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
-  late Future<List<Exercise>> _exercisesFuture;
+  // _exercisesFuture değişkenini late tanımlamak yerine doğrudan tanımlıyorum
+  Future<List<Exercise>> _exercisesFuture = Future.value([]);
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  // TODO: Kas grubu filtrelemesi için state eklenebilir
+  // Seçilen egzersizleri tutmak için Set (benzersizlik sağlar)
+  final Set<Exercise> _selectedExercises = {};
 
   @override
   void initState() {
     super.initState();
-    _loadExercises();
+    print("ExerciseLibraryScreen: initState çağrıldı");
+    // Asenkron olarak egzersizleri yükle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadExercises();
+    });
   }
 
   void _loadExercises() {
-    final exerciseService =
-        Provider.of<ExerciseService>(context, listen: false);
-    _exercisesFuture = exerciseService.getExercises(query: _searchQuery);
-    if (mounted) {
-      setState(() {});
+    print("ExerciseLibraryScreen: egzersizler yükleniyor...");
+    try {
+      final exerciseService =
+          Provider.of<ExerciseService>(context, listen: false);
+      // Seçim modunda tüm egzersizleri yüklemek daha mantıklı olabilir
+      // veya filtrelemeye devam edilebilir.
+      _exercisesFuture = exerciseService.getExercises(query: _searchQuery);
+      if (mounted) {
+        setState(() {
+          print(
+              "ExerciseLibraryScreen: egzersizler yüklendi, UI güncelleniyor");
+        });
+      }
+    } catch (e) {
+      print("ExerciseLibraryScreen: egzersizler yüklenirken hata: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Egzersizler yüklenirken hata oluştu: $e")),
+        );
+      }
     }
   }
 
@@ -45,16 +66,52 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     super.dispose();
   }
 
+  // Egzersiz seçme/seçimi kaldırma
+  void _toggleSelection(Exercise exercise) {
+    setState(() {
+      if (_selectedExercises.contains(exercise)) {
+        _selectedExercises.remove(exercise);
+      } else {
+        _selectedExercises.add(exercise);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: KaplanAppBar(
-        title: 'Egzersiz Kütüphanesi',
+        // Seçim moduna göre başlık ve action'ları ayarla
+        title: widget.isSelectionMode ? 'Egzersiz Seç' : 'Egzersiz Kütüphanesi',
         isDarkMode: isDarkMode,
-        // Seçim modunda geri butonu farklı çalışabilir
-        // showBackButton: !widget.isSelectionMode,
+        showBackButton: true, // Geri dönüş butonunu göster
+        isRequiredPage: true, // AppBar'ın her zaman görünmesini sağla
+        actions: [
+          // Sadece seçim modunda görünen action'lar
+          if (widget.isSelectionMode)
+            TextButton(
+              child: Text(
+                'Ekle (${_selectedExercises.length})',
+                style: TextStyle(
+                    color: _selectedExercises.isNotEmpty
+                        ? (isDarkMode ? Colors.white : AppTheme.primaryColor)
+                        : Colors.grey,
+                    fontWeight: FontWeight.bold),
+              ),
+              onPressed: _selectedExercises.isEmpty
+                  ? null // Seçili egzersiz yoksa pasif
+                  : () {
+                      // Seçilen listeyi geri döndür
+                      print(
+                          "Egzersiz seçimi: ${_selectedExercises.length} egzersiz seçildi");
+                      print(
+                          "Egzersiz listesi dönüyor: ${_selectedExercises.length} adet");
+                      Navigator.of(context).pop(_selectedExercises.toList());
+                    },
+            ),
+        ],
       ),
       backgroundColor:
           isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor,
@@ -121,29 +178,44 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                   final exercises = snapshot.data!;
                   return ListView.separated(
                     itemCount: exercises.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final exercise = exercises[index];
+                      final bool isSelected =
+                          _selectedExercises.contains(exercise);
+
                       return Card(
                         elevation: 1,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(10),
+                            side: widget.isSelectionMode && isSelected
+                                ? BorderSide(
+                                    color: AppTheme.primaryColor, width: 1.5)
+                                : BorderSide.none),
                         color: isDarkMode
-                            ? AppTheme.darkCardBackgroundColor
-                            : Colors.white,
+                            ? (isSelected
+                                ? AppTheme.darkSurfaceColor
+                                : AppTheme.darkCardBackgroundColor)
+                            : (isSelected
+                                ? AppTheme.primaryColor.withOpacity(0.05)
+                                : Colors.white),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor:
-                                AppTheme.primaryColor.withOpacity(0.1),
+                            backgroundColor: AppTheme.primaryColor
+                                .withOpacity(isSelected ? 0.25 : 0.1),
                             child: Icon(
                               _getMuscleGroupIcon(exercise.targetMuscleGroup),
                               color: AppTheme.primaryColor,
                             ),
                           ),
                           title: Text(exercise.name,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black87)),
                           subtitle: Text(
                               '${exercise.targetMuscleGroup}${exercise.equipment != null ? ' - ${exercise.equipment}' : ''}',
                               style: TextStyle(
@@ -152,7 +224,13 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                                       ? Colors.white70
                                       : Colors.grey.shade600)),
                           trailing: widget.isSelectionMode
-                              ? const Icon(Icons.chevron_right)
+                              ? Checkbox(
+                                  value: isSelected,
+                                  onChanged: (bool? value) {
+                                    _toggleSelection(exercise);
+                                  },
+                                  activeColor: AppTheme.primaryColor,
+                                )
                               : IconButton(
                                   icon: Icon(Icons.edit_note,
                                       color: isDarkMode
@@ -161,13 +239,14 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                                   onPressed: () {
                                     _navigateToEditExercise(exercise);
                                   },
+                                  tooltip: 'Egzersizi Düzenle',
                                 ),
                           onTap: () {
                             if (widget.isSelectionMode) {
-                              // Egzersiz seçildiyse, seçilen egzersizle geri dön
-                              Navigator.pop(context, exercise);
+                              // Seçim modunda tıklayınca seçimi değiştir
+                              _toggleSelection(exercise);
                             } else {
-                              // TODO: Egzersiz detaylarını gösteren bir dialog veya ekran aç
+                              // Normal modda detayları göster
                               _showExerciseDetails(exercise);
                             }
                           },
@@ -181,14 +260,17 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _navigateToAddNewExercise();
-        },
-        child: const Icon(Icons.add, color: Colors.white),
-        backgroundColor: AppTheme.accentColor,
-        tooltip: 'Yeni Egzersiz Ekle',
-      ),
+      // Seçim modunda FAB'ı gösterme
+      floatingActionButton: widget.isSelectionMode
+          ? null
+          : FloatingActionButton(
+              onPressed: () {
+                _navigateToAddNewExercise();
+              },
+              child: const Icon(Icons.add, color: Colors.white),
+              backgroundColor: AppTheme.accentColor,
+              tooltip: 'Yeni Egzersiz Ekle',
+            ),
     );
   }
 

@@ -6,20 +6,21 @@ import 'program_set.dart'; // Yeni modeli import et
 enum ProgramItemType { workout, meal, rest, other }
 
 class ProgramItem {
+  String? id; // Veritabanı ID'si (opsiyonel, sonradan atanabilir)
   final ProgramItemType type; // Öğenin türü
-  final String title;
-  final String? description; // Yemekler veya basit notlar için
-  final List<ProgramSet>?
-      programSets; // Antrenmanlar için egzersiz listesi (WorkoutSet -> ProgramSet)
+  String title; // final olmaktan çıkardık, düzenlenebilir
+  String? description; // Yemekler veya basit notlar için
+  List<ProgramSet>? programSets; // final olmaktan çıkardık
   final IconData icon;
   final Color color;
   final String? time;
 
   ProgramItem({
+    this.id, // ID'yi constructor'a ekleyelim (opsiyonel)
     required this.type,
     required this.title,
     this.description,
-    this.programSets, // workoutSets -> programSets
+    this.programSets,
     required this.icon,
     required this.color,
     this.time,
@@ -31,28 +32,36 @@ class ProgramItem {
 
   // Kopyalama metodu
   ProgramItem copyWith({
+    String? id,
     ProgramItemType? type,
     String? title,
     String? description,
-    List<ProgramSet>? programSets, // workoutSets -> programSets
+    List<ProgramSet>? programSets,
     IconData? icon,
     Color? color,
     String? time,
-    bool clearProgramSets = false, // workoutSets -> programSets
-    bool clearDescription = false, // description'ı null yapmak için flag
+    bool clearProgramSets = false,
+    bool clearDescription = false,
   }) {
+    // programSets için null kontrolü ve deep copy
+    List<ProgramSet>? copiedSets;
+    if (clearProgramSets) {
+      copiedSets = null;
+    } else if (programSets != null) {
+      copiedSets =
+          programSets.map((set) => set.copyWith()).toList(); // Her seti kopyala
+    } else {
+      copiedSets = this.programSets?.map((set) => set.copyWith()).toList();
+    }
+
     return ProgramItem(
+      id: id ?? this.id,
       type: type ?? this.type,
       title: title ?? this.title,
-      // Eğer yeni tip workout ise description'ı temizle (veya flag true ise)
       description: (type == ProgramItemType.workout || clearDescription)
           ? null
           : description ?? this.description,
-      // Eğer yeni tip workout değilse programSets'i temizle (veya flag true ise)
-      programSets: (type != ProgramItemType.workout ||
-              clearProgramSets) // workoutSets -> programSets
-          ? null
-          : programSets ?? this.programSets, // workoutSets -> programSets
+      programSets: copiedSets,
       icon: icon ?? this.icon,
       color: color ?? this.color,
       time: time ?? this.time,
@@ -69,20 +78,19 @@ class ProgramItem {
     final int iconCode = json['icon'] ?? 0xE5E5;
     final IconData iconData = _getIconData(iconCode);
 
-    List<ProgramSet>? sets; // WorkoutSet -> ProgramSet
-    if (json['programSets'] != null) {
-      // workoutSets -> programSets
-      sets = (json['programSets'] as List) // workoutSets -> programSets
-          .map((item) => ProgramSet.fromJson(
-              item as Map<String, dynamic>)) // WorkoutSet -> ProgramSet
+    List<ProgramSet>? sets;
+    if (json['programSets'] != null && json['programSets'] is List) {
+      sets = (json['programSets'] as List)
+          .map((item) => ProgramSet.fromJson(item as Map<String, dynamic>))
           .toList();
     }
 
     return ProgramItem(
+      id: json['id'] as String?,
       type: itemType,
       title: json['title'] ?? '',
       description: json['description'] as String?,
-      programSets: sets, // workoutSets -> programSets
+      programSets: sets,
       icon: iconData,
       color: Color(json['color'] ?? 0xFF9E9E9E),
       time: json['time'],
@@ -92,6 +100,7 @@ class ProgramItem {
   // Nesneyi JSON'a dönüştür
   Map<String, dynamic> toJson() {
     return {
+      'id': id, // ID'yi JSON'a ekle
       'type': type.toString(), // Enum'ı string olarak kaydet
       'title': title,
       'description': description, // null olabilir

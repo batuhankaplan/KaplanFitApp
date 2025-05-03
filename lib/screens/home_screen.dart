@@ -86,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    print("[HomeScreen] initState started."); // LOG
     _pageController = PageController();
     // Animasyon controller'ı başlat
     _animationController = AnimationController(
@@ -98,16 +99,19 @@ class _HomeScreenState extends State<HomeScreen>
         DateTime.now().millisecondsSinceEpoch % _motivationalMessages.length];
 
     // Verileri yükle (görevler, su vb.)
+    print("[HomeScreen] initState calling _loadData()."); // LOG
     _loadData();
 
     // Artık kullanıcı kontrolünü burada yapmıyoruz, Splash Screen hallediyor.
     // WidgetsBinding.instance.addPostFrameCallback((_) {
     //   _checkUserAndNavigate();
     // });
+    print("[HomeScreen] initState finished."); // LOG
   }
 
   @override
   void dispose() {
+    print("[HomeScreen] dispose called."); // LOG
     // Listener'ı temizleme kısmını güncelliyoruz
     _pageController.dispose();
     _animationController.dispose();
@@ -172,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Görev durumlarını kaydet
   Future<void> _savingTaskStates() async {
+    print("[HomeScreen] _savingTaskStates called."); // LOG
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
@@ -192,9 +197,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    print("[HomeScreen] build started. isLoading: $isLoading"); // LOG
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Kullanıcıyı al (null olabilir, güvenli erişim önemli)
+    final userProvider = Provider.of<UserProvider>(context);
+    final UserModel? user = userProvider.user;
+    print(
+        "[HomeScreen] build: User fetched from provider. User is ${user == null ? 'null' : 'not null'}."); // LOG
+
     if (isLoading) {
+      print("[HomeScreen] build: Showing loading indicator."); // LOG
       return Center(
         child: CircularProgressIndicator(
           color: AppTheme.primaryColor,
@@ -214,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen>
             SliverToBoxAdapter(
               child: KFSlideAnimation(
                 offsetBegin: Offset(0, 0.1),
-                child: _buildWelcomeHeader(context),
+                child: _buildWelcomeHeader(context, user),
               ),
             ),
 
@@ -357,8 +370,13 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildWelcomeHeader(BuildContext context) {
-    final user = Provider.of<UserProvider>(context).user;
+  Widget _buildWelcomeHeader(BuildContext context, UserModel? user) {
+    print("[HomeScreen] _buildWelcomeHeader called."); // LOG
+    // Kullanıcı adını güvenli bir şekilde al
+    final userName =
+        user?.name ?? 'Kullanıcı'; // Eğer user null ise 'Kullanıcı' yaz
+    print("[HomeScreen] _buildWelcomeHeader: User name is '$userName'."); // LOG
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final now = DateTime.now();
@@ -820,17 +838,31 @@ class _HomeScreenState extends State<HomeScreen>
     // Provider'ları güvenli bir şekilde kontrol edelim
     ActivityProvider? activityProvider;
     NutritionProvider? nutritionProvider;
+    UserModel? user = Provider.of<UserProvider>(context, listen: false)
+        .user; // Kullanıcıyı al
 
     try {
       activityProvider = Provider.of<ActivityProvider>(context);
-    } catch (e) {
-      print('ActivityProvider bulunamadı: $e');
+      print(
+          "[HomeScreen] _buildStatCards: ActivityProvider accessed successfully."); // LOG
+    } catch (e, stacktrace) {
+      print(
+          "[HomeScreen] _buildStatCards: Error accessing ActivityProvider: $e"); // LOG
+      print(
+          "[HomeScreen] _buildStatCards: ActivityProvider Stacktrace: $stacktrace"); // LOG
+      // activityProvider null kalacak
     }
 
     try {
       nutritionProvider = Provider.of<NutritionProvider>(context);
-    } catch (e) {
-      print('NutritionProvider bulunamadı: $e');
+      print(
+          "[HomeScreen] _buildStatCards: NutritionProvider accessed successfully."); // LOG
+    } catch (e, stacktrace) {
+      print(
+          "[HomeScreen] _buildStatCards: Error accessing NutritionProvider: $e"); // LOG
+      print(
+          "[HomeScreen] _buildStatCards: NutritionProvider Stacktrace: $stacktrace"); // LOG
+      // nutritionProvider null kalacak
     }
 
     // Bugünün tarihi
@@ -1178,25 +1210,25 @@ class _HomeScreenState extends State<HomeScreen>
   //       // Kaydedilmiş görev durumlarını yükle
   //       await _loadSavedTaskStates(); // Program yüklendikten sonra durumları yükle
   //     } else {
-  //       print("Bugün için program bulunamadı veya program eksik.");
-  //       if (mounted) {
-  //         setState(() {
-  //           morningProgram = 'Program Yok';
-  //           lunchMenu = 'Program Yok';
-  //           eveningProgram = 'Program Yok';
-  //           dinnerMenu = 'Program Yok';
-  //         });
-  //       }
+  //       print(
+  //           "[HomeScreen] _loadDailyTasks: Invalid todayIndex: $todayIndex"); // LOG
+  //       // Hata durumu veya varsayılanları ayarla
+  //       setState(() {
+  //         morningProgram = 'Program günü bulunamadı';
+  //         lunchMenu = 'Program günü bulunamadı';
+  //         eveningProgram = 'Program günü bulunamadı';
+  //         dinnerMenu = 'Program günü bulunamadı';
+  //       });
   //     }
-  //   } catch (e) {
-  //     print("Görevleri başlatırken hata: $e");
+  //   } catch (e, stacktrace) {
+  //     print("[HomeScreen] _loadDailyTasks Error: $e"); // LOG
+  //     print("[HomeScreen] _loadDailyTasks Stacktrace: $stacktrace"); // LOG
   //     if (mounted) {
   //       setState(() {
-  //         morningProgram = 'Hata';
-  //         lunchMenu = 'Hata';
-  //         eveningProgram = 'Hata';
-  //         dinnerMenu = 'Hata';
-  //         isLoading = false; // Hata durumunda yüklemeyi bitir
+  //         morningProgram = 'Hata oluştu';
+  //         lunchMenu = 'Hata oluştu';
+  //         eveningProgram = 'Hata oluştu';
+  //         dinnerMenu = 'Hata oluştu';
   //       });
   //     }
   //   }
@@ -1410,109 +1442,175 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Tüm verileri yükle
   Future<void> _loadData() async {
-    // Yükleme başladığında isLoading'i true yap
-    if (mounted) {
-      setState(() {
-        isLoading = true;
-      });
+    print("[HomeScreen] _loadData started."); // LOG
+    if (!mounted) {
+      print("[HomeScreen] _loadData: Not mounted, returning."); // LOG
+      return;
     }
+    setState(() {
+      isLoading = true;
+      print("[HomeScreen] _loadData: isLoading set to true."); // LOG
+    });
 
     try {
-      // Görev durumlarını yükle
+      print("[HomeScreen] _loadData: Loading saved task states..."); // LOG
       await _loadSavedTaskStates();
-
-      // Su tüketimini yükle
+      print("[HomeScreen] _loadData: Loading daily tasks..."); // LOG
+      await _loadDailyTasks();
+      print("[HomeScreen] _loadData: Loading water intake..."); // LOG
       await _loadWaterIntake();
-
-      // Veritabanı servisi
-      final databaseService =
-          Provider.of<DatabaseService>(context, listen: false);
-
-      // UserProvider'dan kullanıcı ID'sini al
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final userId = userProvider.user?.id;
-
-      // Program servisini yüklemeye çalış
-      try {
-        final programService =
-            Provider.of<ProgramService>(context, listen: false);
-        // Programdan ve veritabanından günlük görevleri yükle
-        if (userId != null) {
-          await _loadDailyTasks(userId);
-        } else {
-          print("Kullanıcı ID'si bulunamadığı için görevler yüklenemedi.");
-          // Kullanıcı yoksa varsayılan metinleri göster
-          if (mounted) {
-            setState(() {
-              morningProgram = 'Giriş yapın';
-              lunchMenu = 'Giriş yapın';
-              eveningProgram = 'Giriş yapın';
-              dinnerMenu = 'Giriş yapın';
-            });
-          }
-        }
-      } catch (e) {
-        print('ProgramService hatası: $e');
-        // Program servisi bulunamadığında basit içerikler göster
-        if (mounted) {
-          setState(() {
-            morningProgram = 'Program Hatası';
-            lunchMenu = 'Program Hatası';
-            eveningProgram = 'Program Hatası';
-            dinnerMenu = 'Program Hatası';
-          });
-        }
-      }
-
-      // Yükleme tamamlandı
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+      print("[HomeScreen] _loadData: Loading activity summary..."); // LOG
+      await _loadActivitySummary();
     } catch (e, stacktrace) {
-      // Hata ve stacktrace yakala
-      print('_loadData sırasında hata: $e');
-      print('_loadData Stacktrace: $stacktrace');
+      print("[HomeScreen] _loadData Error: $e"); // LOG
+      print("[HomeScreen] _loadData Stacktrace: $stacktrace"); // LOG
+      // Hata durumunda kullanıcıya bilgi verilebilir
+      // ScaffoldMessenger.of(context).showSnackBar(...);
+    } finally {
       if (mounted) {
         setState(() {
           isLoading = false;
-          // Hata durumunda görev metinlerini güncelle
-          morningProgram = 'Yükleme Hatası';
-          lunchMenu = 'Yükleme Hatası';
-          eveningProgram = 'Yükleme Hatası';
-          dinnerMenu = 'Yükleme Hatası';
+          print(
+              "[HomeScreen] _loadData: isLoading set to false (finally)."); // LOG
         });
       }
     }
   }
 
-  // Su tüketimi yükleme (Veritabanından)
-  Future<void> _loadWaterIntake() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final user = userProvider.user;
-    if (user == null || user.id == null) {
-      if (mounted) setState(() => _waterIntake = 0);
-      return;
-    }
+  // Günlük görevleri ve programı yükle
+  Future<void> _loadDailyTasks() async {
+    print("[HomeScreen] _loadDailyTasks started."); // LOG
+    if (!mounted) return;
+
+    final programService = Provider.of<ProgramService>(context, listen: false);
+    final today = DateTime.now();
+    final todayWeekday = today.weekday;
 
     try {
-      final dbService = Provider.of<DatabaseService>(context, listen: false);
-      final today = DateTime.now();
-      final savedIntake = await dbService.getWaterLogForDay(today, user.id!);
-      if (mounted) {
-        setState(() {
-          _waterIntake = savedIntake;
-        });
+      // ProgramService'den haftalık programı al
+      print(
+          "[HomeScreen] _loadDailyTasks: Getting weekly program from ProgramService"); // LOG
+      final weeklyProgram =
+          await programService.getWeeklyProgram(); // Haftalık programı al
+
+      if (weeklyProgram.isNotEmpty && mounted) {
+        // Bugünün indeksini bul (0=Pzt, 6=Paz)
+        final todayIndex = todayWeekday - 1;
+        if (todayIndex >= 0 && todayIndex < weeklyProgram.length) {
+          final dailyProgram = weeklyProgram[todayIndex];
+          print(
+              "[HomeScreen] _loadDailyTasks: Daily program found for index $todayIndex. Updating state."); // LOG
+          setState(() {
+            morningProgram = dailyProgram.morningExercise.title;
+            lunchMenu = dailyProgram.lunch.description ?? 'Belirtilmedi';
+            eveningProgram = dailyProgram.eveningExercise.title;
+            dinnerMenu = dailyProgram.dinner.description ?? 'Belirtilmedi';
+          });
+          print(
+              "Yüklenen görevler: Sabah: $morningProgram, Öğle: $lunchMenu, Akşam: $eveningProgram, Akşam Yemeği: $dinnerMenu"); // LOG
+        } else {
+          print(
+              "[HomeScreen] _loadDailyTasks: Invalid todayIndex: $todayIndex"); // LOG
+          // Hata durumu veya varsayılanları ayarla
+          setState(() {
+            morningProgram = 'Program günü bulunamadı';
+            lunchMenu = 'Program günü bulunamadı';
+            eveningProgram = 'Program günü bulunamadı';
+            dinnerMenu = 'Program günü bulunamadı';
+          });
+        }
+      } else {
+        print(
+            "[HomeScreen] _loadDailyTasks: Weekly program is empty or widget not mounted."); // LOG
+        if (mounted) {
+          setState(() {
+            morningProgram = 'Program bulunamadı';
+            lunchMenu = 'Program bulunamadı';
+            eveningProgram = 'Program bulunamadı';
+            dinnerMenu = 'Program bulunamadı';
+          });
+        }
       }
-    } catch (e) {
-      print("Su tüketimi yüklenirken hata: $e");
+    } catch (e, stacktrace) {
+      print("[HomeScreen] _loadDailyTasks Error: $e"); // LOG
+      print("[HomeScreen] _loadDailyTasks Stacktrace: $stacktrace"); // LOG
       if (mounted) {
         setState(() {
-          _waterIntake = 0; // Hata durumunda sıfırla
+          morningProgram = 'Hata oluştu';
+          lunchMenu = 'Hata oluştu';
+          eveningProgram = 'Hata oluştu';
+          dinnerMenu = 'Hata oluştu';
         });
       }
     }
+  }
+
+  // Bugün içilen suyu yükle
+  Future<void> _loadWaterIntake() async {
+    print("[HomeScreen] _loadWaterIntake started."); // LOG
+    if (!mounted) return;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.user?.id == null) {
+      print(
+          "[HomeScreen] _loadWaterIntake: User ID is null, cannot load water intake."); // LOG
+      return;
+    }
+    final dbService = DatabaseService();
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+      print(
+          "[HomeScreen] _loadWaterIntake: Getting water log for user ${userProvider.user!.id}"); // LOG
+      final waterData = await dbService.getWaterLogInRange(
+          startOfDay, endOfDay, userProvider.user!.id!);
+      if (mounted) {
+        setState(() {
+          _waterIntake =
+              waterData[startOfDay] ?? 0; // Sadece bugünün değerini al
+          print(
+              "[HomeScreen] _loadWaterIntake: Water intake loaded: $_waterIntake ml."); // LOG
+        });
+      }
+    } catch (e, stacktrace) {
+      print("[HomeScreen] _loadWaterIntake Error: $e"); // LOG
+      print("[HomeScreen] _loadWaterIntake Stacktrace: $stacktrace"); // LOG
+    }
+  }
+
+  // Bugünkü aktivite özetini yükle (adım sayısı vb.)
+  Future<void> _loadActivitySummary() async {
+    print("[HomeScreen] _loadActivitySummary started."); // LOG
+    if (!mounted) return;
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.user?.id == null) {
+      print(
+          "[HomeScreen] _loadActivitySummary: User ID is null, cannot load summary."); // LOG
+      return;
+    }
+    // final dbService = DatabaseService(); // Şimdilik devre dışı
+    // try {
+    //    final today = DateTime.now();
+    //   final startOfDay = DateTime(today.year, today.month, today.day);
+    //   final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+    //   print("[HomeScreen] _loadActivitySummary: Getting activity summary for user ${userProvider.user!.id}"); // LOG
+    //   // Bu kısım DatabaseService'e bağlı, varsayılan bir fonksiyon olduğunu varsayalım
+    //   // final summary = await dbService.getTodayActivitySummary(userProvider.user!.id!); // Varsayımsal fonksiyon
+    //   // if (mounted && summary != null) {
+    //   //   setState(() {
+    //   //     // Adım sayısı veya aktif dakika gibi değerleri burada state'e atayın
+    //   //     // _todaySteps = summary['steps'] ?? 0;
+    //   //     // _todayActiveMinutes = summary['activeMinutes'] ?? 0;
+    //   //     print("[HomeScreen] _loadActivitySummary: Activity summary loaded."); // LOG - Gerçek değerleri loglayın
+    //   //   });
+    //   // } else {
+    //   //   print("[HomeScreen] _loadActivitySummary: No activity summary found for today."); // LOG
+    //   // }
+    // } catch (e, stacktrace) {
+    //   print("[HomeScreen] _loadActivitySummary Error: $e"); // LOG
+    //   print("[HomeScreen] _loadActivitySummary Stacktrace: $stacktrace"); // LOG
+    // }
+    print("[HomeScreen] _loadActivitySummary: Temporarily disabled."); // LOG
   }
 
   // Su ekle
@@ -1550,101 +1648,6 @@ class _HomeScreenState extends State<HomeScreen>
     // Veritabanına kaydet
     final dbService = DatabaseService();
     await dbService.insertOrUpdateWaterLog(DateTime.now(), newIntake, user.id!);
-  }
-
-  // Günlük görevleri veritabanından yükle
-  Future<void> _loadDailyTasks(int userId) async {
-    final dbService = DatabaseService();
-    final today = DateTime.now();
-    final tasks = await dbService.getTasksForDay(today);
-
-    // ProgramService'den bugünün programını al
-    final programService = Provider.of<ProgramService>(context, listen: false);
-    final todayProgram = await programService.getTodayProgram();
-
-    // Varsayılan değerler (eğer programda varsa onları kullan, yoksa veritabanından al)
-    String tempMorningTask = 'Program yükleniyor...';
-    String tempNoonTask = 'Program yükleniyor...';
-    String tempEveningTask = 'Program yükleniyor...';
-    String tempDinnerMenu = 'Program yükleniyor...';
-
-    // Önce program bilgilerini ata (eğer varsa)
-    if (todayProgram != null) {
-      // Sabah görevi (Antrenman ise title, değilse description veya title)
-      tempMorningTask =
-          (todayProgram.morningExercise.type == ProgramItemType.workout
-              ? todayProgram.morningExercise.title
-              : todayProgram.morningExercise.description?.isNotEmpty == true
-                  ? todayProgram.morningExercise.description!
-                  : todayProgram.morningExercise.title);
-
-      // Öğle Yemeği (Description veya title)
-      tempNoonTask = todayProgram.lunch.description?.isNotEmpty == true
-          ? todayProgram.lunch.description!
-          : todayProgram.lunch.title;
-
-      // Akşam görevi (Antrenman ise title, değilse description veya title)
-      tempEveningTask =
-          (todayProgram.eveningExercise.type == ProgramItemType.workout
-              ? todayProgram.eveningExercise.title
-              : todayProgram.eveningExercise.description?.isNotEmpty == true
-                  ? todayProgram.eveningExercise.description!
-                  : todayProgram.eveningExercise.title);
-
-      // Akşam Yemeği (Description veya title)
-      tempDinnerMenu = todayProgram.dinner.description?.isNotEmpty == true
-          ? todayProgram.dinner.description!
-          : todayProgram.dinner.title;
-    }
-
-    // Veritabanından gelen görevlerle güncelle (eğer varsa)
-    for (var task in tasks) {
-      switch (task.type) {
-        case TaskType.morningExercise:
-          if (task.description.isNotEmpty) {
-            tempMorningTask = task.description;
-          } else if (task.title.isNotEmpty) {
-            tempMorningTask = task.title;
-          }
-          break;
-        case TaskType.lunch:
-          if (task.description.isNotEmpty) {
-            tempNoonTask = task.description;
-          } else if (task.title.isNotEmpty) {
-            tempNoonTask = task.title;
-          }
-          break;
-        case TaskType.eveningExercise:
-          if (task.description.isNotEmpty) {
-            tempEveningTask = task.description;
-          } else if (task.title.isNotEmpty) {
-            tempEveningTask = task.title;
-          }
-          break;
-        case TaskType.dinner:
-          if (task.description.isNotEmpty) {
-            tempDinnerMenu = task.description;
-          } else if (task.title.isNotEmpty) {
-            tempDinnerMenu = task.title;
-          }
-          break;
-        default:
-          break;
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        morningProgram = tempMorningTask;
-        lunchMenu = tempNoonTask;
-        eveningProgram = tempEveningTask;
-        dinnerMenu = tempDinnerMenu;
-      });
-
-      // Debug amaçlı
-      print(
-          "Yüklenen görevler: Sabah: $morningProgram, Öğle: $lunchMenu, Akşam: $eveningProgram, Akşam Yemeği: $dinnerMenu");
-    }
   }
 
   // Günlük görevler listesini oluşturan widget

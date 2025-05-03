@@ -68,20 +68,32 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   bool _isLoading = false; // Veri kaydetme/yükleme durumu için
 
   bool _autoCalculateNutrition = false; // Otomatik makro hesaplama state'i
+  bool _isInitialLoad = true; // İlk yükleme kontrolü için
 
   @override
   void initState() {
     super.initState();
-    _loadUserData(); // Başlangıçta verileri yükle
-    // Değişiklikleri dinle ve BMI'ı yeniden hesapla
+    // Verileri yüklemeden önce listenerları ekle
     _heightController.addListener(_calculateBMI);
     _weightController.addListener(_calculateBMI);
+    _ageController
+        .addListener(_autoCalculateIfNeeded); // Yaş değişirse otomatik hesapla
+    // Diğer controller'lar için de eklenebilir
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUserData().then((_) {
+        setState(() {
+          _isInitialLoad = false; // İlk yükleme tamamlandı
+        });
+      });
+    });
   }
 
   @override
   void dispose() {
     _heightController.removeListener(_calculateBMI);
     _weightController.removeListener(_calculateBMI);
+    _ageController.removeListener(_autoCalculateIfNeeded);
     _heightController.dispose();
     _weightController.dispose();
     _targetWeightController.dispose();
@@ -92,44 +104,65 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     _proteinController.dispose();
     _carbsController.dispose();
     _fatController.dispose();
+    _ageController.dispose(); // YENİ: ageController dispose
     super.dispose();
   }
 
   // Kullanıcı verilerini UserProvider'dan yükle (Beslenme hedefleri eklendi)
-  void _loadUserData() {
+  Future<void> _loadUserData() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
+    // Kullanıcı verisini tekrar çekmeyi deneyelim (eğer null ise)
+    if (userProvider.user == null) {
+      await userProvider.loadUser(); // Tekrar yüklemeyi dene
+    }
     final user = userProvider.user;
-    if (user != null) {
+
+    if (mounted) {
+      // setState öncesi kontrol
       setState(() {
-        // Vücut Bilgileri
-        _heightController.text = user.height.toString();
-        _weightController.text = user.weight.toString();
-        _ageController.text = user.age.toString(); // YENİ: Yaşı yükle
-        _targetWeightController.text = user.targetWeight?.toString() ?? '';
-        _selectedWeeklyGoal = user.weeklyWeightGoal;
-        _selectedActivityLevel =
-            user.activityLevel ?? 'Orta Aktif'; // Varsayılan ata
-        _selectedGender = user.gender ?? 'Erkek'; // YENİ: Cinsiyeti yükle
-        _waterIntakeController.text = user.targetWaterIntake?.toString() ?? '';
-        _weeklyActivityGoalController.text =
-            user.weeklyActivityGoal?.toString() ?? '150'; // Varsayılan 150 dk
+        if (user != null) {
+          _heightController.text = user.height?.toString() ?? '';
+          _weightController.text = user.weight?.toString() ?? '';
+          _ageController.text = user.age?.toString() ?? '';
+          _targetWeightController.text = user.targetWeight?.toString() ?? '';
+          _selectedWeeklyGoal =
+              user.weeklyWeightGoal ?? 0.0; // Varsayılan 0.0 (Kilonu Koru)
+          _selectedActivityLevel = user.activityLevel; // Veri yoksa null olacak
+          _selectedGender = user.gender ?? 'Erkek'; // Veri yoksa Erkek
+          _waterIntakeController.text =
+              user.targetWaterIntake?.toString() ?? '';
+          _weeklyActivityGoalController.text =
+              user.weeklyActivityGoal?.toString() ??
+                  ''; // Varsayılan kaldırıldı, boş olacak
 
-        // Beslenme Hedefleri (settings_screen'den taşındı)
-        _caloriesController.text =
-            user.targetCalories?.toStringAsFixed(0) ?? '';
-        _proteinController.text = user.targetProtein?.toStringAsFixed(0) ?? '';
-        _carbsController.text = user.targetCarbs?.toStringAsFixed(0) ?? '';
-        _fatController.text = user.targetFat?.toStringAsFixed(0) ?? '';
-        _autoCalculateNutrition = user.autoCalculateNutrition; // YENİ: Yükle
+          _caloriesController.text =
+              user.targetCalories?.toStringAsFixed(0) ?? '';
+          _proteinController.text =
+              user.targetProtein?.toStringAsFixed(0) ?? '';
+          _carbsController.text = user.targetCarbs?.toStringAsFixed(0) ?? '';
+          _fatController.text = user.targetFat?.toStringAsFixed(0) ?? '';
+          _autoCalculateNutrition = user.autoCalculateNutrition;
 
-        _calculateBMI();
+          _calculateBMI(); // Yükleme sonrası BMI hesapla
+          // Otomatik hesaplama açıksa ve gerekli bilgiler varsa, yükleme sonrası bir kez hesapla
+          if (_autoCalculateNutrition &&
+              _areRequiredFieldsFilledForAutoCalc()) {
+            _autoCalculateNutritionTargets();
+          }
+        } else {
+          // Kullanıcı yoksa varsayılanları ayarla
+          _selectedGender = 'Erkek';
+          _selectedWeeklyGoal = 0.0; // Yeni kullanıcı için Kilonu Koru
+          _autoCalculateNutrition = false; // Yeni kullanıcı için manuel başla
+          // Diğer alanlar zaten boş controller ile başlıyor
+        }
       });
     }
     print(
-        "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=${_selectedActivityLevel}, Gender=${_selectedGender}, AutoCalc=${_autoCalculateNutrition}"); // Debug log
+        "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=${_selectedActivityLevel}, Gender=${_selectedGender}, WeeklyGoal=${_selectedWeeklyGoal}, AutoCalc=${_autoCalculateNutrition}");
   }
 
-  // BMI Hesaplama (profile_screen.dart'tan taşındı)
+  // BMI Hesaplama (Cinsiyet değişikliğini dinlemesi gerekmez, height/weight dinler)
   void _calculateBMI() {
     try {
       // Boş değer kontrolü eklendi
@@ -254,12 +287,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     return tdee;
   }
 
-  // YENİ: Hedef kilo ve haftalık kilo değişimine göre günlük kalori hedefini hesapla
-  // GÜNCELLEME: Hesaplama aynı kalıyor, isim daha açıklayıcı
-  double _calculateTargetCaloriesBasedOnGoal() {
-    double tdee = _calculateTDEE(); // Günlük enerji harcaması
-    if (tdee <= 0) return 2000; // TDEE hesaplanamazsa varsayılan değer
-
+  // YENİ: Hedef kiloya göre kalori ayarlaması yap
+  double _adjustCaloriesForGoal(double tdee) {
     double weeklyGoalKg = _selectedWeeklyGoal ?? 0; // Haftalık kilo hedefi (kg)
 
     // 1 kg yağ yaklaşık 7700 kalori
@@ -279,6 +308,47 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     print(
         "[GoalSettings] Hedef Kalori Hesaplandı: $targetCalories (TDEE: $tdee, Adjustment: $dailyCalorieAdjustment)"); // Debug log
     return targetCalories;
+  }
+
+  // YENİ: Beslenme hedeflerini otomatik hesapla ve ilgili alanları doldur
+  void _autoCalculateNutritionTargets() {
+    // 1. Adım: Hedef Kaloriyi Hesapla
+    double targetCalories = _adjustCaloriesForGoal(_calculateTDEE());
+    if (targetCalories <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Hesaplama için boy, kilo, yaş ve cinsiyet bilgilerinizi kontrol edin')),
+      );
+      print(
+          "[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0"); // Debug log
+      return;
+    }
+
+    // 2. Adım: Makroları Hesapla
+    Map<String, double> macros =
+        _calculateMacroTargetsFromCalories(targetCalories);
+
+    setState(() {
+      _caloriesController.text = targetCalories.round().toString();
+      _proteinController.text = macros['protein']!.round().toString();
+      _carbsController.text = macros['carbs']!.round().toString();
+      _fatController.text = macros['fat']!.round().toString();
+
+      // Haftalık aktivite hedefi bu fonksiyonda AYARLANMAYACAK.
+      // _weeklyActivityGoalController.text = '150'; // Bu satır kaldırıldı veya hiç eklenmedi
+      print(
+          "[GoalSettings] Otomatik hesaplama tamamlandı ve alanlar güncellendi."); // Debug log
+    });
+  }
+
+  // YENİ: Otomatik hesaplama için gerekli alanların dolu olup olmadığını kontrol et
+  bool _areRequiredFieldsFilledForAutoCalc() {
+    return _weightController.text.isNotEmpty &&
+        _heightController.text.isNotEmpty &&
+        _ageController.text.isNotEmpty &&
+        _selectedGender != null &&
+        _selectedActivityLevel != null;
   }
 
   // YENİ: Kalori hedefine göre makro besin hedeflerini hesapla
@@ -321,48 +391,14 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     };
   }
 
-  // Beslenme hedeflerini otomatik hesapla
-  void _autoCalculateTargets() {
-    // 1. Adım: Hedef Kaloriyi Hesapla
-    double targetCalories = _calculateTargetCaloriesBasedOnGoal();
-    if (targetCalories <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Hesaplama için boy, kilo, yaş ve cinsiyet bilgilerinizi kontrol edin')),
-      );
-      print(
-          "[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0"); // Debug log
-      return;
-    }
-
-    // 2. Adım: Makroları Hesapla
-    Map<String, double> macros =
-        _calculateMacroTargetsFromCalories(targetCalories);
-
-    setState(() {
-      _caloriesController.text = targetCalories.round().toString();
-      _proteinController.text = macros['protein']!.round().toString();
-      _carbsController.text = macros['carbs']!.round().toString();
-      _fatController.text = macros['fat']!.round().toString();
-
-      // Aktivite seviyesine göre haftalık aktivite hedefini güncellemeye devam et
-      /* Bu kısım kaldırılıyor
-      if (_selectedActivityLevel == 'Hareketsiz') {
-        _weeklyActivityGoalController.text = '90';
-      } else if (_selectedActivityLevel == 'Az Aktif') {
-        _weeklyActivityGoalController.text = '120';
-      } else if (_selectedActivityLevel == 'Orta Aktif') {
-        _weeklyActivityGoalController.text = '150';
-      } else if (_selectedActivityLevel == 'Çok Aktif') {
-        _weeklyActivityGoalController.text = '225';
-      } else if (_selectedActivityLevel == 'Ekstra Aktif') {
-        _weeklyActivityGoalController.text = '300';
+  // Otomatik hesaplama açıkken ve ilgili alan değiştiğinde hesaplamayı tetikle
+  void _autoCalculateIfNeeded() {
+    if (_autoCalculateNutrition && !_isInitialLoad) {
+      // İlk yükleme sırasında tetiklenmesin
+      if (_areRequiredFieldsFilledForAutoCalc()) {
+        _autoCalculateNutritionTargets();
       }
-      */
-      print(
-          "[GoalSettings] Otomatik hesaplama tamamlandı ve alanlar güncellendi."); // Debug log
-    });
+    }
   }
 
   @override
@@ -509,7 +545,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                     setState(() {
                       _selectedGender = index == 0 ? 'Erkek' : 'Kadın';
                       if (_autoCalculateNutrition) {
-                        _autoCalculateTargets();
+                        _autoCalculateNutritionTargets();
                       }
                     });
                   },
@@ -560,7 +596,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               },
               onChanged: (value) {
                 if (_autoCalculateNutrition && value.isNotEmpty) {
-                  _autoCalculateTargets();
+                  _autoCalculateNutritionTargets();
                 }
               },
             ),
@@ -585,7 +621,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               },
               onChanged: (value) {
                 if (_autoCalculateNutrition && value.isNotEmpty) {
-                  _autoCalculateTargets();
+                  _autoCalculateNutritionTargets();
                 }
               },
             ),
@@ -673,7 +709,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               },
               onChanged: (value) {
                 if (_autoCalculateNutrition && value.isNotEmpty) {
-                  _autoCalculateTargets();
+                  _autoCalculateNutritionTargets();
                 }
               },
             ),
@@ -702,7 +738,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                     _weightController.text.isNotEmpty) {
                   _calculateWeeklyGoal();
                   if (_autoCalculateNutrition) {
-                    _autoCalculateTargets();
+                    _autoCalculateNutritionTargets();
                   }
                 }
               },
@@ -744,7 +780,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                       setState(() {
                         _selectedWeeklyGoal = newValue;
                         if (_autoCalculateNutrition) {
-                          _autoCalculateTargets();
+                          _autoCalculateNutritionTargets();
                         }
                       });
                     },
@@ -876,7 +912,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                     } else if (newValue == 'Ekstra Aktif') {
                       _weeklyActivityGoalController.text = '300';
                     }
-                    _autoCalculateTargets(); // Aktivite değişince kaloriyi de yeniden hesapla
+                    _autoCalculateNutritionTargets(); // Aktivite değişince kaloriyi de yeniden hesapla
                   }
                   print(
                       "[GoalSettings] Aktivite Seviyesi değişti: $newValue"); // Debug log
@@ -974,7 +1010,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                   _autoCalculateNutrition = value;
                   if (value) {
                     // Otomatik hesapla active ise hesapla
-                    _autoCalculateTargets();
+                    _autoCalculateNutritionTargets();
                   }
                 });
               },
@@ -1183,7 +1219,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   final TextEditingController _ageController = TextEditingController();
 
   // Hedefleri kaydet ve UserModel'i güncelle
-  // GÜNCELLEME: Silinmiş olan fonksiyonu yeniden ekliyorum
   Future<void> _saveGoals() async {
     if (!_formKey.currentState!.validate()) {
       print(

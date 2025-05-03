@@ -10,7 +10,13 @@ class Exercise {
   final String?
       equipment; // Gerekli ekipman (örn: Dumbbell, Barbell, Makine, Vücut Ağırlığı)
   final String? videoUrl; // Opsiyonel: Egzersizin videosunu gösteren URL
+  final String? imageUrl; // Opsiyonel: Egzersizin görselini gösteren URL
   final Timestamp? createdAt; // Oluşturulma tarihi (Firestore Timestamp)
+
+  // Yeni varsayılan değerler
+  final String? defaultSets; // Varsayılan set sayısı
+  final String? defaultReps; // Varsayılan tekrar sayısı
+  final String? defaultRestTime; // Varsayılan dinlenme süresi
 
   Exercise({
     this.id,
@@ -19,7 +25,11 @@ class Exercise {
     required this.targetMuscleGroup,
     this.equipment,
     this.videoUrl,
+    this.imageUrl,
     this.createdAt,
+    this.defaultSets,
+    this.defaultReps,
+    this.defaultRestTime,
   });
 
   // Firestore'a yazmak için Map'e dönüştürme
@@ -30,13 +40,17 @@ class Exercise {
       'targetMuscleGroup': targetMuscleGroup,
       'equipment': equipment,
       'videoUrl': videoUrl,
+      'imageUrl': imageUrl,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
+      'defaultSets': defaultSets,
+      'defaultReps': defaultReps,
+      'defaultRestTime': defaultRestTime,
     };
   }
 
   // Firestore'dan okurken DocumentSnapshot'tan Exercise nesnesine dönüştürme
   factory Exercise.fromSnapshot(DocumentSnapshot snapshot) {
-    final data = snapshot.data() as Map<String, dynamic>?; // null kontrolü
+    final data = snapshot.data() as Map<String, dynamic>?;
     if (data == null) {
       throw Exception("Egzersiz verisi bulunamadı veya formatı bozuk!");
     }
@@ -48,7 +62,11 @@ class Exercise {
       targetMuscleGroup: data['targetMuscleGroup'] as String? ?? 'Bilinmiyor',
       equipment: data['equipment'] as String?,
       videoUrl: data['videoUrl'] as String?,
+      imageUrl: data['imageUrl'] as String?,
       createdAt: data['createdAt'] as Timestamp?,
+      defaultSets: data['defaultSets'] as String?,
+      defaultReps: data['defaultReps'] as String?,
+      defaultRestTime: data['defaultRestTime'] as String?,
     );
   }
 
@@ -59,7 +77,11 @@ class Exercise {
     String? targetMuscleGroup,
     String? equipment,
     String? videoUrl,
+    String? imageUrl,
     Timestamp? createdAt,
+    String? defaultSets,
+    String? defaultReps,
+    String? defaultRestTime,
   }) {
     return Exercise(
       id: id ?? this.id,
@@ -68,7 +90,11 @@ class Exercise {
       targetMuscleGroup: targetMuscleGroup ?? this.targetMuscleGroup,
       equipment: equipment ?? this.equipment,
       videoUrl: videoUrl ?? this.videoUrl,
+      imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
+      defaultSets: defaultSets ?? this.defaultSets,
+      defaultReps: defaultReps ?? this.defaultReps,
+      defaultRestTime: defaultRestTime ?? this.defaultRestTime,
     );
   }
 }

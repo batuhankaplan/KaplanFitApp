@@ -19,8 +19,15 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Program ve İstatistikler sayfaları dışında AppBar gösterme
-    if (!isRequiredPage && title != 'Program' && title != 'İstatistikler') {
+    // Kontrol edilen sayfaları güncelleyelim
+    if (!isRequiredPage &&
+        title != 'Program' &&
+        title != 'İstatistikler' &&
+        title != 'Egzersiz Seç' &&
+        title !=
+            'Antrenman Programı' && // Antrenman Programı için appbar göstermek için ekledim
+        !title.contains('Programı Düzenle') &&
+        !title.contains('Yeni Kategori')) {
       return PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: SafeArea(
@@ -30,7 +37,7 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       );
     }
-    
+
     return AppBar(
       backgroundColor: AppTheme.primaryColor,
       elevation: 4,
@@ -48,17 +55,27 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       centerTitle: true,
       actions: actions,
-      leading: showBackButton && Navigator.canPop(context)
+      leading: showBackButton
           ? IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                print("KaplanAppBar: Geri butonu tıklandı");
+                Navigator.of(context).pop();
+              },
             )
           : null,
     );
   }
 
   @override
-  Size get preferredSize => isRequiredPage || title == 'Program' || title == 'İstatistikler' 
+  Size get preferredSize => isRequiredPage ||
+          title == 'Program' ||
+          title == 'İstatistikler' ||
+          title ==
+              'Antrenman Programı' || // Antrenman Programı için yükseklik ayarı
+          title.contains('Programı Düzenle') ||
+          title.contains('Yeni Kategori') ||
+          title == 'Egzersiz Seç'
       ? const Size.fromHeight(kToolbarHeight)
-      : const Size.fromHeight(kToolbarHeight); // Tüm durumlarda boşluk bırak
-} 
+      : const Size.fromHeight(0); // AppBar gösterilmeyecekse yüksekliği 0 olsun
+}
