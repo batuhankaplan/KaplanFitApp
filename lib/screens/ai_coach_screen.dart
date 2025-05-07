@@ -174,12 +174,23 @@ class _AICoachScreenState extends State<AICoachScreen> {
     try {
       final messageId = await databaseService.createChatMessage(message);
 
+      final savedMessage = ChatMessage(
+        id: messageId,
+        conversationId: _conversationId!,
+        text: text,
+        isUser: isUser,
+        timestamp: DateTime.now(),
+      );
+
       setState(() {
-        _messages.add(message);
+        _messages.add(savedMessage);
       });
 
       _scrollToBottom();
+
+      print("Mesaj veritabanına kaydedildi. ID: $messageId");
     } catch (e) {
+      print("Mesaj kaydedilirken hata: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Mesaj kaydedilirken hata oluştu: $e')),
       );
@@ -212,6 +223,8 @@ class _AICoachScreenState extends State<AICoachScreen> {
       final response = await aiCoachService.getCoachResponse(messageText);
 
       await _addMessage(response, false);
+
+      await _updateConversationLastActivity();
     } catch (e) {
       debugPrint('AI yanıtı alınırken hata: $e');
 
@@ -246,6 +259,20 @@ class _AICoachScreenState extends State<AICoachScreen> {
     } catch (e) {
       debugPrint('Konuşma başlığı güncellenirken hata: $e');
       // Hata durumunda başlık güncellenmez, kullanıcı bilgilendirilmez
+    }
+  }
+
+  Future<void> _updateConversationLastActivity() async {
+    if (_conversationId == null) return;
+
+    try {
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
+      await databaseService
+          .updateChatConversationLastActivity(_conversationId!);
+      print("Konuşma aktivite zamanı güncellendi. ID: $_conversationId");
+    } catch (e) {
+      print("Konuşma aktivite zamanı güncellenirken hata: $e");
     }
   }
 

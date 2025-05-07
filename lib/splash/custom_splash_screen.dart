@@ -1,60 +1,60 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import 'dart:async';
 
 class CustomSplashScreen extends StatefulWidget {
-  final Widget nextScreen;
-  
-  const CustomSplashScreen({Key? key, required this.nextScreen}) : super(key: key);
+  const CustomSplashScreen({Key? key}) : super(key: key);
 
   @override
   State<CustomSplashScreen> createState() => _CustomSplashScreenState();
 }
 
-class _CustomSplashScreenState extends State<CustomSplashScreen> with SingleTickerProviderStateMixin {
+class _CustomSplashScreenState extends State<CustomSplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<double> _pulseAnimation;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2500),
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
       ),
     );
-    
+
     _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack),
       ),
     );
-    
+
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
         curve: const Interval(0.5, 0.8, curve: Curves.easeIn),
       ),
     );
-    
+
     _pulseAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: 1.08).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 1.0, end: 1.08)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 1.0,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.08, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(begin: 1.08, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeInOut)),
         weight: 1.0,
       ),
     ]).animate(
@@ -63,27 +63,10 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with SingleTick
         curve: const Interval(0.5, 1.0, curve: Curves.linear),
       ),
     );
-    
+
     _controller.forward();
-    
-    Timer(const Duration(milliseconds: 3000), () {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = 0.0;
-            const end = 1.0;
-            const curve = Curves.easeInOut;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var fadeAnimation = animation.drive(tween);
-            return FadeTransition(opacity: fadeAnimation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 600),
-        ),
-      );
-    });
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
@@ -94,7 +77,7 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with SingleTick
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = AppTheme.primaryColor;
-    
+
     return Scaffold(
       backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : primaryColor,
       body: Container(
@@ -102,9 +85,9 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with SingleTick
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: isDarkMode 
-              ? [AppTheme.darkBackgroundColor, Color(0xFF1C1C2E)]
-              : [primaryColor, primaryColor.withOpacity(0.8)],
+            colors: isDarkMode
+                ? [AppTheme.darkBackgroundColor, Color(0xFF1C1C2E)]
+                : [primaryColor, primaryColor.withOpacity(0.8)],
           ),
         ),
         child: Center(
@@ -200,7 +183,8 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with SingleTick
                       child: const Padding(
                         padding: EdgeInsets.all(8.0),
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                           strokeWidth: 2.5,
                         ),
                       ),
@@ -214,4 +198,4 @@ class _CustomSplashScreenState extends State<CustomSplashScreen> with SingleTick
       ),
     );
   }
-} 
+}

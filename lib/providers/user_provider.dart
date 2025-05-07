@@ -37,35 +37,19 @@ class UserProvider extends ChangeNotifier {
       if (userId != null) {
         // Belirli ID'ye sahip kullanıcıyı getir
         user = await _databaseService.getUser(userId);
-        print(
-            "[UserProvider] ID ile kullanıcı yükleme: $userId -> ${user?.name}");
+        print("[DB] Kullanıcı getirildi, ID: $userId, Veri: $user");
       } else {
-        // Eğer aktif kullanıcı ID'si yoksa, ilk kullanıcıyı getir
-        user = await _databaseService.getFirstUser();
-        print("[UserProvider] İlk kullanıcı yükleme: ${user?.name}");
-
-        // İlk kullanıcının ID'sini aktiflenen kullanıcı ID'si olarak kaydet
-        if (user != null && user.id != null) {
-          await prefs.setInt('activeUserId', user.id!);
-          print("[UserProvider] Aktif kullanıcı ID'si kaydedildi: ${user.id}");
-        }
+        print("[UserProvider] Aktif kullanıcı ID'si bulunamadı");
+        // Kullanıcı ID'si yoksa null ata, otomatik profil yükleme yapma
+        user = null;
       }
 
-      if (user != null) {
-        _user = user;
-        _weightHistory = user.weightHistory;
-        userLoaded = true;
-        print("[UserProvider] Kullanıcı yüklendi: ${user.name}");
-      } else {
-        _user = null;
-        _weightHistory = [];
-        print("[UserProvider] Kullanıcı bulunamadı.");
-      }
+      _user = user;
+      _isLoading = false;
+      notifyListeners();
+      userLoaded = user != null;
     } catch (e) {
-      print("[UserProvider] loadUser HATA: $e");
-      _user = null;
-      _weightHistory = [];
-    } finally {
+      print("[UserProvider] Hata: $e");
       _isLoading = false;
       notifyListeners();
     }
@@ -114,22 +98,15 @@ class UserProvider extends ChangeNotifier {
   }
 
   // Yeni: Çıkış yapma (logout) metodu
-  Future<void> logout() async {
-    try {
-      // SharedPreferences'den aktif kullanıcı ID'sini temizle
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('activeUserId');
+  Future<void> logoutUser() async {
+    print("[UserProvider] logoutUser çağrıldı");
+    _user = null;
+    notifyListeners();
 
-      // Mevcut kullanıcı verilerini temizle
-      _user = null;
-      _weightHistory = [];
-
-      print("[UserProvider] Kullanıcı çıkış yaptı.");
-      notifyListeners();
-    } catch (e) {
-      print("[UserProvider] logout HATA: $e");
-      throw e;
-    }
+    // Aktif kullanıcı ID'sini SharedPreferences'dan sil
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('activeUserId');
+    print("[UserProvider] activeUserId SharedPreferences'dan silindi");
   }
 
   Future<void> addWeightRecord(double weight) async {

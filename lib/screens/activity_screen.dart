@@ -900,7 +900,16 @@ class _ActivityScreenState extends State<ActivityScreen>
 
           // Sonuç kontrolü
           if (selectedExercise != null) {
-            if (selectedExercise is Exercise) {
+            if (selectedExercise is List &&
+                selectedExercise.isNotEmpty &&
+                selectedExercise.first is Exercise) {
+              // Liste olarak geliyorsa ilk elemanı al
+              print(
+                  "Aktiviteler - Seçilen egzersiz listesi: ${selectedExercise.length} öğe");
+              final exercise = selectedExercise.first as Exercise;
+              onExerciseSelected(exercise);
+            } else if (selectedExercise is Exercise) {
+              // Direkt Exercise objesi olarak geliyorsa
               print("Aktiviteler - Seçilen egzersiz: ${selectedExercise.name}");
               onExerciseSelected(selectedExercise);
             } else {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/nutrition_provider.dart';
+import '../providers/activity_provider.dart';
 import '../services/database_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -128,6 +129,22 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
             _weightLogData = data..sort((a, b) => a.date.compareTo(b.date));
             print(
                 "[GoalTrackingScreen] Weight data loaded: ${data.length} entries");
+
+            // Kullanıcının mevcut kilosunu gösteren yeni bir kilo kaydı ekleyelim
+            // ancak sadece hiç kayıt yoksa veya son kayıt güncel değilse
+            if (data.isEmpty ||
+                (data.isNotEmpty &&
+                    data.last.date.difference(DateTime.now()).inDays.abs() >
+                        0 &&
+                    user.weight != null)) {
+              final currentWeightRecord = WeightRecord(
+                weight: user.weight!,
+                date: DateTime.now(),
+              );
+              _weightLogData.add(currentWeightRecord);
+              print(
+                  "[GoalTrackingScreen] Added current weight record from user data");
+            }
           }).catchError((e) {
             print("[GoalTrackingScreen] Error loading weight data: $e");
           }),
@@ -516,43 +533,85 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
   Widget _buildTrackingTypeSelectorImproved() {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Ekran genişliğine göre sığıp sığmadığını kontrol et (yaklaşık değer)
+    // Ekran genişliğine göre daha kompakt görünüm ayarla
     final screenWidth = MediaQuery.of(context).size.width;
-    final bool useCompactLabels = screenWidth < 380; // Küçük ekranlar için
 
     // Yükleme sırasında butonların etkin olup olmadığını kontrol et
     final bool interactionDisabled = _isLoading;
 
-    return ToggleButtons(
-      isSelected: TrackingType.values
-          .map((type) => _selectedTrackingType == type)
-          .toList(),
-      onPressed: interactionDisabled
-          ? null // Yükleme sırasında null ata
-          : (int index) {
-              setState(() {
-                _selectedTrackingType = TrackingType.values[index];
-              });
-            },
-      borderRadius: BorderRadius.circular(8.0),
-      selectedBorderColor: colorScheme.primary,
-      color: colorScheme.onSurface.withOpacity(0.6),
-      selectedColor: colorScheme.onPrimary,
-      fillColor: colorScheme.primary,
-      constraints: BoxConstraints(
-          minHeight: 40.0,
-          minWidth: (screenWidth - 32 - 12) /
-              4), // Ekran genişliğine göre ayarla (padding vs çıkarıldı)
-      children: <Widget>[
-        _buildToggleButton(
-            Icons.opacity_outlined, 'Su', TrackingType.water, useCompactLabels),
-        _buildToggleButton(Icons.monitor_weight_outlined, 'Kilo',
-            TrackingType.weight, useCompactLabels),
-        _buildToggleButton(Icons.local_fire_department_outlined, 'Kalori',
-            TrackingType.calories, useCompactLabels),
-        _buildToggleButton(Icons.directions_run_outlined, 'Aktivite',
-            TrackingType.activity, useCompactLabels),
-      ],
+    // Tıklanınca gösterilecek tooltip mesajları
+    final List<String> tooltipMessages = [
+      'Su Takibi',
+      'Kilo Takibi',
+      'Kalori Takibi',
+      'Aktivite Takibi',
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(TrackingType.values.length, (index) {
+        final type = TrackingType.values[index];
+        final bool isSelected = _selectedTrackingType == type;
+
+        // Her buton için ikon tanımlaması
+        IconData icon;
+        switch (type) {
+          case TrackingType.water:
+            icon = Icons.opacity_outlined;
+            break;
+          case TrackingType.weight:
+            icon = Icons.monitor_weight_outlined;
+            break;
+          case TrackingType.calories:
+            icon = Icons.local_fire_department_outlined;
+            break;
+          case TrackingType.activity:
+            icon = Icons.directions_run_outlined;
+            break;
+        }
+
+        return Expanded(
+          child: Tooltip(
+            message: tooltipMessages[index],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: InkWell(
+                onTap: interactionDisabled
+                    ? null
+                    : () {
+                        setState(() {
+                          _selectedTrackingType = type;
+                        });
+                      },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected ? colorScheme.primary : colorScheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.outline.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      color: isSelected
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurface.withOpacity(0.7),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 
@@ -566,26 +625,10 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         : colorScheme.onSurface.withOpacity(0.7);
 
     return Tooltip(
-      message: label,
+      message: label, // Tooltip ile etiketi göster
       child: Padding(
-        // İç padding ekleyelim
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
-        child: compact
-            ? Icon(icon, color: color, size: 20) // Sadece ikon
-            : Row(
-                // İkon ve yazı
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: color, size: 18),
-                  const SizedBox(width: 4),
-                  Text(
-                    label,
-                    style: TextStyle(color: color, fontSize: 12), // Yazı boyutu
-                    overflow: TextOverflow.ellipsis, // Taşmayı önle
-                  ),
-                ],
-              ),
+        child: Icon(icon, color: color, size: 18),
       ),
     );
   }
@@ -663,13 +706,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
 
   // Görünüm Modu Seçici (Liste/Grafik - ToggleButtons)
   Widget _buildViewModeSelector() {
-    final color = _selectedTrackingType == TrackingType.water
-        ? const Color.fromARGB(255, 37, 42, 44)
-        : _selectedTrackingType == TrackingType.weight
-            ? AppTheme.weightColor
-            : _selectedTrackingType == TrackingType.calories
-                ? AppTheme.calorieColor
-                : AppTheme.activityColor;
+    final color = Colors.white; // İkonların rengini beyaz yapıyoruz
 
     return Row(
       children: [
@@ -677,8 +714,9 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           icon: Icon(
             Icons.list,
             color: _selectedViewMode == TrackingViewMode.list
-                ? color
-                : Colors.grey,
+                ? Colors.white // Seçili ikon beyaz
+                : Colors.white
+                    .withOpacity(0.6), // Seçili olmayan ikon biraz saydam beyaz
           ),
           onPressed: () =>
               setState(() => _selectedViewMode = TrackingViewMode.list),
@@ -687,8 +725,9 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           icon: Icon(
             Icons.show_chart,
             color: _selectedViewMode == TrackingViewMode.graph
-                ? color
-                : Colors.grey,
+                ? Colors.white // Seçili ikon beyaz
+                : Colors.white
+                    .withOpacity(0.6), // Seçili olmayan ikon biraz saydam beyaz
           ),
           onPressed: () =>
               setState(() => _selectedViewMode = TrackingViewMode.graph),
@@ -827,6 +866,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
     // Listeyi sarmalayıp yükseklik sınırı ve kenarlık verelim
     return Container(
       constraints: BoxConstraints(maxHeight: 350), // Yüksekliği artırdık
+      width: double.infinity, // Genişliği ekrana uygun şekilde maksimum yap
       decoration: BoxDecoration(
         border:
             Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1)),
@@ -886,6 +926,14 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
       dateMap[i] = startDate.add(Duration(days: i));
     }
 
+    // Günlük bir debug log ekleyelim
+    print(
+        "[GoalTracking] Grafik oluşturuluyor: Tür=${_selectedTrackingType}, Aralık=${_selectedRange}, Günler=$numberOfDays");
+    print(
+        "[GoalTracking] WeightData: ${_weightLogData.length} kayıt, WaterData: ${_waterLogData.length} kayıt");
+    print(
+        "[GoalTracking] CalorieData: ${_calorieData.length} kayıt, ActivityData: ${_activityData.length} kayıt");
+
     // Verileri filtrele ve spotları oluştur
     switch (_selectedTrackingType) {
       case TrackingType.water:
@@ -900,65 +948,108 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
 
       case TrackingType.weight:
         targetLineY = user.targetWeight?.toDouble();
-        // _weightLogData zaten sıralı
-        // Her gün için son kaydı veya önceki günün kaydını kullanarak spot oluştur
+
+        // WeightLogData'yı günlere göre organize edelim ve haritaya dönüştürelim
         Map<DateTime, double> dailyWeightValue = {};
-        DateTime? lastDateWithValue;
-        double? lastWeightValue;
 
-        for (int i = 0; i < numberOfDays; i++) {
-          DateTime currentDate = dateMap[i]!;
-          // O güne ait kayıtları bul (birden fazla olabilir)
-          var recordsOnDate = _weightLogData
-              .where((r) =>
-                  r.date.year == currentDate.year &&
-                  r.date.month == currentDate.month &&
-                  r.date.day == currentDate.day &&
-                  r.weight != null)
-              .toList();
+        // Eğer kullanıcının mevcut kilosu varsa bugünün değeri olarak gösterelim
+        if (user.weight != null) {
+          final today = DateTime(
+              DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
-          if (recordsOnDate.isNotEmpty) {
-            // O günün son kaydını al
-            lastWeightValue = recordsOnDate.last.weight!;
-            lastDateWithValue = currentDate;
-            dailyWeightValue[currentDate] = lastWeightValue;
-          } else if (lastWeightValue != null) {
-            // O gün kayıt yoksa bir önceki değeri taşı
-            dailyWeightValue[currentDate] = lastWeightValue;
+          // _weightLogData içinde bugün için veri var mı kontrol edelim
+          bool hasTodayRecord = _weightLogData.any((record) =>
+              record.date.year == today.year &&
+              record.date.month == today.month &&
+              record.date.day == today.day);
+
+          // Bugün için kayıt yoksa, mevcut kiloyu bugünün verisi olarak ekleyelim
+          if (!hasTodayRecord) {
+            dailyWeightValue[today] = user.weight!;
+          }
+        }
+
+        // Tüm kayıtları günlere göre organize edelim
+        for (final record in _weightLogData) {
+          if (record.weight != null) {
+            // Sadece tarih kısmını alalım (saat bilgisi olmadan)
+            final dateKey =
+                DateTime(record.date.year, record.date.month, record.date.day);
+            dailyWeightValue[dateKey] = record.weight!;
+          }
+        }
+
+        // Veri boşluklarını doldur (güncel değerleri koru)
+        DateTime? lastDate;
+        double? lastWeight;
+
+        // Önce kayıtları sıralayalım (eski tarihten yeniye)
+        final sortedDates = dailyWeightValue.keys.toList()
+          ..sort((a, b) => a.compareTo(b));
+
+        if (sortedDates.isNotEmpty) {
+          lastDate = sortedDates.last;
+          lastWeight = dailyWeightValue[lastDate];
+
+          // Tarih aralığımızdaki her gün için veri olduğundan emin olalım
+          for (int i = 0; i < numberOfDays; i++) {
+            final currentDate = dateMap[i]!;
+
+            // Zaten bu tarih için veri mevcutsa, bir şey yapmaya gerek yok
+            if (dailyWeightValue.containsKey(currentDate)) {
+              continue;
+            }
+
+            // Bu tarih eğer en son veri olan tarihten sonraysa, son veriyi kullan
+            if (lastDate != null &&
+                lastWeight != null &&
+                currentDate.isAfter(lastDate)) {
+              dailyWeightValue[currentDate] = lastWeight;
+            }
+            // Önceki tarihleri doldurmaya gerek yok, çizilmeyecekler
           }
         }
 
         spots = _generateSpotsForGraph(
             dateMap, dailyWeightValue, (data, date) => data[date]);
 
-        // Min/Max Y ayarı
-        double currentMinY = double.infinity;
-        double currentMaxY = double.negativeInfinity;
-        spots.where((s) => s.y != null).forEach((spot) {
-          // y null olmayanları al
-          if (spot.y! > currentMaxY) currentMaxY = spot.y!;
-          if (spot.y! < currentMinY) currentMinY = spot.y!;
-        });
+        // Min/Max Y ayarı - gerçek veriye göre
+        if (spots.isNotEmpty) {
+          double currentMinY = spots
+              .where((s) => s.y != null)
+              .map((s) => s.y!)
+              .reduce((min, y) => y < min ? y : min);
+          double currentMaxY = spots
+              .where((s) => s.y != null)
+              .map((s) => s.y!)
+              .reduce((max, y) => y > max ? y : max);
 
-        if (currentMinY != double.infinity) {
-          minY = currentMinY * 0.95;
-          maxY = currentMaxY * 1.05;
+          // Sınırları biraz genişlet
+          minY = currentMinY - (currentMaxY - currentMinY) * 0.1;
+          maxY = currentMaxY + (currentMaxY - currentMinY) * 0.1;
+
+          // Minimum 1 kg fark olsun
+          if (maxY - minY < 1) {
+            minY = currentMinY - 0.5;
+            maxY = currentMaxY + 0.5;
+          }
         } else if (targetLineY != null) {
-          minY = targetLineY * 0.9;
-          maxY = targetLineY * 1.1;
-        } else {
+          minY = targetLineY - 5;
+          maxY = targetLineY + 5;
+        } else if (user.weight != null) {
           // Fallback
-          final currentW = user.weight ?? 70.0;
-          minY = currentW - 5.0;
-          maxY = currentW + 5.0;
+          minY = user.weight! - 5.0;
+          maxY = user.weight! + 5.0;
+        } else {
+          minY = 50;
+          maxY = 100;
         }
 
         // Target çizgisi görünür olsun diye min/max ayarla
         if (targetLineY != null) {
-          if (targetLineY > maxY) maxY = targetLineY * 1.05;
-          if (targetLineY < minY) minY = targetLineY * 0.95;
+          if (targetLineY > maxY) maxY = targetLineY + (maxY - minY) * 0.1;
+          if (targetLineY < minY) minY = targetLineY - (maxY - minY) * 0.1;
         }
-        if (maxY <= minY) maxY = minY + 10; // Minimum aralık sağla
 
         break;
 
@@ -967,25 +1058,99 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         maxY = (targetLineY == 0 || targetLineY == null ? 2500 : targetLineY) *
             1.5; // Hedef yoksa varsayılan
         minY = 0;
-        spots = _generateSpotsForGraph(
-            dateMap, _calorieData, (data, date) => data[date]?.calories ?? 0);
+
+        // Bugünün kalori verisini ekleyelim (eğer nutrition provider'daki güncel veriler varsa)
+        Map<DateTime, NutritionSummary> updatedCalorieData =
+            Map.from(_calorieData);
+
+        // Bugünün beslenme verilerini alalım
+        final todayNutrition = _getTodayNutrition();
+        final today = DateTime(
+            DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
+        // Eğer bugün için veri varsa ve bu veri _calorieData içinde yoksa veya farklıysa ekleyelim
+        if (todayNutrition.calories > 0 &&
+            (!updatedCalorieData.containsKey(today) ||
+                updatedCalorieData[today]?.calories !=
+                    todayNutrition.calories)) {
+          updatedCalorieData[today] = todayNutrition;
+        }
+
+        spots = _generateSpotsForGraph(dateMap, updatedCalorieData,
+            (data, date) => data[date]?.calories ?? 0);
         maxY = _calculateMaxYForGraph(spots, targetLineY, maxY);
         break;
 
       case TrackingType.activity:
+        // Aktivite grafiğinde haftalık toplam hedefi kullan (günlük ortalama yerine)
         targetLineY =
-            (user.weeklyActivityGoal ?? 0) / 7.0; // Günlük ortalama hedef
-        maxY = (targetLineY == 0 ? 60 : targetLineY) *
-            2.0; // Hedef yoksa varsayılan
+            user.weeklyActivityGoal?.toDouble() ?? 0; // Haftalık toplam hedef
+        maxY = (targetLineY == 0 ? 180 : targetLineY) *
+            1.5; // Hedef yoksa varsayılan
         minY = 0;
-        spots = _generateSpotsForGraph(dateMap, _activityData,
-            (data, date) => data[date]?.toDouble() ?? 0);
+
+        // ActivityProvider'dan güncel aktivite verilerini alalım
+        final activityProvider =
+            Provider.of<ActivityProvider>(context, listen: false);
+        Map<DateTime, int> updatedActivityData = Map.from(_activityData);
+
+        // Tüm aktiviteleri alalım
+        final activities = activityProvider.getAllActivities();
+
+        // Haftalık toplam aktivite dakikasını hesapla
+        Map<int, double> weeklyTotals =
+            {}; // Haftanın toplam değerlerini tutacak
+
+        // Tarih aralığı için aktiviteleri filtreleyelim ve haftalık toplam süreleri hesaplayalım
+        for (int i = 0; i < numberOfDays; i++) {
+          final date = dateMap[i]!;
+          final dayStart = DateTime(date.year, date.month, date.day);
+          final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+          // Bu güne ait aktiviteleri filtrele
+          final dayActivities = activities.where((activity) =>
+              activity.date.isAfter(dayStart) &&
+              activity.date.isBefore(dayEnd));
+
+          // Günlük toplam süreyi hesapla
+          int totalMinutes = 0;
+          for (final activity in dayActivities) {
+            totalMinutes += activity.durationMinutes;
+          }
+
+          // Bu tarihin hangi haftaya ait olduğunu belirle (0'dan başlayarak)
+          int weekIndex = i ~/ 7;
+
+          // Bu günü haftalık toplama ekle
+          weeklyTotals[weekIndex] =
+              (weeklyTotals[weekIndex] ?? 0) + totalMinutes;
+
+          // Günlük verileri de güncelleyelim (liste görünümü için)
+          if (totalMinutes > 0) {
+            updatedActivityData[dayStart] = totalMinutes;
+          } else if (!updatedActivityData.containsKey(dayStart)) {
+            updatedActivityData[dayStart] = 0;
+          }
+        }
+
+        // Her haftanın toplam değerini o haftanın son gününe ekle (grafikte göstermek için)
+        // Bu sayede grafik, haftalık birikimli aktivite süresini gösterir
+        Map<DateTime, double> weeklyActivityData = {};
+        for (int week = 0; week < (numberOfDays / 7).ceil(); week++) {
+          int endDayIndex = ((week + 1) * 7) - 1;
+          if (endDayIndex >= numberOfDays) endDayIndex = numberOfDays - 1;
+
+          final weekEndDate = dateMap[endDayIndex]!;
+          weeklyActivityData[weekEndDate] = weeklyTotals[week] ?? 0;
+        }
+
+        // Haftalık toplam verilerle grafik spotlarını oluştur
+        spots = _generateSpotsForGraph(
+            dateMap, weeklyActivityData, (data, date) => data[date] ?? 0);
+
         maxY = _calculateMaxYForGraph(spots, targetLineY, maxY);
         break;
     }
-
-    // Veri olmayan başlangıç/son spotlarını kırpalım (opsiyonel, estetik için)
-    // spots.removeWhere((s) => s.y == 0 && !_spotHasRealZeroData(s, dateMap));
 
     // Grafiği çizmek için en az 1 nokta yeterli olabilir mi? Test edelim.
     // Kilo için null değerler de dahil edildiği için farklı kontrol
@@ -1021,8 +1186,6 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           end: Alignment.bottomCenter,
         ),
       ),
-      // Kilo için null noktaları atla (bağlama yerine)
-      // connectNulls: false,
     );
 
     return Container(
@@ -1067,7 +1230,6 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                // interval: (maxY > minY) ? (maxY - minY) / 4 : 10, // Otomatik aralık
                 getTitlesWidget: _buildLeftTitles,
                 reservedSize: 42, // Yer ayır
               ),
@@ -1104,13 +1266,10 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                   ],
                 ),
           lineTouchData: LineTouchData(
-            // Tooltip ayarları
             touchTooltipData: LineTouchTooltipData(
-              // tooltipBgColor: _getChartColor(_selectedTrackingType).withOpacity(0.9), // Geçici olarak yorum satırı
               getTooltipItems: (touchedSpots) {
                 return touchedSpots
                     .map((LineBarSpot touchedSpot) {
-                      // spotIndex'in geçerli olduğundan emin ol
                       if (touchedSpot.spotIndex < 0 ||
                           touchedSpot.spotIndex >=
                               touchedSpot.bar.spots.length) {
@@ -1119,15 +1278,13 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                       final flSpot =
                           touchedSpot.bar.spots[touchedSpot.spotIndex];
                       if (flSpot == null || flSpot.y == null) {
-                        // null kontrolü
                         return null;
                       }
                       DateTime? date = dateMap[flSpot.x.toInt()];
-                      if (date == null)
-                        return null; // Haritada olmayan x değeri
+                      if (date == null) return null;
 
-                      String dateStr = DateFormat('d MMM yyyy', 'tr_TR')
-                          .format(date); // Tam tarih
+                      String dateStr =
+                          DateFormat('d MMM yyyy', 'tr_TR').format(date);
                       String valueStr;
                       switch (_selectedTrackingType) {
                         case TrackingType.water:
@@ -1144,14 +1301,14 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                           break;
                       }
                       return LineTooltipItem(
-                        valueStr, // Değeri başa alalım (\n kaldırıldı)
+                        valueStr,
                         TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 14),
                         children: [
                           TextSpan(
-                            text: dateStr, // Tarihi alta alalım
+                            text: '\n$dateStr',
                             style: TextStyle(
                                 color: Colors.white.withOpacity(0.8),
                                 fontSize: 12),
@@ -1161,13 +1318,13 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                       );
                     })
                     .whereNotNull()
-                    .toList(); // null olanları filtrele
+                    .toList();
               },
             ),
-            handleBuiltInTouches: true, // Dokunma olaylarını etkinleştir
+            handleBuiltInTouches: true,
           ),
         ),
-        duration: const Duration(milliseconds: 250), // Animasyon süresi
+        duration: const Duration(milliseconds: 250),
       ),
     );
   }
@@ -1204,22 +1361,6 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
     // Max değeri çok küçükse veya 0 ise default kullan, yoksa %20 pay ekle
     return (potentialMax < 10 ? defaultMax : potentialMax * 1.2);
   }
-
-  // Yardımcı: Bir spotun 0 değerinin gerçek veri mi yoksa eksik veri mi olduğunu kontrol etme (Artık kullanılmıyor olabilir)
-  /*
-   bool _spotHasRealZeroData(FlSpot spot, Map<int, DateTime> dateMap) {
-      DateTime? date = dateMap[spot.x.toInt()];
-      if (date == null) return false;
-      final dateKey = DateTime(date.year, date.month, date.day);
-      switch(_selectedTrackingType) {
-          case TrackingType.water: return _waterLogData.containsKey(dateKey) && _waterLogData[dateKey] == 0;
-          case TrackingType.calories: return _calorieData.containsKey(dateKey) && _calorieData[dateKey]?.calories == 0;
-          case TrackingType.activity: return _activityData.containsKey(dateKey) && _activityData[dateKey] == 0;
-          // Kilo için 0 gerçekçi olmayabilir, bu yüzden kontrol etmiyoruz.
-          default: return false;
-      }
-   }
-   */
 
   // Grafik Renklerini Döndür
   Color _getChartColor(TrackingType type) {
@@ -1693,27 +1834,5 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         ],
       ),
     );
-  }
-
-  // Kilo grafiği için veri noktalarını hazırla
-  List<FlSpot> _prepareWeightData() {
-    final user = Provider.of<UserProvider>(context, listen: false).user!;
-    final targetWeight = user.targetWeight ?? 0;
-    final initialWeight = user.weight ?? 0;
-
-    // Kilo kayıtlarını tarihe göre sırala
-    final sortedRecords = _weightLogData.toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-
-    // Veri noktalarını oluştur
-    List<FlSpot> spots = [];
-    for (int i = 0; i < sortedRecords.length; i++) {
-      final record = sortedRecords[i];
-      if (record.weight != null) {
-        spots.add(FlSpot(i.toDouble(), record.weight!));
-      }
-    }
-
-    return spots;
   }
 }

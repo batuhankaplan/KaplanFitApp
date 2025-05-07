@@ -248,7 +248,63 @@ void initPlatformSpecificFeatures() {
   }
 }
 
-void main() async {
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({Key? key}) : super(key: key);
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  Future<bool>? _loadUserFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserFuture =
+        Provider.of<UserProvider>(context, listen: false).loadUser();
+    print("[AuthWrapper initState] loadUser çağrıldı.");
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _loadUserFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          print(
+              "[AuthWrapper build] Kullanıcı yükleniyor (FutureBuilder waiting)...");
+          return const CustomSplashScreen();
+        }
+
+        if (snapshot.hasError) {
+          print("[AuthWrapper build] Hata oluştu: ${snapshot.error}");
+          return const Scaffold(
+              body: Center(
+                  child:
+                      Text("Bir hata oluştu. Uygulamayı yeniden başlatın.")));
+        }
+
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final bool userExists = userProvider.user != null;
+
+        print(
+            "[AuthWrapper build] Kullanıcı var mı (Provider kontrolü)? $userExists");
+
+        if (userExists) {
+          print("[AuthWrapper build] Kullanıcı var, MainScreen gösteriliyor.");
+          return const MainScreen();
+        } else {
+          print(
+              "[AuthWrapper build] Kullanıcı yok, ProfileScreen gösteriliyor.");
+          return const ProfileScreen();
+        }
+      },
+    );
+  }
+}
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('tr_TR', null);
   await Firebase.initializeApp(); // Firebase başlatma tekrar aktif.
@@ -350,18 +406,17 @@ class MyApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      initialRoute: '/', // SplashScreen
+      home: AuthWrapper(),
       routes: {
-        '/': (context) => KaplanSplashScreen(),
         '/home': (context) => MainScreen(),
         '/profile': (context) => ProfileScreen(),
-        '/activity': (context) => ActivityScreen(),
-        '/nutrition': (context) => NutritionScreen(),
-        '/settings': (context) => SettingsScreen(),
-        '/goal_settings': (context) => GoalSettingsScreen(),
+        '/goal-settings': (context) => GoalSettingsScreen(),
+        '/goal-tracking': (context) => GoalTrackingScreen(),
         '/program': (context) => ProgramScreen(),
-        '/goal_tracking': (context) => GoalTrackingScreen(),
-        '/notification_settings': (context) => NotificationSettingsScreen(),
+        '/stats': (context) => StatsScreen(),
+        '/settings': (context) => SettingsScreen(),
+        '/notification-settings': (context) => NotificationSettingsScreen(),
+        '/workout-program': (context) => WorkoutProgramScreen(),
       },
     );
   }

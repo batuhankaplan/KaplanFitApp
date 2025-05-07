@@ -814,11 +814,31 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
   Future<void> updateUser(UserModel user) async {
     final db = await database;
+    if (user.id == null) {
+      throw Exception('Güncellenecek kullanıcı bulunamadı');
+    }
+
+    // Eğer ağırlık değişmişse, kilo geçmişine yeni kayıt ekle
+    UserModel? existingUser = await getUser(user.id!);
+    if (existingUser != null && existingUser.weight != user.weight) {
+      // Kilo değişmiş, yeni kilo kaydı ekle
+      await addWeightRecord(
+          WeightRecord(
+            weight: user.weight,
+            date: DateTime.now(),
+          ),
+          user.id!);
+
+      // lastWeightUpdate alanını da güncelle
+      user = user.copyWith(lastWeightUpdate: DateTime.now());
+    }
+
     final map = user.toMap();
     map.remove('weightHistory');
     // YENİ: autoCalculateNutrition için varsayılan değer ekle
     map['autoCalculateNutrition'] ??= 0;
     print("[DB] Kullanıcı güncelleniyor, ID: ${user.id}, Veri: $map");
+
     await db.update(
       'users',
       map,
@@ -828,11 +848,23 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     print("[DB] Kullanıcı güncellendi, ID: ${user.id}");
   }
 
-  Future<int> insertWeightRecord(WeightRecord record, int userId) async {
+  Future<int> addWeightRecord(WeightRecord record, int userId) async {
     final db = await database;
-    Map<String, dynamic> map = record.toMap();
-    map['userId'] = userId;
-    return await db.insert('weight_records', map);
+    final map = {
+      'weight': record.weight,
+      'date': record.date.millisecondsSinceEpoch,
+      'userId': userId,
+    };
+
+    print("[DB] Yeni kilo kaydı ekleniyor: $map");
+    final id = await db.insert('weight_records', map);
+    print("[DB] Kilo kaydı eklendi, ID: $id");
+    return id;
+  }
+
+  // Eski isimli fonksiyon, geriye dönük uyumluluk için
+  Future<int> insertWeightRecord(WeightRecord record, int userId) async {
+    return addWeightRecord(record, userId);
   }
 
   Future<List<WeightRecord>> getWeightHistory(int userId) async {
@@ -1767,5 +1799,17 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       print("Besin arama hatası: $e");
       return [];
     }
+  }
+
+  Future<void> updateChatConversationLastActivity(int id) async {
+    final db = await database;
+    final now = DateTime.now();
+    await db.update(
+      'chat_conversations',
+      {'lastMessageAt': now.millisecondsSinceEpoch},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    print("Konuşmanın son aktivite zamanı güncellendi: $id, $now");
   }
 } // DatabaseService sınıfının kapanış parantezi

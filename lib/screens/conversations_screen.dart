@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/database_provider.dart';
+import '../services/database_service.dart';
 import '../models/chat_model.dart';
 import 'ai_coach_screen.dart';
 import '../widgets/kaplan_loading.dart';
@@ -15,6 +15,7 @@ class ConversationsScreen extends StatefulWidget {
 class _ConversationsScreenState extends State<ConversationsScreen> {
   List<ChatConversation> _conversations = [];
   bool _isLoading = false;
+  String? _error;
 
   @override
   void initState() {
@@ -28,22 +29,31 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     });
 
     try {
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
+      final conversations = await databaseService.getAllChatConversations();
 
-      // Sonra konuşmaları yükle
-      final conversations =
-          await databaseProvider.database.getAllChatConversations();
-
-      setState(() {
-        _conversations = conversations;
-      });
+      if (mounted) {
+        setState(() {
+          _conversations = conversations;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      _showErrorDialog('Konuşmalar yüklenirken hata oluştu: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      print("Konuşmalar yüklenirken hata: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = "Konuşmalar yüklenirken bir hata oluştu: $e";
+        });
+
+        // InitState'de showDialog kullanmak yerine, bir sonraki frame'de gösterelim
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showErrorDialog(_error!);
+          }
+        });
+      }
     }
   }
 
@@ -53,10 +63,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     });
 
     try {
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
-
-      // Yeni bir konuşma başlatmak için doğrudan AICoachScreen'e yönlendir
       Navigator.of(context)
           .push(
         MaterialPageRoute(
@@ -70,9 +76,11 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     } catch (e) {
       _showErrorDialog('Yeni konuşma oluşturulurken hata oluştu: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -103,9 +111,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     });
 
     try {
-      final databaseProvider =
-          Provider.of<DatabaseProvider>(context, listen: false);
-      await databaseProvider.database.deleteChatConversation(conversation.id!);
+      final databaseService =
+          Provider.of<DatabaseService>(context, listen: false);
+      await databaseService.deleteChatConversation(conversation.id!);
 
       setState(() {
         _conversations.removeWhere((c) => c.id == conversation.id);
@@ -119,9 +127,11 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
     } catch (e) {
       _showErrorDialog('Konuşma silinirken hata oluştu: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -169,17 +179,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _createNewConversation,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Yeni Konuşma Başlat'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                        ),
-                      ),
                     ],
                   ),
                 )
@@ -245,10 +244,11 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                     },
                   ),
                 ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _createNewConversation,
         backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Yeni Konuşma'),
       ),
     );
   }

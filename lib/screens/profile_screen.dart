@@ -370,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               try {
                 // Çıkış yap işlemini gerçekleştir
                 await Provider.of<UserProvider>(context, listen: false)
-                    .logout();
+                    .logoutUser();
 
                 // Başarılı çıkış mesajı göster
                 ScaffoldMessenger.of(context).showSnackBar(

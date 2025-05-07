@@ -70,70 +70,73 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   bool _autoCalculateNutrition = false; // Otomatik makro hesaplama state'i
   bool _isInitialLoad = true; // İlk yükleme kontrolü için
 
+  // Geçici BMI state'leri, sadece anlık gösterim için
+  double _currentBmiValue = 0.0;
+  String _currentBmiCategory = "";
+
   @override
   void initState() {
     super.initState();
-    // Verileri yüklemeden önce listenerları ekle
-    _heightController.addListener(_calculateBMI);
-    _weightController.addListener(_calculateBMI);
-    _ageController
-        .addListener(_autoCalculateIfNeeded); // Yaş değişirse otomatik hesapla
-    // Diğer controller'lar için de eklenebilir
+    // Listener'lar BMI için artık doğrudan _buildBodyInfoCard içinde veya onChanged ile yönetilecek.
+    // _heightController.addListener(_calculateAndDisplayBMI); // KALDIRILDI
+    // _weightController.addListener(_calculateAndDisplayBMI); // KALDIRILDI
+    _ageController.addListener(_autoCalculateIfNeeded);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadUserData().then((_) {
-        setState(() {
-          _isInitialLoad = false; // İlk yükleme tamamlandı
-        });
+        if (mounted) {
+          // mounted kontrolü eklendi
+          setState(() {
+            _isInitialLoad = false;
+            // Kullanıcı verileri yüklendikten sonra BMI'yı hesapla ve göster
+            _calculateAndDisplayBMI();
+          });
+        }
       });
     });
   }
 
   @override
   void dispose() {
-    _heightController.removeListener(_calculateBMI);
-    _weightController.removeListener(_calculateBMI);
+    // _heightController.removeListener(_calculateAndDisplayBMI); // KALDIRILDI
+    // _weightController.removeListener(_calculateAndDisplayBMI); // KALDIRILDI
     _ageController.removeListener(_autoCalculateIfNeeded);
     _heightController.dispose();
     _weightController.dispose();
     _targetWeightController.dispose();
     _waterIntakeController.dispose();
-    _weeklyActivityGoalController.dispose(); // Yeni: Dispose eklendi
-    // Beslenme controller'ları dispose et
+    _weeklyActivityGoalController.dispose();
     _caloriesController.dispose();
     _proteinController.dispose();
     _carbsController.dispose();
     _fatController.dispose();
-    _ageController.dispose(); // YENİ: ageController dispose
+    _ageController.dispose();
     super.dispose();
   }
 
-  // Kullanıcı verilerini UserProvider'dan yükle (Beslenme hedefleri eklendi)
   Future<void> _loadUserData() async {
+    // setState(() { _isLoading = true; }); // build içinde Consumer yönetiyor
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    // Kullanıcı verisini tekrar çekmeyi deneyelim (eğer null ise)
-    if (userProvider.user == null) {
-      await userProvider.loadUser(); // Tekrar yüklemeyi dene
+    if (userProvider.user == null && !_isInitialLoad) {
+      // _isInitialLoad sırasında zaten yükleniyor olabilir
+      await userProvider.loadUser();
     }
     final user = userProvider.user;
 
     if (mounted) {
-      // setState öncesi kontrol
       setState(() {
         if (user != null) {
           _heightController.text = user.height?.toString() ?? '';
           _weightController.text = user.weight?.toString() ?? '';
           _ageController.text = user.age?.toString() ?? '';
           _targetWeightController.text = user.targetWeight?.toString() ?? '';
-          _selectedWeeklyGoal =
-              user.weeklyWeightGoal ?? 0.0; // Varsayılan 0.0 (Kilonu Koru)
-          _selectedActivityLevel = user.activityLevel; // Veri yoksa null olacak
-          _selectedGender = user.gender ?? 'Erkek'; // Veri yoksa Erkek
+          _selectedWeeklyGoal = user.weeklyWeightGoal ?? 0.0;
+          _selectedActivityLevel = user.activityLevel;
+          _selectedGender = user.gender ?? 'Erkek';
           _waterIntakeController.text =
               user.targetWaterIntake?.toString() ?? '';
           _weeklyActivityGoalController.text =
-              user.weeklyActivityGoal?.toString() ??
-                  ''; // Varsayılan kaldırıldı, boş olacak
+              user.weeklyActivityGoal?.toString() ?? '';
 
           _caloriesController.text =
               user.targetCalories?.toStringAsFixed(0) ?? '';
@@ -143,94 +146,99 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
           _fatController.text = user.targetFat?.toStringAsFixed(0) ?? '';
           _autoCalculateNutrition = user.autoCalculateNutrition;
 
-          _calculateBMI(); // Yükleme sonrası BMI hesapla
-          // Otomatik hesaplama açıksa ve gerekli bilgiler varsa, yükleme sonrası bir kez hesapla
+          // _calculateBMI(); // YENİ YAPI: _calculateAndDisplayBMI ile değiştirildi
+          _calculateAndDisplayBMI(); // Yükleme sonrası BMI'yı hemen hesapla
           if (_autoCalculateNutrition &&
               _areRequiredFieldsFilledForAutoCalc()) {
             _autoCalculateNutritionTargets();
           }
         } else {
-          // Kullanıcı yoksa varsayılanları ayarla
           _selectedGender = 'Erkek';
-          _selectedWeeklyGoal = 0.0; // Yeni kullanıcı için Kilonu Koru
-          _autoCalculateNutrition = false; // Yeni kullanıcı için manuel başla
-          // Diğer alanlar zaten boş controller ile başlıyor
+          _selectedWeeklyGoal = 0.0;
+          _autoCalculateNutrition = false;
         }
+        // _isLoading = false; // build içinde Consumer yönetiyor
       });
     }
     print(
         "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=${_selectedActivityLevel}, Gender=${_selectedGender}, WeeklyGoal=${_selectedWeeklyGoal}, AutoCalc=${_autoCalculateNutrition}");
   }
 
-  // BMI Hesaplama (Cinsiyet değişikliğini dinlemesi gerekmez, height/weight dinler)
-  void _calculateBMI() {
-    try {
-      // Boş değer kontrolü eklendi
-      if (_weightController.text.isEmpty || _heightController.text.isEmpty) {
-        setState(() {
-          _bmi = 0;
-          _bmiCategory = '';
-        });
-        return;
-      }
-      final weight = double.parse(_weightController.text);
-      final height = double.parse(_heightController.text);
+  // YENİ: BMI Hesaplama ve Gösterme Fonksiyonu (State Güncellemesi ile)
+  void _calculateAndDisplayBMI() {
+    final heightText = _heightController.text;
+    final weightText = _weightController.text;
 
-      if (weight > 0 && height > 0) {
-        final bmi = weight / ((height / 100) * (height / 100));
-        setState(() {
-          _bmi = bmi;
-          _bmiCategory = _getBMICategory(bmi);
-        });
+    if (heightText.isNotEmpty && weightText.isNotEmpty) {
+      final double height = double.tryParse(heightText) ?? 0;
+      final double weight = double.tryParse(weightText) ?? 0;
+
+      if (height > 0 && weight > 0) {
+        double bmi = weight / ((height / 100) * (height / 100));
+        String category = "";
+        Color color = Colors.grey;
+
+        if (_selectedGender == 'Kadın') {
+          if (bmi < 17.5) {
+            category = 'Zayıf';
+            color = Colors.blue;
+          } else if (bmi < 23.5) {
+            category = 'Normal';
+            color = Colors.green;
+          } else if (bmi < 28.5) {
+            category = 'Kilolu';
+            color = Colors.orange;
+          } else {
+            category = 'Obez';
+            color = Colors.red;
+          }
+        } else {
+          // Erkek veya belirtilmemişse
+          if (bmi < 18.5) {
+            category = 'Zayıf';
+            color = Colors.blue;
+          } else if (bmi < 25.0) {
+            category = 'Normal';
+            color = Colors.green;
+          } else if (bmi < 30.0) {
+            category = 'Kilolu';
+            color = Colors.orange;
+          } else {
+            category = 'Obez';
+            color = Colors.red;
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _currentBmiValue = bmi;
+            _currentBmiCategory = category;
+          });
+        }
+        _autoCalculateIfNeeded(); // BMI değiştiğinde besin ihtiyaçları da değişebilir.
       } else {
+        if (mounted) {
+          setState(() {
+            _currentBmiValue = 0.0;
+            _currentBmiCategory = "";
+          });
+        }
+      }
+    } else {
+      if (mounted) {
         setState(() {
-          _bmi = 0;
-          _bmiCategory = '';
+          _currentBmiValue = 0.0;
+          _currentBmiCategory = "";
         });
       }
-    } catch (e) {
-      // Geçersiz değerler için hesaplama yapma veya hata gösterme
-      setState(() {
-        _bmi = 0;
-        _bmiCategory = '';
-      });
     }
   }
 
-  // BMI Kategori (profile_screen.dart'tan taşındı)
-  String _getBMICategory(double bmi) {
-    if (bmi <= 0) return ''; // Geçersiz BMI için boş string
-    if (bmi < 18.5) {
-      return "Zayıf";
-    } else if (bmi < 25) {
-      return "Normal";
-    } else if (bmi < 30) {
-      return "Fazla Kilolu";
-    } else if (bmi < 35) {
-      return "Obez (Sınıf I)";
-    } else if (bmi < 40) {
-      return "Obez (Sınıf II)";
-    } else {
-      return "Aşırı Obez (Sınıf III)";
-    }
-  }
+  // _calculateBMI, _getBMICategory, _getBMIColor fonksiyonları KALDIRILDI.
+  // Yeni BMI mantığı _calculateAndDisplayBMI içinde ve _buildBodyInfoCard widget'ında olacak.
 
-  // BMI Renk (profile_screen.dart'tan taşındı)
-  Color _getBMIColor(double bmi) {
-    if (bmi <= 0) {
-      return Colors.grey;
-    } else if (bmi < 18.5) {
-      return Colors.blue;
-    } else if (bmi < 25) {
-      return Colors.green;
-    } else if (bmi < 30) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
-  }
-
-  // YENİ: Harris-Benedict formülüne göre Bazal Metabolizma Hızını (BMR) hesapla
+// ... (Mevcut _calculateBMR, _calculateTDEE, _adjustCaloriesForGoal, _autoCalculateNutritionTargets, _areRequiredFieldsFilledForAutoCalc, _calculateMacroTargetsFromCalories, _autoCalculateIfNeeded fonksiyonları burada kalacak)
+// YENİ: Harris-Benedict formülüne göre Bazal Metabolizma Hızını (BMR) hesapla
   // GÜNCELLEME: Mifflin-St Jeor formülü kullanılacak
   double _calculateBMR() {
     // Formül için gerekli değerleri al
@@ -315,34 +323,33 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     // 1. Adım: Hedef Kaloriyi Hesapla
     double targetCalories = _adjustCaloriesForGoal(_calculateTDEE());
     if (targetCalories <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Hesaplama için boy, kilo, yaş ve cinsiyet bilgilerinizi kontrol edin')),
-      );
-      print(
-          "[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0"); // Debug log
+      if (mounted) {
+        // ScaffoldMessenger için mounted kontrolü
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Hesaplama için boy, kilo, yaş ve cinsiyet bilgilerinizi kontrol edin')),
+        );
+      }
+      print("[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0");
       return;
     }
 
-    // 2. Adım: Makroları Hesapla
     Map<String, double> macros =
         _calculateMacroTargetsFromCalories(targetCalories);
 
-    setState(() {
-      _caloriesController.text = targetCalories.round().toString();
-      _proteinController.text = macros['protein']!.round().toString();
-      _carbsController.text = macros['carbs']!.round().toString();
-      _fatController.text = macros['fat']!.round().toString();
-
-      // Haftalık aktivite hedefi bu fonksiyonda AYARLANMAYACAK.
-      // _weeklyActivityGoalController.text = '150'; // Bu satır kaldırıldı veya hiç eklenmedi
-      print(
-          "[GoalSettings] Otomatik hesaplama tamamlandı ve alanlar güncellendi."); // Debug log
-    });
+    if (mounted) {
+      setState(() {
+        _caloriesController.text = targetCalories.round().toString();
+        _proteinController.text = macros['protein']!.round().toString();
+        _carbsController.text = macros['carbs']!.round().toString();
+        _fatController.text = macros['fat']!.round().toString();
+        print(
+            "[GoalSettings] Otomatik hesaplama tamamlandı ve alanlar güncellendi.");
+      });
+    }
   }
 
-  // YENİ: Otomatik hesaplama için gerekli alanların dolu olup olmadığını kontrol et
   bool _areRequiredFieldsFilledForAutoCalc() {
     return _weightController.text.isNotEmpty &&
         _heightController.text.isNotEmpty &&
@@ -351,39 +358,32 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         _selectedActivityLevel != null;
   }
 
-  // YENİ: Kalori hedefine göre makro besin hedeflerini hesapla
-  // GÜNCELLEME: kalori.txt'deki oranlara göre hesaplama
   Map<String, double> _calculateMacroTargetsFromCalories(
       double targetCalories) {
     double weight = double.tryParse(_weightController.text) ?? 0;
 
     if (targetCalories <= 0 || weight <= 0) {
       print(
-          "[GoalSettings] Makro hesaplama için geçersiz girdi (Kalori: $targetCalories, Kilo: $weight)"); // Debug log
+          "[GoalSettings] Makro hesaplama için geçersiz girdi (Kalori: $targetCalories, Kilo: $weight)");
       return {'protein': 0, 'carbs': 0, 'fat': 0};
     }
 
-    // Protein: kilo × 2.2 gr (kalori.txt'den)
     double proteinGrams = weight * 2.2;
-    double proteinCalories = proteinGrams * 4; // 1g protein = 4 kalori
+    double proteinCalories = proteinGrams * 4;
 
-    // Yağ: Günlük kalorinin %25'i (kalori.txt'den)
     double fatCalories = targetCalories * 0.25;
-    double fatGrams = fatCalories / 9; // 1g yağ = 9 kalori
+    double fatGrams = fatCalories / 9;
 
-    // Karbonhidrat: Kalan kalori (kalori.txt'den)
     double carbCalories = targetCalories - proteinCalories - fatCalories;
-    double carbGrams = carbCalories / 4; // 1g karbonhidrat = 4 kalori
+    double carbGrams = carbCalories / 4;
 
-    // Negatif karbonhidratı engelle (protein ve yağ çok yüksekse olabilir)
     if (carbGrams < 0) {
-      print(
-          "[GoalSettings] Karbonhidrat negatif çıktı, 0'a ayarlanıyor."); // Debug log
+      print("[GoalSettings] Karbonhidrat negatif çıktı, 0\'a ayarlanıyor.");
       carbGrams = 0;
     }
 
     print(
-        "[GoalSettings] Makrolar Hesaplandı: P: ${proteinGrams.round()}g, C: ${carbGrams.round()}g, F: ${fatGrams.round()}g"); // Debug log
+        "[GoalSettings] Makrolar Hesaplandı: P: ${proteinGrams.round()}g, C: ${carbGrams.round()}g, F: ${fatGrams.round()}g");
     return {
       'protein': proteinGrams,
       'carbs': carbGrams,
@@ -391,10 +391,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     };
   }
 
-  // Otomatik hesaplama açıkken ve ilgili alan değiştiğinde hesaplamayı tetikle
   void _autoCalculateIfNeeded() {
     if (_autoCalculateNutrition && !_isInitialLoad) {
-      // İlk yükleme sırasında tetiklenmesin
       if (_areRequiredFieldsFilledForAutoCalc()) {
         _autoCalculateNutritionTargets();
       }
@@ -403,8 +401,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
-    final user = userProvider.user;
+    // final userProvider = Provider.of<UserProvider>(context); // Consumer içinde yönetiliyor
+    // final user = userProvider.user; // Consumer içinde yönetiliyor
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -418,69 +416,49 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
         ),
         actions: [
-          // AppBar'a kaydetme butonu ekliyoruz
           IconButton(
-            icon: const Icon(Icons.save),
+            icon: _isLoading
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ))
+                : const Icon(Icons.save),
             tooltip: 'Hedefleri Kaydet',
-            onPressed: _saveGoals,
+            onPressed: _isLoading ? null : _saveGoals,
           ),
         ],
       ),
-      backgroundColor: isDarkMode
-          ? AppTheme.darkBackgroundColor
-          : const Color(0xFFF8F8FC), // Açık tema için arka plan rengi
+      backgroundColor:
+          isDarkMode ? AppTheme.darkBackgroundColor : const Color(0xFFF8F8FC),
       body: SafeArea(
         child: Consumer<UserProvider>(
+          // UserProvider'ı burada dinleyelim
           builder: (context, userProvider, child) {
             final user = userProvider.user;
-            final isLoading =
-                userProvider.isLoading; // UserProvider'ın kendi isLoading'i
-
-            if (isLoading || user == null) {
-              print("[GoalSettings Build] Kullanıcı yükleniyor veya null...");
+            // GoalSettingsScreen'in kendi _isLoading state'i var, onu kullanalım.
+            // Provider'ın isLoading'i genel veri yükleme durumu için.
+            // Sayfanın kendi içindeki _isLoading, _saveGoals sırasındaki yüklemeyi gösterir.
+            // İlk yükleme için SplashScreen veya benzeri bir yapı daha uygun olabilir.
+            // Şimdilik, user null ise veya _isInitialLoad true ise yükleme gösterelim.
+            if (_isInitialLoad && user == null) {
+              // userProvider.isLoading yerine _isInitialLoad
+              print(
+                  "[GoalSettings Build] İlk yükleme veya kullanıcı null, yükleniyor...");
               return const Center(child: CircularProgressIndicator());
+            } else if (user == null && !_isInitialLoad) {
+              print(
+                  "[GoalSettings Build] Kullanıcı null ve ilk yükleme değil, profil oluşturmaya yönlendirilebilir veya hata mesajı gösterilebilir.");
+              // return Center(child: Text("Kullanıcı bulunamadı. Lütfen profil oluşturun."));
+              // Bu durumda SplashScreen'e geri dönmek veya bir hata mesajı göstermek daha iyi olabilir.
+              // Şimdilik boş bir form gösterelim, _loadUserData'nın halletmesi beklenir.
+              return _buildFormContent(
+                  isDarkMode, null); // Kullanıcı null olsa da formu göster
             } else {
               print(
-                  "[GoalSettings Build] Kullanıcı yüklendi, build devam ediyor.");
-              // Kullanıcı yüklendiğinde asıl içeriği göster
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey, // Tüm formlar için tek bir anahtarı kullan
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Vücut Bilgileri Başlık ve Kart
-                      _buildSectionHeader(
-                          'Vücut Bilgileri', Icons.person, isDarkMode),
-                      _buildBodyInfoCard(isDarkMode, user),
-
-                      const SizedBox(height: 24),
-
-                      // Kilo ve Su Hedefleri Başlık ve Kart
-                      _buildSectionHeader('Kilo ve Su Hedefleri',
-                          Icons.monitor_weight, isDarkMode),
-                      _buildWeightAndWaterCard(isDarkMode, user),
-
-                      const SizedBox(height: 24),
-
-                      // Aktivite Hedefleri Başlık ve Kart
-                      _buildSectionHeader('Aktivite Hedefleri',
-                          Icons.directions_run, isDarkMode),
-                      _buildActivityGoalsCard(isDarkMode, user),
-
-                      const SizedBox(height: 24),
-
-                      // Beslenme Hedefleri Başlık ve Kart
-                      _buildSectionHeader(
-                          'Beslenme Hedefleri', Icons.restaurant, isDarkMode),
-                      _buildNutritionTargetsCard(isDarkMode, user),
-
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              );
+                  "[GoalSettings Build] Kullanıcı yüklendi veya form gösteriliyor.");
+              return _buildFormContent(isDarkMode, user);
             }
           },
         ),
@@ -488,17 +466,45 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     );
   }
 
-  // Kart başlıkları için widget
+  Widget _buildFormContent(bool isDarkMode, UserModel? user) {
+    // Bu fonksiyon build metodunun içindeki SingleChildScrollView ve sonrasını içerir.
+    // _isInitialLoad false olduktan sonra bu widget çağrılır.
+    // _loadUserData içinde user null ise bile controller'lar boş kalır,
+    // _calculateAndDisplayBMI da _bmi ve _bmiCategory'yi sıfırlar.
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader('Vücut Bilgileri', Icons.person, isDarkMode),
+            _buildBodyInfoCard(isDarkMode, user), // user null olabilir
+            const SizedBox(height: 24),
+            _buildSectionHeader(
+                'Kilo ve Su Hedefleri', Icons.monitor_weight, isDarkMode),
+            _buildWeightAndWaterCard(isDarkMode, user), // user null olabilir
+            const SizedBox(height: 24),
+            _buildSectionHeader(
+                'Aktivite Hedefleri', Icons.directions_run, isDarkMode),
+            _buildActivityGoalsCard(isDarkMode, user), // user null olabilir
+            const SizedBox(height: 24),
+            _buildSectionHeader(
+                'Beslenme Hedefleri', Icons.restaurant, isDarkMode),
+            _buildNutritionTargetsCard(isDarkMode, user), // user null olabilir
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title, IconData icon, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: AppTheme.primaryColor,
-            size: 28,
-          ),
+          Icon(icon, color: AppTheme.primaryColor, size: 28),
           const SizedBox(width: 12),
           Text(
             title,
@@ -513,37 +519,57 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     );
   }
 
-  // Vücut Bilgileri kartı
   Widget _buildBodyInfoCard(bool isDarkMode, UserModel? user) {
+    // Anlık BMI değeri için yerel değişkenler veya doğrudan _currentBmiValue kullanılabilir.
+    // Renk ve kategori de _calculateAndDisplayBMI içinde state'e set ediliyor.
+    Color bmiColor = Colors.grey;
+    if (_currentBmiValue > 0) {
+      if (_selectedGender == 'Kadın') {
+        if (_currentBmiValue < 17.5) {
+          bmiColor = Colors.blue;
+        } else if (_currentBmiValue < 23.5) {
+          bmiColor = Colors.green;
+        } else if (_currentBmiValue < 28.5) {
+          bmiColor = Colors.orange;
+        } else {
+          bmiColor = Colors.red;
+        }
+      } else {
+        if (_currentBmiValue < 18.5) {
+          bmiColor = Colors.blue;
+        } else if (_currentBmiValue < 25.0) {
+          bmiColor = Colors.green;
+        } else if (_currentBmiValue < 30.0) {
+          bmiColor = Colors.orange;
+        } else {
+          bmiColor = Colors.red;
+        }
+      }
+    }
+
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cinsiyet Seçimi - YENİ
             Row(
               children: [
                 const Padding(
                   padding: EdgeInsets.only(left: 8.0, bottom: 8.0),
-                  child: Text(
-                    'Cinsiyet',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  child: Text('Cinsiyet',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 ),
                 const Spacer(),
                 ToggleButtons(
                   onPressed: (int index) {
                     setState(() {
                       _selectedGender = index == 0 ? 'Erkek' : 'Kadın';
+                      _calculateAndDisplayBMI(); // Cinsiyet değişince BMI'yı yeniden hesapla
                       if (_autoCalculateNutrition) {
                         _autoCalculateNutritionTargets();
                       }
@@ -554,30 +580,24 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                   selectedColor: Colors.white,
                   fillColor: AppTheme.primaryColor,
                   color: isDarkMode ? Colors.white70 : Colors.black54,
-                  constraints: const BoxConstraints(
-                    minHeight: 36.0,
-                    minWidth: 90.0,
-                  ),
+                  constraints:
+                      const BoxConstraints(minHeight: 36.0, minWidth: 90.0),
                   isSelected: [
                     _selectedGender == 'Erkek',
-                    _selectedGender == 'Kadın',
+                    _selectedGender == 'Kadın'
                   ],
                   children: const [
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text('Erkek'),
-                    ),
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text('Erkek')),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Text('Kadın'),
-                    ),
+                        padding: EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text('Kadın')),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
-            // Boy TextFormField
             TextFormField(
               controller: _heightController,
               decoration: const InputDecoration(
@@ -589,21 +609,20 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.isEmpty)
                   return 'Lütfen boyunuzu girin';
-                }
                 return null;
               },
               onChanged: (value) {
+                _calculateAndDisplayBMI(); // Boy değişince BMI'yı yeniden hesapla
                 if (_autoCalculateNutrition && value.isNotEmpty) {
                   _autoCalculateNutritionTargets();
                 }
               },
             ),
             const SizedBox(height: 16),
-
-            // Yaş TextFormField - Otomatik hesaplama için eklendi
             TextFormField(
+              // Yaş controller'ı buraya eklendi
               controller: _ageController,
               decoration: const InputDecoration(
                 labelText: 'Yaş',
@@ -620,25 +639,21 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 return null;
               },
               onChanged: (value) {
-                if (_autoCalculateNutrition && value.isNotEmpty) {
-                  _autoCalculateNutritionTargets();
-                }
+                // Yaş değişince otomatik besin hesaplamasını tetikle (BMI direkt etkilenmez ama TDEE etkilenir)
+                _autoCalculateIfNeeded();
               },
             ),
             const SizedBox(height: 16),
-
-            // BMI Gösterimi
-            if (_bmi > 0)
+            // YENİ BMI GÖSTERİMİ
+            if (_currentBmiValue > 0)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _getBMIColor(_bmi).withOpacity(0.1),
+                  color: bmiColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _getBMIColor(_bmi).withOpacity(0.5),
-                    width: 1,
-                  ),
+                  border:
+                      Border.all(color: bmiColor.withOpacity(0.5), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -646,25 +661,35 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                     Text(
                       'Vücut Kitle İndeksi (BMI)',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: bmiColor),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _currentBmiValue.toStringAsFixed(1),
+                          style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: bmiColor),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _currentBmiCategory,
+                          style: TextStyle(fontSize: 18, color: bmiColor),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${_bmi.toStringAsFixed(1)}',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: _getBMIColor(_bmi),
-                      ),
-                    ),
-                    Text(
-                      _bmiCategory,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: _getBMIColor(_bmi),
-                      ),
+                      _selectedGender == 'Kadın'
+                          ? 'Kadın BMI Aralıkları: Zayıf (<17.5), Normal (17.5-23.5), Kilolu (23.5-28.5), Obez (>28.5)'
+                          : 'Erkek BMI Aralıkları: Zayıf (<18.5), Normal (18.5-25), Kilolu (25-30), Obez (>30)',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -675,7 +700,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     );
   }
 
-  // Kilo ve Su Hedefleri kartı
   Widget _buildWeightAndWaterCard(bool isDarkMode, UserModel? user) {
     return Card(
       elevation: 4,
@@ -688,7 +712,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Mevcut Kilo TextFormField
             TextFormField(
               controller: _weightController,
               decoration: const InputDecoration(
@@ -708,6 +731,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 return null;
               },
               onChanged: (value) {
+                _calculateAndDisplayBMI(); // Kilo değişince BMI'yı yeniden hesapla
                 if (_autoCalculateNutrition && value.isNotEmpty) {
                   _autoCalculateNutritionTargets();
                 }
@@ -740,6 +764,9 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                   if (_autoCalculateNutrition) {
                     _autoCalculateNutritionTargets();
                   }
+                } else if (value.isNotEmpty &&
+                    _weightController.text.isNotEmpty) {
+                  _calculateWeeklyGoal(); // Haftalık hedefi yine de hesapla
                 }
               },
             ),
@@ -762,10 +789,10 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                         label = 'Kilonu Koru';
                       } else if (value < 0) {
                         label =
-                            '${value.abs()} kg Ver (Yaklaşık ${(value * -7700).round()} kcal/hafta)';
+                            '${value.abs()} kg Ver'; // (Yaklaşık ${(value * -7700).round()} kcal/hafta)
                       } else {
                         label =
-                            '$value kg Al (Yaklaşık ${(value * 7700).round()} kcal/hafta)';
+                            '$value kg Al'; //(Yaklaşık ${(value * 7700).round()} kcal/hafta)
                       }
                       return DropdownMenuItem<double>(
                         value: value,
@@ -784,13 +811,12 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                         }
                       });
                     },
-                    isExpanded: true, // Etiketin sığması için
+                    isExpanded: true,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            // Güvenli kilo kaybı/artışı hakkında bilgi
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -819,8 +845,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Günlük Su Hedefi TextFormField
             TextFormField(
               controller: _waterIntakeController,
               decoration: const InputDecoration(
@@ -834,10 +858,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,1}')),
               ],
-              validator: (value) {
-                // Opsiyonel, boş olabilir
-                return null;
-              },
             ),
           ],
         ),
@@ -845,7 +865,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     );
   }
 
-  // Aktivite Hedefleri kartı
   Widget _buildActivityGoalsCard(bool isDarkMode, UserModel? user) {
     return Card(
       elevation: 4,
@@ -858,7 +877,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Aktivite Seviyesi Dropdown - detaylı açıklamalar eklendi
             DropdownButtonFormField<String>(
               value: _selectedActivityLevel,
               decoration: const InputDecoration(
@@ -866,7 +884,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 prefixIcon: Icon(Icons.fitness_center),
                 border: OutlineInputBorder(),
               ),
-              // GÜNCELLEME: Seçenekleri _activityLevelOptions listesinden alalım
               items: _activityLevelOptions.map((String level) {
                 String description;
                 switch (level) {
@@ -898,30 +915,25 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               onChanged: (String? newValue) {
                 setState(() {
                   _selectedActivityLevel = newValue;
-                  // Aktivite seviyesine göre haftalık aktivite hedefini ayarla (Otomatikse)
                   if (_autoCalculateNutrition) {
-                    if (newValue == 'Hareketsiz') {
+                    if (newValue == 'Hareketsiz')
                       _weeklyActivityGoalController.text = '90';
-                    } else if (newValue == 'Az Aktif') {
+                    else if (newValue == 'Az Aktif')
                       _weeklyActivityGoalController.text = '120';
-                    } else if (newValue == 'Orta Aktif') {
-                      // 'Orta Derecede Aktif' yerine
+                    else if (newValue == 'Orta Aktif')
                       _weeklyActivityGoalController.text = '150';
-                    } else if (newValue == 'Çok Aktif') {
+                    else if (newValue == 'Çok Aktif')
                       _weeklyActivityGoalController.text = '225';
-                    } else if (newValue == 'Ekstra Aktif') {
+                    else if (newValue == 'Ekstra Aktif')
                       _weeklyActivityGoalController.text = '300';
-                    }
-                    _autoCalculateNutritionTargets(); // Aktivite değişince kaloriyi de yeniden hesapla
+                    _autoCalculateNutritionTargets();
                   }
-                  print(
-                      "[GoalSettings] Aktivite Seviyesi değişti: $newValue"); // Debug log
+                  print("[GoalSettings] Aktivite Seviyesi değişti: $newValue");
                 });
               },
-              isExpanded: true, // Açıklamaların sığması için
+              isExpanded: true,
             ),
             const SizedBox(height: 8),
-            // Aktivite seviyesi bilgi metni
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -931,31 +943,21 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppTheme.infoColor,
-                    size: 16,
-                  ),
+                  Icon(Icons.info_outline, color: AppTheme.infoColor, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Aktivite seviyeniz günlük kalori ihtiyacınızı etkiler. Daha aktif bir yaşam tarzı, daha yüksek kalori ihtiyacı gerektirir.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.infoColor,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppTheme.infoColor),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // Haftalık Aktivite Hedefi TextFormField
             TextFormField(
               controller: _weeklyActivityGoalController,
-              enabled:
-                  !_autoCalculateNutrition, // Otomatik hesaplama kapalıysa düzenlenebilir
+              enabled: !_autoCalculateNutrition,
               decoration: const InputDecoration(
                 labelText: 'Haftalık Aktivite Hedefi (dakika)',
                 prefixIcon: Icon(Icons.timer),
@@ -966,12 +968,10 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.isEmpty)
                   return 'Lütfen haftalık aktivite hedefinizi girin';
-                }
                 if (double.tryParse(value) == null ||
                     double.parse(value) <= 0) {
-                  // Türkçe karakterler yerine İngilizce karakterler kullanıldı
                   return 'Gecerli bir sure girin (0\'dan buyuk)';
                 }
                 return null;
@@ -983,25 +983,20 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     );
   }
 
-  // Beslenme Hedefleri kartı
   Widget _buildNutritionTargetsCard(bool isDarkMode, UserModel? user) {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Otomatik Hesaplama Switch
             SwitchListTile(
               title: const Text('Otomatik Hesapla'),
               subtitle: const Text(
-                'Aktivite seviyesi ve hedeflerinize göre beslenme hedeflerinizi hesaplayın',
-              ),
+                  'Aktivite seviyesi ve hedeflerinize göre beslenme hedeflerinizi hesaplayın'),
               value: _autoCalculateNutrition,
               activeColor: AppTheme.primaryColor,
               contentPadding: EdgeInsets.zero,
@@ -1009,15 +1004,12 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 setState(() {
                   _autoCalculateNutrition = value;
                   if (value) {
-                    // Otomatik hesapla active ise hesapla
                     _autoCalculateNutritionTargets();
                   }
                 });
               },
             ),
             const SizedBox(height: 16),
-
-            // Kalori Hedefi TextFormField
             TextFormField(
               controller: _caloriesController,
               decoration: const InputDecoration(
@@ -1027,42 +1019,30 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 isDense: true,
               ),
               keyboardType: TextInputType.number,
-              enabled:
-                  !_autoCalculateNutrition, // Otomatik hesaplama açıksa devre dışı
+              enabled: !_autoCalculateNutrition,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 8),
-            // Kalori bilgi kutusu
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
+                  color: AppTheme.infoColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8)),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: AppTheme.infoColor,
-                    size: 16,
-                  ),
+                  Icon(Icons.info_outline, color: AppTheme.infoColor, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Minimum güvenli günlük kalori alımı kadınlarda 1200 kcal, erkeklerde 1500 kcal olmalıdır.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.infoColor,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppTheme.infoColor),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // Protein Hedefi TextFormField
             TextFormField(
               controller: _proteinController,
               decoration: const InputDecoration(
@@ -1077,8 +1057,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 16),
-
-            // Karbonhidrat Hedefi TextFormField
             TextFormField(
               controller: _carbsController,
               decoration: const InputDecoration(
@@ -1093,8 +1071,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 16),
-
-            // Yağ Hedefi TextFormField
             TextFormField(
               controller: _fatController,
               decoration: const InputDecoration(
@@ -1109,8 +1085,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 16),
-
-            // Beslenme bilgileri kutusu
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1118,41 +1092,31 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                     ? AppTheme.primaryColor.withOpacity(0.1)
                     : AppTheme.primaryColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.primaryColor.withOpacity(0.2),
-                ),
+                border:
+                    Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Makro Besin Değerleri Hakkında',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
+                  Text('Makro Besin Değerleri Hakkında',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryColor)),
                   const SizedBox(height: 8),
                   Text(
-                    '• Protein: Kas yapımı ve onarımı için gereklidir.\n'
-                    '• Karbonhidrat: Ana enerji kaynağıdır.\n'
-                    '• Yağ: Hormon üretimi ve vitamin emilimi için önemlidir.',
-                    style: TextStyle(fontSize: 13),
-                  ),
+                      '• Protein: Kas yapımı ve onarımı için gereklidir.\n'
+                      '• Karbonhidrat: Ana enerji kaynağıdır.\n'
+                      '• Yağ: Hormon üretimi ve vitamin emilimi için önemlidir.',
+                      style: TextStyle(fontSize: 13)),
                   const SizedBox(height: 8),
+                  Text('Kalori Eşdeğerleri:',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   Text(
-                    'Kalori Eşdeğerleri:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                  Text(
-                    '• 1g Protein = 4 kalori\n'
-                    '• 1g Karbonhidrat = 4 kalori\n'
-                    '• 1g Yağ = 9 kalori',
-                    style: TextStyle(fontSize: 13),
-                  ),
+                      '• 1g Protein = 4 kalori\n'
+                      '• 1g Karbonhidrat = 4 kalori\n'
+                      '• 1g Yağ = 9 kalori',
+                      style: TextStyle(fontSize: 13)),
                 ],
               ),
             ),
@@ -1162,53 +1126,24 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     );
   }
 
-  // Hedef kiloya göre haftalık hedefi öner
   void _calculateWeeklyGoal() {
-    if (_weightController.text.isEmpty ||
-        _targetWeightController.text.isEmpty) {
+    if (_weightController.text.isEmpty || _targetWeightController.text.isEmpty)
       return;
-    }
-
     try {
       double currentWeight = double.parse(_weightController.text);
       double targetWeight = double.parse(_targetWeightController.text);
       double difference = targetWeight - currentWeight;
-
-      // Hedef ağırlık aynıysa kilo koruma
-      if (difference.abs() < 0.1) {
+      if (mounted) {
+        // setState için mounted kontrolü
         setState(() {
-          _selectedWeeklyGoal = 0.0;
+          if (difference.abs() < 0.1)
+            _selectedWeeklyGoal = 0.0;
+          else if (difference < 0) {
+            _selectedWeeklyGoal = (difference.abs() <= 5) ? -0.5 : -0.75;
+          } else {
+            _selectedWeeklyGoal = (difference <= 5) ? 0.25 : 0.5;
+          }
         });
-        return;
-      }
-
-      // Kilo kaybı
-      if (difference < 0) {
-        // Güvenli kilo kaybı haftada 0.5-1 kg
-        if (difference.abs() <= 5) {
-          setState(() {
-            _selectedWeeklyGoal = -0.5; // Haftalık 0.5kg kayıp
-          });
-        } else {
-          setState(() {
-            _selectedWeeklyGoal =
-                -0.75; // Haftalık 0.75kg kayıp (daha fazla verilecek)
-          });
-        }
-      }
-      // Kilo alma
-      else {
-        // Güvenli kilo alımı haftada 0.25-0.5 kg
-        if (difference <= 5) {
-          setState(() {
-            _selectedWeeklyGoal = 0.25; // Haftalık 0.25kg alım
-          });
-        } else {
-          setState(() {
-            _selectedWeeklyGoal =
-                0.5; // Haftalık 0.5kg alım (daha fazla alınacak)
-          });
-        }
       }
     } catch (e) {
       print("Haftalık hedef hesaplama hatası: $e");
@@ -1220,53 +1155,55 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
 
   // Hedefleri kaydet ve UserModel'i güncelle
   Future<void> _saveGoals() async {
-    if (!_formKey.currentState!.validate()) {
-      print(
-          "[GoalSettings] Form geçerli değil, kaydetme iptal edildi."); // Debug log
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      // validate null olabilir
+      print("[GoalSettings] Form geçerli değil, kaydetme iptal edildi.");
       return;
     }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    print("[GoalSettings] Hedefler kaydediliyor..."); // Debug log
+    if (mounted)
+      setState(() {
+        _isLoading = true;
+      });
+    print("[GoalSettings] Hedefler kaydediliyor...");
 
     try {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final currentUser = userProvider.user;
 
       if (currentUser == null) {
-        print("[GoalSettings] Mevcut kullanıcı bulunamadı."); // Debug log
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Önce profil bilgilerinizi oluşturun')),
-        );
-        setState(() {
-          _isLoading = false;
-        }); // Yükleniyor durumunu kapat
+        print("[GoalSettings] Mevcut kullanıcı bulunamadı.");
+        if (mounted) {
+          // ScaffoldMessenger için mounted kontrolü
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Önce profil bilgilerinizi oluşturun')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
         return;
       }
 
-      // Form değerlerini al ve parse et
-      final double height =
-          double.tryParse(_heightController.text) ?? currentUser.height;
-      final double weight =
-          double.tryParse(_weightController.text) ?? currentUser.weight;
+      final double height = double.tryParse(_heightController.text) ??
+          currentUser.height ??
+          0; // null ise 0 ata
+      final double weight = double.tryParse(_weightController.text) ??
+          currentUser.weight ??
+          0; // null ise 0 ata
       final int age = int.tryParse(_ageController.text) ??
-          currentUser.age; // Yaşı da alalım
+          currentUser.age ??
+          0; // null ise 0 ata
       final double? targetWeight = _targetWeightController.text.isNotEmpty
           ? double.tryParse(_targetWeightController.text)
           : currentUser.targetWeight;
       final double? waterIntakeLiters = _waterIntakeController.text.isNotEmpty
-          ? double.tryParse(
-              _waterIntakeController.text) // Kullanıcı litre olarak giriyor
+          ? double.tryParse(_waterIntakeController.text)
           : currentUser.targetWaterIntake;
       final double? weeklyActivityGoal =
           _weeklyActivityGoalController.text.isNotEmpty
               ? double.tryParse(_weeklyActivityGoalController.text)
               : currentUser.weeklyActivityGoal;
-
-      // Beslenme değerlerini al (otomatik hesaplama kapalıysa buradan alır)
       final double? calories = _caloriesController.text.isNotEmpty
           ? double.tryParse(_caloriesController.text)
           : currentUser.targetCalories;
@@ -1280,32 +1217,27 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
           ? double.tryParse(_fatController.text)
           : currentUser.targetFat;
 
-      // Kullanıcı modelini güncelle
       final updatedUser = currentUser.copyWith(
         height: height,
         weight: weight,
-        age: age, // Yaşı ekle
+        age: age,
         targetWeight: targetWeight,
         weeklyWeightGoal: _selectedWeeklyGoal,
         activityLevel: _selectedActivityLevel,
-        targetWaterIntake: waterIntakeLiters, // Litre olarak kaydet
+        gender: _selectedGender, // Cinsiyeti kaydet
+        targetWaterIntake: waterIntakeLiters,
         weeklyActivityGoal: weeklyActivityGoal,
         targetCalories: calories,
         targetProtein: protein,
         targetCarbs: carbs,
         targetFat: fat,
-        autoCalculateNutrition: _autoCalculateNutrition, // YENİ: Kaydet
+        autoCalculateNutrition: _autoCalculateNutrition,
       );
 
       print(
-          "[GoalSettings] Kaydedilecek Kullanıcı Verisi: ${updatedUser.toMap()}"); // Debug log
-
-      // UserProvider ile kullanıcıyı güncelle
+          "[GoalSettings] Kaydedilecek Kullanıcı Verisi: ${updatedUser.toMap()}");
       await userProvider.saveUser(updatedUser);
-
-      print("[GoalSettings] Kullanıcı başarıyla kaydedildi."); // Debug log
-
-      // Kısa gecikme ekleyerek veritabanı işlemlerinin tamamlanmasını sağlayabiliriz
+      print("[GoalSettings] Kullanıcı başarıyla kaydedildi.");
       await Future.delayed(const Duration(milliseconds: 300));
 
       if (mounted) {
@@ -1315,9 +1247,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         Navigator.pop(context);
       }
     } catch (e, stacktrace) {
-      // Hata ve stacktrace yakala
       print("Hedef kaydetme hatası: $e");
-      print("Stacktrace: $stacktrace"); // Stacktrace'i yazdır
+      print("Stacktrace: $stacktrace");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Hata: $e')),
@@ -1328,16 +1259,14 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         setState(() {
           _isLoading = false;
         });
-        print(
-            "[GoalSettings] Kaydetme işlemi tamamlandı (finally bloğu)."); // Debug log
+        print("[GoalSettings] Kaydetme işlemi tamamlandı (finally bloğu).");
       }
     }
   }
+
+  // _updateGender ve _buildGenderSelection fonksiyonları KALDIRILDI, ToggleButtons kullanılıyor.
 }
 
-// UserModel'de gender alanı olmadığını varsayarak ekliyorum.
-// Eğer varsa bu kısım UserModel'e taşınmalı.
-extension UserModelGender on UserModel {
-  String? get gender => // Bu alanı UserModel'e ekleyin veya uygun yerden alın
-      null;
-}
+// UserModelGender extension KALDIRILDI, UserModel içinde gender zaten var varsayılıyor.
+// Eğer UserModel'de gender yoksa, UserModel tanımına eklenmeli.
+// Varsayılan olarak UserModel'de String? gender; olduğu kabul edildi.
