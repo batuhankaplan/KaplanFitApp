@@ -36,8 +36,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   // Yeni: Dropdown'lar için state değişkenleri
   double? _selectedWeeklyGoal;
   String? _selectedActivityLevel;
-  String? _selectedGender =
-      'Erkek'; // Yeni: Cinsiyet seçimi için varsayılan değer
+  String? _selectedGender;
 
   // Yeni: Dropdown seçenekleri
   final List<double> _weeklyGoalOptions = [
@@ -117,10 +116,10 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
   Future<void> _loadUserData() async {
     // setState(() { _isLoading = true; }); // build içinde Consumer yönetiyor
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    if (userProvider.user == null && !_isInitialLoad) {
-      // _isInitialLoad sırasında zaten yükleniyor olabilir
-      await userProvider.loadUser();
-    }
+    // if (userProvider.user == null && !_isInitialLoad) { // KALDIRILDI
+    //   // _isInitialLoad sırasında zaten yükleniyor olabilir
+    //   await userProvider.loadUser(); // KALDIRILDI
+    // } // KALDIRILDI
     final user = userProvider.user;
 
     if (mounted) {
@@ -130,9 +129,9 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
           _weightController.text = user.weight?.toString() ?? '';
           _ageController.text = user.age?.toString() ?? '';
           _targetWeightController.text = user.targetWeight?.toString() ?? '';
-          _selectedWeeklyGoal = user.weeklyWeightGoal ?? 0.0;
+          _selectedWeeklyGoal = user.weeklyWeightGoal;
           _selectedActivityLevel = user.activityLevel;
-          _selectedGender = user.gender ?? 'Erkek';
+          _selectedGender = user.gender;
           _waterIntakeController.text =
               user.targetWaterIntake?.toString() ?? '';
           _weeklyActivityGoalController.text =
@@ -153,8 +152,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             _autoCalculateNutritionTargets();
           }
         } else {
-          _selectedGender = 'Erkek';
-          _selectedWeeklyGoal = 0.0;
+          _selectedGender = null;
+          _selectedWeeklyGoal = null;
           _autoCalculateNutrition = false;
         }
         // _isLoading = false; // build içinde Consumer yönetiyor

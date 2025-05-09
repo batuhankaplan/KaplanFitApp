@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final int? id;
+  final String? uid;
   final String name;
   final int age;
   final double height; // cm cinsinden
@@ -8,7 +11,7 @@ class UserModel {
   final String? email; // E-posta adresi
   final String? phoneNumber; // Telefon numarası
   final String? gender; // YENİ: Cinsiyet ('Erkek' veya 'Kadın')
-  final DateTime? createdAt;
+  final DateTime createdAt;
   DateTime? lastWeightUpdate;
   List<WeightRecord> weightHistory;
 
@@ -25,8 +28,12 @@ class UserModel {
   final double? weeklyActivityGoal; // Yeni: Haftalık Aktivite Hedefi (Dakika)
   final bool autoCalculateNutrition; // YENİ: Otomatik hesaplama durumu
 
+  // YENİ: Günlük mevcut su tüketimi
+  final double currentDailyWaterIntake; // ml cinsinden
+
   UserModel({
     this.id,
+    this.uid,
     required this.name,
     required this.age,
     required this.height,
@@ -35,7 +42,7 @@ class UserModel {
     this.email,
     this.phoneNumber,
     this.gender, // YENİ
-    this.createdAt,
+    required this.createdAt,
     this.lastWeightUpdate,
     this.weightHistory = const [],
     this.targetCalories,
@@ -48,11 +55,13 @@ class UserModel {
     this.targetWaterIntake, // Yeni
     this.weeklyActivityGoal, // Yeni: Haftalık aktivite hedefi
     this.autoCalculateNutrition = false, // YENİ: Varsayılan değer false
+    this.currentDailyWaterIntake = 0.0, // Varsayılan değer eklendi
   });
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'uid': uid,
       'name': name,
       'age': age,
       'height': height,
@@ -61,7 +70,7 @@ class UserModel {
       'email': email,
       'phoneNumber': phoneNumber,
       'gender': gender, // YENİ
-      'createdAt': createdAt?.millisecondsSinceEpoch,
+      'createdAt': createdAt.millisecondsSinceEpoch,
       'lastWeightUpdate': lastWeightUpdate?.millisecondsSinceEpoch,
       'targetCalories': targetCalories,
       'targetProtein': targetProtein,
@@ -75,12 +84,14 @@ class UserModel {
           weeklyActivityGoal, // Yeni: Haftalık aktivite hedefi
       'autoCalculateNutrition':
           autoCalculateNutrition ? 1 : 0, // YENİ: Integer olarak kaydet
+      'currentDailyWaterIntake': currentDailyWaterIntake, // Eklendi
     };
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'],
+      uid: map['uid'],
       name: map['name'],
       age: map['age'],
       height: map['height'],
@@ -89,9 +100,7 @@ class UserModel {
       email: map['email'],
       phoneNumber: map['phoneNumber'],
       gender: map['gender'], // YENİ
-      createdAt: map['createdAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
-          : null,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt']),
       lastWeightUpdate: map['lastWeightUpdate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['lastWeightUpdate'])
           : null,
@@ -107,6 +116,9 @@ class UserModel {
           map['weeklyActivityGoal'], // Yeni: Haftalık aktivite hedefi
       autoCalculateNutrition:
           map['autoCalculateNutrition'] == 1, // YENİ: Integer'dan bool'a çevir
+      currentDailyWaterIntake:
+          (map['currentDailyWaterIntake'] as num?)?.toDouble() ??
+              0.0, // Eklendi ve null kontrolü
     );
   }
 
@@ -133,6 +145,7 @@ class UserModel {
 
   UserModel copyWith({
     int? id,
+    String? uid,
     String? name,
     int? age,
     double? height,
@@ -154,9 +167,11 @@ class UserModel {
     double? targetWaterIntake,
     double? weeklyActivityGoal,
     bool? autoCalculateNutrition, // YENİ
+    double? currentDailyWaterIntake, // Eklendi
   }) {
     return UserModel(
       id: id ?? this.id,
+      uid: uid ?? this.uid,
       name: name ?? this.name,
       age: age ?? this.age,
       height: height ?? this.height,
@@ -179,7 +194,21 @@ class UserModel {
       weeklyActivityGoal: weeklyActivityGoal ?? this.weeklyActivityGoal,
       autoCalculateNutrition:
           autoCalculateNutrition ?? this.autoCalculateNutrition, // YENİ
+      currentDailyWaterIntake:
+          currentDailyWaterIntake ?? this.currentDailyWaterIntake, // Eklendi
     );
+  }
+
+  // Firestore için (eğer Firestore kullanılıyorsa)
+  factory UserModel.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> snapshot,
+      SnapshotOptions? options) {
+    final data = snapshot.data();
+    return UserModel.fromMap(data ?? {}); // fromMap kullanarak dönüşüm
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return toMap(); // toMap kullanarak dönüşüm
   }
 }
 

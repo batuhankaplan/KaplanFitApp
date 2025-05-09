@@ -23,6 +23,13 @@ class ActivityProvider with ChangeNotifier {
   String get dailyTasksDate => _dailyTasksDate;
   DateTime get selectedDate => _selectedDate;
 
+  // YENİ: Seçili gün için toplam aktivite süresi (dakika)
+  int get currentDailyActivityMinutes {
+    if (_isLoading) return 0; // Yükleniyorsa 0 dön
+    return _activities.fold<int>(
+        0, (sum, activity) => sum + (activity.durationMinutes ?? 0));
+  }
+
   ActivityProvider(this._dbService) {
     refreshActivities();
     loadDailyTasks();

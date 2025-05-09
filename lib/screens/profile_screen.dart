@@ -94,28 +94,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
           weeklyActivityGoal: currentUser.weeklyActivityGoal ?? 150.0,
         );
       } else {
-        // Yeni kullanıcı oluştur - varsayılan değerlerle doldur
+        // Yeni kullanıcı oluştur - hedef alanları boş bırak
         updatedUser = UserModel(
           name: name,
           age: age,
-          height: 170.0, // Varsayılan boy
-          weight: 70.0, // Varsayılan kilo
+          height:
+              currentUser?.height ?? 0, // Bu değerler aslında formdan gelmeli
+          weight:
+              currentUser?.weight ?? 0, // Bu değerler aslında formdan gelmeli
           email: email.isNotEmpty ? email : null,
           phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
           profileImagePath: _profileImagePath,
           createdAt: DateTime.now(),
-          lastWeightUpdate: DateTime.now(),
-          weeklyActivityGoal:
-              150.0, // Haftalık aktivite hedefi (varsayılan 150 dakika)
-          targetCalories: 2000.0, // Varsayılan kalori hedefi
-          targetProtein: 100.0, // Varsayılan protein hedefi (g)
-          targetCarbs: 250.0, // Varsayılan karbonhidrat hedefi (g)
-          targetFat: 70.0, // Varsayılan yağ hedefi (g)
-          targetWaterIntake: 2.5, // Varsayılan su hedefi (litre)
-          targetWeight: 65.0, // Varsayılan hedef kilo
-          weeklyWeightGoal:
-              -0.5, // Varsayılan haftalık kilo hedefi (kilo kaybı)
-          activityLevel: 'Orta Aktif', // Varsayılan aktivite seviyesi
+          lastWeightUpdate:
+              DateTime.now(), // İlk ağırlık kaydı olarak düşünülebilir
+          weeklyActivityGoal: null,
+          targetCalories: null,
+          targetProtein: null,
+          targetCarbs: null,
+          targetFat: null,
+          targetWaterIntake: null,
+          targetWeight: null,
+          weeklyWeightGoal: null,
+          activityLevel: null,
         );
       }
 

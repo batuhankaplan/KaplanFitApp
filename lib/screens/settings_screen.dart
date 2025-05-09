@@ -267,35 +267,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLogoutDialog(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Çıkış Yap'),
-        content: Text('Hesabınızdan çıkış yapmak istediğinize emin misiniz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              // Kullanıcı profil bilgilerini sıfırla
-              await userProvider.clearUser();
-
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Hesabınızdan çıkış yapıldı')),
-              );
-            },
-            child: Text('Çıkış Yap'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Çıkış Yap'),
+          content: const Text(
+              'Hesabınızdan çıkış yapmak istediğinize emin misiniz? Bu işlem, mevcut oturumunuzu sonlandıracak ve sizi başlangıç ekranına yönlendirecektir.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('İptal'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Diyaloğu kapat
+              },
             ),
-          ),
-        ],
-      ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Çıkış Yap',
+                  style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Onay diyaloğunu kapat
+
+                try {
+                  // UserProvider'dan logoutUser metodunu çağır
+                  await Provider.of<UserProvider>(context, listen: false)
+                      .logoutUser();
+
+                  // Kullanıcıyı ana ekrana (veya giriş ekranına) yönlendir ve geçmişi temizle
+                  // Projenizin başlangıç ekranı rotasını buraya yazın.
+                  // Genellikle '/' veya '/auth' veya '/login' olabilir.
+                  // Bu örnekte, UserProvider'ın kullanıcı durumu değiştiğinde
+                  // main.dart veya ilgili yönlendiricinin doğru ekranı göstermesini bekliyoruz.
+                  // Bu yüzden direkt ana sayfaya yönlendirme ve stack'i temizleme genel bir yaklaşımdır.
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/', (Route<dynamic> route) => false);
+
+                  // Geri bildirim göstermek için (opsiyonel, logoutUser içinde de olabilir)
+                  // ScaffoldMessenger.of(context).showSnackBar(
+                  //   const SnackBar(content: Text('Başarıyla çıkış yapıldı.')),
+                  // );
+                } catch (e) {
+                  // Hata durumunda kullanıcıya bilgi ver
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text('Çıkış yapılırken bir hata oluştu: $e')),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

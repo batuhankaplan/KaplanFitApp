@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_coach_service.dart';
 import '../models/chat_model.dart';
+import '../providers/user_provider.dart';
 import 'conversations_screen.dart';
 import '../widgets/kaplan_loading.dart';
 
@@ -24,7 +25,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
   bool _showApiKeyInput =
       false; // API anahtarı girişini varsayılan olarak gizli tutuyoruz
   String _apiKey =
-      'YOUR_API_KEY_HERE'; // TODO: API anahtarını güvenli bir yerden al
+      'AIzaSyCpyD_2D-xJyYUlJni8YMLXiMxaVvTLswQ'; // TODO: API anahtarını güvenli bir yerden al
   int? _conversationId;
   String _conversationTitle = 'Yeni Sohbet';
   ChatMessage?
@@ -270,45 +271,51 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
     final databaseService =
         Provider.of<DatabaseService>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final currentUserId = userProvider.user?.id;
+
     bool conversationJustCreated = false;
 
     if (_conversationId == null) {
-      // İlk kullanıcı mesajı, sohbeti şimdi oluştur
+      if (currentUserId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Sohbet başlatmak için aktif bir kullanıcı gereklidir. Lütfen giriş yapın.')),
+        );
+        return;
+      }
+
       conversationJustCreated = true;
-      // Başlığı kullanıcı mesajının ilk kısmından oluştur
       String tempTitle = messageText.length > 30
           ? "${messageText.substring(0, 27)}..."
           : messageText;
-      if (tempTitle.isEmpty) tempTitle = "Yeni Sohbet"; // Çok nadir bir durum
+      if (tempTitle.isEmpty) tempTitle = "Yeni Sohbet";
 
       final newConversation = ChatConversation(
-        title:
-            tempTitle, // Başlık _updateConversationTitle ile ayrıca DB'de güncellenecek
+        userId: currentUserId,
+        title: tempTitle,
         createdAt: DateTime.now(),
-        lastMessageAt: DateTime.now(), // İlk mesajla aktivite zamanı
+        lastMessageAt: DateTime.now(),
       );
 
       try {
         final newConversationId =
             await databaseService.createChatConversation(newConversation);
         _conversationId = newConversationId;
-        _conversationTitle = tempTitle; // UI için başlığı hemen güncelle
+        _conversationTitle = tempTitle;
         debugPrint(
             "Yeni sohbet oluşturuldu ve kaydedildi. ID: $_conversationId, Başlık: $_conversationTitle");
 
-        // Bekleyen hoş geldin mesajını şimdi kaydet (eğer varsa)
         if (_pendingWelcomeMessage != null) {
           final welcomeMessageToSave = _pendingWelcomeMessage!.copyWith(
             conversationId: _conversationId!,
           );
-          // _addMessage'ı hoşgeldin mesajını DB'ye kaydetmek için doğrudan çağırmak yerine,
-          // createChatMessage'i burada çağıralım ve UI'daki mesajı güncelleyelim.
           final welcomeMessageId =
               await databaseService.createChatMessage(welcomeMessageToSave);
           final savedWelcomeMessage =
               welcomeMessageToSave.copyWith(id: welcomeMessageId);
 
-          // UI'daki geçici hoşgeldin mesajını ID'li olanla değiştir
           int welcomeIndex = _messages.indexWhere(
               (msg) => msg.text == _pendingWelcomeMessage!.text && !msg.isUser);
           if (welcomeIndex != -1 && mounted) {
@@ -316,7 +323,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
               _messages[welcomeIndex] = savedWelcomeMessage;
             });
           }
-          _pendingWelcomeMessage = null; // Hoş geldin mesajı işlendi.
+          _pendingWelcomeMessage = null;
           debugPrint(
               "Bekleyen hoşgeldin mesajı kaydedildi. ID: $welcomeMessageId");
         }
@@ -327,12 +334,10 @@ class _AICoachScreenState extends State<AICoachScreen> {
             SnackBar(content: Text('Sohbet başlatılırken hata oluştu: $e')),
           );
         }
-        return; // Sohbet oluşturulamazsa devam etme
+        return;
       }
     }
 
-    // Artık _conversationId'nin dolu olduğundan eminiz (ya vardı ya da yeni oluşturuldu).
-    // Kullanıcının mesajını ekle (bu _addMessage zaten DB'ye yazar)
     await _addMessage(messageText, true);
     _messageController.clear();
 
@@ -342,11 +347,8 @@ class _AICoachScreenState extends State<AICoachScreen> {
       });
     }
 
-    // Sohbet başlığını DB'de güncelle (eğer yeni oluşturulduysa veya ilk mesajsa ve başlık varsayılansa)
-    // _updateConversationTitle, _conversationId null değilse çalışır.
     if (conversationJustCreated) {
-      await _updateConversationTitle(
-          messageText); // Bu metod DB'deki başlığı günceller.
+      await _updateConversationTitle(messageText);
     }
 
     try {
@@ -354,10 +356,9 @@ class _AICoachScreenState extends State<AICoachScreen> {
         ..apiKey = _apiKey;
 
       final response = await aiCoachService.getCoachResponse(messageText);
-      await _addMessage(
-          response, false); // AI yanıtını ekle (bu da DB'ye yazar)
+      await _addMessage(response, false);
 
-      await _updateConversationLastActivity(); // Sohbet aktivitesini güncelle
+      await _updateConversationLastActivity();
     } catch (e) {
       debugPrint('[AICoachScreen] AI yanıtı alınırken hata: $e');
       String errorMessage =
@@ -395,8 +396,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
     String newTitle = userMessage.length > 30
         ? "${userMessage.substring(0, 27)}..."
         : userMessage;
-    if (newTitle.trim().isEmpty)
-      newTitle = "Sohbet"; // Kullanıcı mesajı sadece boşluk içeriyorsa
+    if (newTitle.trim().isEmpty) newTitle = "Sohbet";
 
     try {
       await databaseService.updateChatConversationTitle(
@@ -416,7 +416,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
   Future<void> _updateConversationLastActivity() async {
     if (_conversationId == null) return;
-    // ... (mevcut kod)
     try {
       final databaseService =
           Provider.of<DatabaseService>(context, listen: false);
@@ -429,7 +428,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 
   Future<void> _goToConversations() async {
-    // ... (mevcut kod)
     Navigator.of(context)
         .push(
       MaterialPageRoute(
@@ -437,13 +435,9 @@ class _AICoachScreenState extends State<AICoachScreen> {
       ),
     )
         .then((_) {
-      // Geri dönüldüğünde, eğer bir sohbet açıksa onu yeniden yükle
-      // Bu, ConversationsScreen'den bir sohbet silinmişse veya güncellenmişse faydalı olabilir.
       if (_conversationId != null) {
         _reloadCurrentConversation();
       } else {
-        // Eğer aktif bir sohbet yoksa (yeni sohbet ekranıydı ve kullanıcı mesaj atmadı)
-        // ve kullanıcı geri geldiyse, ekranı yeni sohbet durumuna resetleyebiliriz.
         _prepareNewConversationUI();
       }
     });
@@ -451,14 +445,10 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
   Future<void> _reloadCurrentConversation() async {
     if (_conversationId == null) {
-      // Eğer yeniden yüklenecek bir ID yoksa (örneğin, yeni sohbet hiç kaydedilmediyse)
-      // UI'ı yeni sohbet durumuna getirebiliriz.
       _prepareNewConversationUI();
       return;
     }
-    // ... (mevcut kodun devamı, _conversationId null değilse çalışır)
-    // ...
-    setState(() => _isLoading = true); // Yüklemeyi başlat
+    setState(() => _isLoading = true);
     try {
       final databaseService =
           Provider.of<DatabaseService>(context, listen: false);
@@ -479,7 +469,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
           _scrollToBottom();
         }
       } else {
-        // Sohbet DB'de bulunamadı (belki silindi), UI'ı yeni sohbete resetle.
         if (mounted) {
           debugPrint(
               "Reload: $_conversationId ID'li sohbet DB'de bulunamadı. Yeni sohbete geçiliyor.");
@@ -500,30 +489,22 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 
   Future<void> _createNewConversation() async {
-    // AppBar'daki + butonu
-    // Kullanıcıyı yeni, boş bir AICoachScreen'e yönlendir.
-    // Mevcut ekranın state'i korunur, Navigator stack'ine yeni bir sayfa eklenir.
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) =>
-            const AICoachScreen(), // Yeni bir instance, conversationId = null
+        builder: (context) => const AICoachScreen(),
       ),
     );
   }
 
   Future<void> _startNewConversation() async {
-    // Sohbet silindikten sonra çağrılır
     if (mounted) {
       setState(() {
-        _prepareNewConversationUI(); // UI'ı temizle ve geçici hoşgeldin mesajını göster
+        _prepareNewConversationUI();
       });
       FocusScope.of(context).unfocus();
       debugPrint("Yeni sohbet UI'da başlatıldı (silme sonrası).");
     }
   }
-
-  // ... (deleteConversation, build ve diğer widget metodları mevcut halleriyle kalabilir)
-  // _buildMessageBubble, _buildMessageInput, _buildApiKeyInput, _listModels
 
   Future<void> _deleteConversation(int conversationId) async {
     final confirm = await showDialog<bool>(
@@ -555,7 +536,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Sohbet silindi')),
           );
-          // Eğer silinen sohbet şu an açık olan sohbetse, ekranı yeni sohbet moduna al
           if (_conversationId == conversationId) {
             _startNewConversation();
           }

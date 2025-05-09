@@ -169,38 +169,23 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  Future<bool>? _loadUserFuture;
-
   @override
   void initState() {
     super.initState();
-    _loadUserFuture =
-        Provider.of<UserProvider>(context, listen: false).loadUser();
-    print("[AuthWrapper initState] loadUser çağrıldı.");
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _loadUserFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        if (userProvider.isLoading) {
           print(
-              "[AuthWrapper build] Kullanıcı yükleniyor (FutureBuilder waiting)...");
+              "[AuthWrapper build] Kullanıcı yükleniyor (Consumer isLoading).");
           return const CustomSplashScreen();
         }
 
-        if (snapshot.hasError) {
-          print("[AuthWrapper build] Hata oluştu: ${snapshot.error}");
-          return const Scaffold(
-              body: Center(
-                  child:
-                      Text("Bir hata oluştu. Uygulamayı yeniden başlatın.")));
-        }
-
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        // isLoading false ise buraya gelinir.
         final bool userExists = userProvider.user != null;
-
         print(
             "[AuthWrapper build] Kullanıcı var mı (Provider kontrolü)? $userExists");
 
@@ -257,7 +242,7 @@ Future<void> main() async {
 
   // UserProvider'ı oluştur ve kullanıcıyı yükle
   final userProvider = UserProvider(databaseService); // DatabaseService geç
-  await userProvider.loadUser();
+  // await userProvider.loadUser(); // UserProvider constructor'ında zaten çağrılıyor.
 
   // ProgramService'i initialize et (User ID varsa)
   try {
@@ -363,61 +348,6 @@ class _KaplanSplashScreenState extends State<KaplanSplashScreen>
     );
 
     _controller.forward();
-
-    // Kullanıcı verilerini yükle ve uygun ekrana yönlendir
-    _loadUserAndNavigate();
-  }
-
-  Future<void> _loadUserAndNavigate() async {
-    print("[SplashScreen] _loadUserAndNavigate started.");
-    // Kısa bir gecikme ekleyerek splash ekranı animasyonunun görünmesini sağla
-    await Future.delayed(const Duration(milliseconds: 2500));
-
-    if (!mounted) {
-      print("[SplashScreen] Widget not mounted after delay. Aborting.");
-      return;
-    }
-    print("[SplashScreen] Widget mounted. Proceeding to load user.");
-
-    bool userLoaded = false; // Default to false
-    try {
-      print("[SplashScreen] Accessing UserProvider...");
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      print("[SplashScreen] Calling userProvider.loadUser()...");
-      userLoaded = await userProvider.loadUser();
-      print("[SplashScreen] userProvider.loadUser() returned: $userLoaded");
-
-      if (!mounted) {
-        print(
-            "[SplashScreen] Widget not mounted after loadUser. Aborting navigation.");
-        return;
-      }
-
-      // Yönlendirme:
-      if (userLoaded) {
-        print(
-            "[SplashScreen] User loaded successfully. Navigating to /home (MainScreen).");
-        Navigator.of(context).pushReplacementNamed('/home');
-      } else {
-        print("[SplashScreen] User not loaded. Navigating to ProfileScreen.");
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-      }
-    } catch (e, stacktrace) {
-      // Hata ve stacktrace yakala
-      print("[SplashScreen] Error during loadUser or navigation: $e");
-      print("[SplashScreen] Stacktrace: $stacktrace");
-      if (mounted) {
-        print("[SplashScreen] Navigating to ProfileScreen due to error.");
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const ProfileScreen()),
-        );
-      } else {
-        print(
-            "[SplashScreen] Widget not mounted after error. Cannot navigate.");
-      }
-    }
   }
 
   @override

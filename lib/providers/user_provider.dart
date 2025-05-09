@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 class UserProvider extends ChangeNotifier {
   UserModel? _user;
@@ -14,99 +15,173 @@ class UserProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   UserProvider(this._databaseService) {
-    // loadUser(); // Otomatik yüklemeyi kaldırıyoruz, main'deki FutureBuilder yapacak
+    _loadUser();
   }
 
-  Future<bool> loadUser() async {
-    print("[UserProvider] loadUser çağrıldı."); // LOG: Metot başlangıcı
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isLoading) {
-        _isLoading = true;
-        // notifyListeners(); // FutureBuilder için gerekli değil, kaldırılabilir
+  Future<void> _loadUser() async {
+    _isLoading = true;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    final int? activeUserId = prefs.getInt('activeUserId');
+
+    if (activeUserId != null) {
+      _user = await _databaseService.getUser(activeUserId);
+      if (_user != null) {
+        // Günlük su tüketimini gün başında sıfırla
+        final String lastWaterLogDate =
+            prefs.getString('lastWaterLogDate_$_user!.id') ?? '';
+        final String todayDate =
+            DateFormat('yyyy-MM-dd').format(DateTime.now());
+        if (lastWaterLogDate != todayDate) {
+          _user = _user!.copyWith(currentDailyWaterIntake: 0.0);
+          // SharedPreferences'a hemen kaydetmeyelim, logWater veya saveUser içinde kaydedilsin
+          // await prefs.setString('lastWaterLogDate_$_user!.id', todayDate);
+        }
       }
-    });
-    bool userLoaded = false;
-
-    try {
-      // Aktif kullanıcı ID'sini SharedPreferences'den al
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getInt('activeUserId');
-
-      UserModel? user;
-
-      if (userId != null) {
-        // Belirli ID'ye sahip kullanıcıyı getir
-        user = await _databaseService.getUser(userId);
-        print("[DB] Kullanıcı getirildi, ID: $userId, Veri: $user");
-      } else {
-        print("[UserProvider] Aktif kullanıcı ID'si bulunamadı");
-        // Kullanıcı ID'si yoksa null ata, otomatik profil yükleme yapma
-        user = null;
-      }
-
-      _user = user;
-      _isLoading = false;
-      notifyListeners();
-      userLoaded = user != null;
-    } catch (e) {
-      print("[UserProvider] Hata: $e");
-      _isLoading = false;
-      notifyListeners();
+    } else {
+      _user = null;
     }
-
-    return userLoaded;
+    _isLoading = false;
+    notifyListeners();
   }
 
-  Future<void> saveUser(UserModel user) async {
+  Future<void> saveUser(UserModel userToSave,
+      {bool isLoginOrRegister = false}) async {
+    _isLoading = true;
+    notifyListeners();
     try {
-      _isLoading = true;
-      notifyListeners();
-
-      if (user.id != null) {
-        // Mevcut kullanıcıyı güncelle
-        await _databaseService.updateUser(user);
-        print("[UserProvider] Kullanıcı güncellendi: ${user.id}");
+      UserModel userWithId = userToSave;
+      if (userToSave.id == null) {
+        final newId = await _databaseService.insertUser(userToSave);
+        userWithId = userToSave.copyWith(id: newId);
       } else {
-        // Yeni kullanıcı oluştur
-        final id = await _databaseService.insertUser(user);
-        user = user.copyWith(id: id); // ID ile kullanıcıyı güncelle
-        print("[UserProvider] Yeni kullanıcı oluşturuldu: $id");
-
-        // Yeni kullanıcının ID'sini aktif kullanıcı olarak kaydet
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('activeUserId', id);
-        print("[UserProvider] Aktif kullanıcı ID'si kaydedildi: $id");
+        await _databaseService.updateUser(userToSave);
       }
+      _user = userWithId;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('activeUserId', _user!.id!);
 
-      // Ağırlık kayıtlarını ekle
-      if (user.id != null && user.weightHistory.isNotEmpty) {
-        // En son ağırlık kaydı varsa veritabanına ekle
-        final lastWeight = user.weightHistory.first; // İlk kayıt en son eklenen
-        await _databaseService.insertWeightRecord(lastWeight, user.id!);
-        print("[UserProvider] Ağırlık kaydı eklendi: ${lastWeight.weight} kg");
+      // Su tüketimi için son log tarihini GÜNCELLEME, eğer logWater'dan geliyorsa zaten güncellendi.
+      // Login/Register durumunda zaten aşağıdaki blokta sıfırlanıyor.
+      // final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      // await prefs.setString('lastWaterLogDate_$_user!.id', todayDate); // KALDIRILDI - logWater ele alacak
+
+      if (isLoginOrRegister) {
+        // Yeni kayıt veya giriş ise, günlük su tüketimini sıfırla
+        // Bu sıfırlama aynı zamanda lastWaterLogDate'i de güncellemeli
+        final String todayDate =
+            DateFormat('yyyy-MM-dd').format(DateTime.now());
+        _user = _user!.copyWith(currentDailyWaterIntake: 0.0);
+        await _databaseService.updateUser(_user!); // Veritabanında da sıfırla
+        await prefs.setString('lastWaterLogDate_$_user!.id', todayDate);
       }
-
-      _user = user;
-      _weightHistory = await _databaseService.getWeightHistory(user.id!);
+      // _resetWaterIntakeIfNeeded(); // KALDIRILDI - Bu çağrı buradan kaldırıldı.
     } catch (e) {
-      print("[UserProvider] saveUser HATA: $e");
-      throw e; // Hatanın yukarı çıkmasına izin ver (UI'da gösterilmesi için)
+      print("UserProvider saveUser Hata: $e");
+      // Hata yönetimi eklenebilir
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Yeni: Çıkış yapma (logout) metodu
+  Future<void> loginUser(String name) async {
+    // Bu metot örnek olarak bırakıldı, gerçek login mekanizması farklı olabilir.
+    _isLoading = true;
+    notifyListeners();
+    UserModel? foundUser = await _databaseService.getUserByName(name);
+    if (foundUser != null) {
+      await saveUser(foundUser.copyWith(/* lastLogin: DateTime.now() */),
+          isLoginOrRegister: true);
+    } else {
+      // Kullanıcı bulunamadı hatası
+      _isLoading = false;
+      notifyListeners();
+      throw Exception('Kullanıcı bulunamadı');
+    }
+  }
+
+  Future<void> registerUser(UserModel newUser) async {
+    // Bu metot örnek olarak bırakıldı, gerçek register mekanizması farklı olabilir.
+    await saveUser(
+        newUser.copyWith(
+            createdAt: DateTime.now() /*, lastLogin: DateTime.now() */),
+        isLoginOrRegister: true);
+  }
+
   Future<void> logoutUser() async {
     print("[UserProvider] logoutUser çağrıldı");
-    _user = null;
-    notifyListeners();
+    final int? userIdToDeleteChats = _user?.id;
 
-    // Aktif kullanıcı ID'sini SharedPreferences'dan sil
+    _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('activeUserId');
     print("[UserProvider] activeUserId SharedPreferences'dan silindi");
+
+    if (userIdToDeleteChats != null) {
+      try {
+        await _databaseService
+            .deleteAllChatConversationsForUser(userIdToDeleteChats);
+        print(
+            "[UserProvider] Kullanıcı $userIdToDeleteChats için tüm konuşmalar silindi.");
+      } catch (e) {
+        print("[UserProvider] Konuşmalar silinirken hata: $e");
+      }
+    }
+    notifyListeners();
+  }
+
+  // YENİ: Günlük su tüketimini kaydetmek için metot
+  Future<void> logWater(double amountInMl) async {
+    if (_user == null) return;
+
+    _isLoading = true;
+    // notifyListeners(); // Başlangıçta değil, sonunda
+
+    final prefs = await SharedPreferences.getInstance();
+    final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final String lastWaterLogDateKey = 'lastWaterLogDate_${_user!.id}';
+    final String lastWaterLogDate = prefs.getString(lastWaterLogDateKey) ?? '';
+
+    double currentIntake = _user!.currentDailyWaterIntake;
+
+    if (lastWaterLogDate != todayDate) {
+      // Yeni bir gün, mevcut tüketimi sıfırla
+      print(
+          "[UserProvider] New day detected for water log. Resetting intake for user ${_user!.id}.");
+      currentIntake = 0.0;
+      // Bu yeni gün bilgisini hemen SharedPreferences'a yazalım ki sonraki logWater çağrıları doğru çalışsın.
+      await prefs.setString(lastWaterLogDateKey, todayDate);
+    }
+
+    final newTotalWater = currentIntake + amountInMl;
+    _user = _user!.copyWith(
+        currentDailyWaterIntake: newTotalWater.clamp(0.0, 10000.0)); // Max 10L
+
+    try {
+      // saveUser metodu zaten _user'ı güncelleyip, DB'ye yazıp, notifyListeners çağıracak.
+      // Ayrıca SharedPreferences için activeUserId'yi de hallediyor.
+      // lastWaterLogDate'i yukarıda zaten ayarladık.
+      await _databaseService.updateUser(_user!); // Sadece DB'yi güncelleyelim
+      // ve _user state'ini tuttuktan sonra notify edelim.
+
+      // await saveUser(_user!); // saveUser'ı burada çağırmak döngüye veya gereksiz işlemlere yol açabilir.
+      // saveUser içindeki SharedPreferences activeUserId ve _isLoading yönetimi önemli.
+      // Şimdilik doğrudan DB update ve notifyListeners yapalım.
+      // Eğer saveUser'daki diğer mantıklar (prefs vs.) gerekliyse, saveUser'ı daha dikkatli çağırmalı.
+
+      print(
+          "[UserProvider] Water logged: $amountInMl ml. New total: $newTotalWater ml for user ${_user!.id}");
+    } catch (e) {
+      print("[UserProvider] Error logging water: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners(); // Değişikliği bildir
+    }
+  }
+
+  Future<UserModel?> getUserById(int id) async {
+    return await _databaseService.getUser(id);
   }
 
   Future<void> addWeightRecord(double weight) async {
@@ -161,7 +236,7 @@ class UserProvider extends ChangeNotifier {
 
     await _databaseService.updateUser(_user!);
 
-    await loadUser(); // Yeniden tüm verileri yükle
+    await _loadUser(); // Yeniden tüm verileri yükle
   }
 
   // Kullanıcı bilgilerini temizle

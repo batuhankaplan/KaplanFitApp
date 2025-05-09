@@ -39,7 +39,7 @@ class DatabaseService {
   DatabaseService._internal();
 
   static const int _dbVersion =
-      19; // 18'den 19'a yükseltildi (autoCalculateNutrition eklendi)
+      20; // 19'dan 20'ye yükseltildi (chat_conversations.userId eklendi)
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -756,36 +756,34 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
   Future<void> _createChatTables(Database db) async {
     await db.execute('''
-        CREATE TABLE IF NOT EXISTS chat_conversations(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT NOT NULL,
-          createdAt INTEGER NOT NULL,
-          lastMessageAt INTEGER
-        )
-      ''');
+      CREATE TABLE IF NOT EXISTS chat_conversations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL, -- YENİ EKLENDİ
+        title TEXT NOT NULL,
+        createdAt INTEGER NOT NULL,
+        lastMessageAt INTEGER,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE -- YENİ EKLENDİ
+      )
+    ''');
+    print("Chat Conversations tablosu oluşturuldu/güncellendi.");
+
     await db.execute('''
-        CREATE TABLE IF NOT EXISTS chat_messages(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          conversationId INTEGER NOT NULL,
-          text TEXT NOT NULL,
-          isUser INTEGER NOT NULL,
-          timestamp INTEGER NOT NULL,
-          FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
-        )
-      ''');
-    print("Chat tabloları oluşturuldu.");
+      CREATE TABLE IF NOT EXISTS chat_messages(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversationId INTEGER NOT NULL,
+        text TEXT NOT NULL,
+        isUser INTEGER NOT NULL,
+        timestamp INTEGER NOT NULL,
+        FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
+      )
+    ''');
+    print("Chat Messages tablosu oluşturuldu.");
   }
 
   Future<int> insertUser(UserModel user) async {
     final db = await database;
-    final map = user.toMap();
-    map.remove('weightHistory');
-    // YENİ: autoCalculateNutrition için varsayılan değer ekle (eğer modelden gelmezse diye)
-    map['autoCalculateNutrition'] ??= 0;
-    int id = await db.insert('users', map,
+    return await db.insert('users', user.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace);
-    print("[DB] Kullanıcı eklendi, ID: $id, Veri: $map");
-    return id;
   }
 
   Future<UserModel?> getUser(int id) async {
@@ -795,21 +793,34 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       where: 'id = ?',
       whereArgs: [id],
     );
-
     if (maps.isNotEmpty) {
-      print("[DB] Kullanıcı getirildi, ID: $id, Veri: ${maps.first}");
-      // Kullanıcıyı oluştururken ağırlık geçmişini de yükle
-      final userMap = Map<String, dynamic>.from(maps.first);
-      // YENİ: DB'den null gelebilen autoCalculateNutrition için kontrol
-      userMap['autoCalculateNutrition'] ??= 0; // Eğer null ise 0 (false) yap
-      final user = UserModel.fromMap(userMap);
-      final weightHistory = await getWeightHistory(id);
-      user.weightHistory = weightHistory;
-      return user;
-    } else {
-      print("[DB] Kullanıcı bulunamadı, ID: $id");
-      return null;
+      return UserModel.fromMap(maps.first);
     }
+    return null;
+  }
+
+  // YENİ: Kullanıcıyı isme göre getirme
+  Future<UserModel?> getUserByName(String name) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      where: 'name = ?',
+      whereArgs: [name],
+      limit: 1, // İsim unique olmayabilir, ilk eşleşeni al
+    );
+    if (maps.isNotEmpty) {
+      return UserModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<UserModel>> getAllUsers() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'users',
+      orderBy: 'id ASC', // ID'ye göre artan sırada sırala
+    );
+    return List.generate(maps.length, (i) => UserModel.fromMap(maps[i]));
   }
 
   Future<void> updateUser(UserModel user) async {
@@ -1072,10 +1083,12 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     return await db.insert('chat_conversations', conversation.toMap());
   }
 
-  Future<List<ChatConversation>> getAllChatConversations() async {
+  Future<List<ChatConversation>> getAllChatConversations(int userId) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'chat_conversations',
+      where: 'userId = ?',
+      whereArgs: [userId],
       orderBy: 'lastMessageAt DESC, createdAt DESC',
     );
     return List.generate(maps.length, (i) => ChatConversation.fromMap(maps[i]));
@@ -1096,7 +1109,9 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     final db = await database;
     await db.update(
       'chat_conversations',
-      conversation.toMap(),
+      conversation
+          .toMap(), // conversation.userId burada güncellenmemeli, sabit kalmalı.
+      // Eğer userId güncellenmesi gerekiyorsa ayrı bir metod olmalı.
       where: 'id = ?',
       whereArgs: [conversation.id],
     );
@@ -1526,52 +1541,35 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print(
-        "Veritabanı yükseltiliyor: Sürüm $oldVersion -> $newVersion"); // Loglama eklendi
+    print("Veritabanı yükseltiliyor: $oldVersion -> $newVersion");
     var batch = db.batch();
-    if (oldVersion < 15) {
-      // meals tablosuna userId sütununu ekle
+
+    // Önceki versiyonlardan gelen yükseltmeleri burada yönetebilirsiniz.
+    // Her versiyon için ayrı if blokları kullanmak en iyisidir.
+    // Örneğin, versiyon 15'ten 16'ya geçişte bir şey yapılmışsa:
+    // if (oldVersion < 16) { ... }
+
+    if (oldVersion < 17) {
       try {
-        await db.execute('ALTER TABLE meals ADD COLUMN userId INTEGER');
+        batch.execute(
+            'ALTER TABLE meals ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
         print("Meals tablosuna userId sütunu eklendi.");
       } catch (e) {
         print(
             "Meals tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
-      // water_log tablosunu ekle
       try {
-        await db.execute('''
-            CREATE TABLE IF NOT EXISTS water_log(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              date INTEGER NOT NULL UNIQUE,
-              amount_ml INTEGER NOT NULL DEFAULT 0,
-              userId INTEGER, 
-              FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
-            )
-          ''');
-        print("Water Log tablosu oluşturuldu.");
-      } catch (e) {
-        print("Water Log tablosu oluşturulurken hata (zaten olabilir): $e");
-      }
-    }
-    if (oldVersion < 16) {
-      // workout_logs, exercise_logs, workout_sets tablolarını ekle
-      await _createWorkoutTables(db);
-    }
-    if (oldVersion < 17) {
-      try {
-        await db
-            .execute('ALTER TABLE users ADD COLUMN weeklyActivityGoal REAL');
-        print("Users tablosuna weeklyActivityGoal sütunu eklendi.");
+        batch.execute(
+            'ALTER TABLE water_log ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
+        print("Water Log tablosuna userId sütunu eklendi.");
       } catch (e) {
         print(
-            "Users tablosuna weeklyActivityGoal sütunu eklenirken hata (zaten olabilir): $e");
+            "Water Log tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
-    // YENİ: Sürüm 18 için yükseltme
     if (oldVersion < 18) {
       try {
-        await db.execute('ALTER TABLE users ADD COLUMN gender TEXT');
+        batch.execute('ALTER TABLE users ADD COLUMN gender TEXT');
         print("Users tablosuna gender sütunu eklendi.");
       } catch (e) {
         print(
@@ -1581,12 +1579,26 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     // YENİ: Sürüm 19 için yükseltme
     if (oldVersion < 19) {
       try {
-        await db.execute(
+        batch.execute(
             'ALTER TABLE users ADD COLUMN autoCalculateNutrition INTEGER DEFAULT 0');
         print("Users tablosuna autoCalculateNutrition sütunu eklendi.");
       } catch (e) {
         print(
             "Users tablosuna autoCalculateNutrition sütunu eklenirken hata (zaten olabilir): $e");
+      }
+    }
+    // YENİ: Sürüm 20 için yükseltme (chat_conversations.userId)
+    if (oldVersion < 20) {
+      try {
+        batch.execute(
+            'ALTER TABLE chat_conversations ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
+        print("chat_conversations tablosuna userId sütunu eklendi (upgrade).");
+        // Opsiyonel: Mevcut sahipsiz konuşmaları ilk kullanıcıya ata
+        // batch.execute('UPDATE chat_conversations SET userId = (SELECT id FROM users ORDER BY id ASC LIMIT 1) WHERE userId IS NULL');
+        // print("Sahipsiz konuşmalar ilk kullanıcıya atandı (upgrade).");
+      } catch (e) {
+        print(
+            "chat_conversations tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
 
@@ -1775,25 +1787,46 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
   // Besin arama fonksiyonu (AddEditMealDialog için)
   Future<List<FoodItem>> searchFoodItems(String query) async {
-    if (query.isEmpty) return [];
-    // Aramayı en az 2 karakter girilince yapalım (performans için)
-    if (query.length < 2) return [];
+    Query<Map<String, dynamic>> firestoreQuery = _db.collection('foods');
+
+    if (query.isEmpty) {
+      // Sorgu boşsa, tüm besinleri (limitli) getir
+      firestoreQuery = firestoreQuery.orderBy('name_lowercase').limit(50);
+    } else {
+      // Sorgu doluysa, keywords ile ara
+      // Arama terimini küçük harfe çevir ve kelimelere ayır
+      final searchKeywords =
+          query.toLowerCase().split(' ').where((k) => k.isNotEmpty).toList();
+
+      if (searchKeywords.isNotEmpty) {
+        // Firestore 'array-contains-any' 10 elemanla sınırlı,
+        // ve her bir keyword için ayrı bir 'array-contains' daha mantıklı olabilir
+        // ya da ilk keyword'e odaklanıp sonra client-side filtreleme yapılabilir.
+        // Şimdilik, en az bir keyword eşleşmesi için sorgu yapalım.
+        // Daha iyi bir "OR" benzeri sorgu için, her bir keyword için ayrı sorgu yapıp
+        // sonuçları birleştirmek gerekebilir, bu da karmaşıklığı artırır.
+        // Firestore'un `in` ve `array-contains-any` operatörleri 10 elemanla sınırlıdır.
+        // Bu yüzden arama terimlerini 10 ile sınırlayalım.
+        final limitedSearchKeywords = searchKeywords.take(10).toList();
+        if (limitedSearchKeywords.isNotEmpty) {
+          firestoreQuery = firestoreQuery
+              .where('keywords', arrayContainsAny: limitedSearchKeywords)
+              .limit(25);
+        } else {
+          // Eğer geçerli bir arama kelimesi kalmadıysa (örneğin sadece boşluklardan oluşuyorsa)
+          // yine de boş liste döndürmek yerine tümünü getirebilir veya bir hata mesajı verebiliriz.
+          // Şimdilik ilk 50'yi getirelim, bu durum nadir olmalı.
+          firestoreQuery = firestoreQuery.orderBy('name_lowercase').limit(50);
+        }
+      } else {
+        // searchKeywords boşsa (örneğin query sadece boşluk içeriyorsa)
+        firestoreQuery = firestoreQuery.orderBy('name_lowercase').limit(50);
+      }
+    }
 
     try {
-      // Başlangıç eşleşmesi için (daha hızlı)
-      QuerySnapshot snapshot = await _db
-          .collection('foods')
-          .where('name_lowercase', isGreaterThanOrEqualTo: query.toLowerCase())
-          .where('name_lowercase',
-              isLessThanOrEqualTo:
-                  query.toLowerCase() + '\uf8ff') // Bitiş sınırı
-          .orderBy('name_lowercase')
-          .limit(25) // Sonuçları biraz artıralım
-          .get();
-
-      // Alternatif: Tam metin arama için 3. parti servisler (Algolia vb.) veya
-      // Firestore'da daha kompleks sorgular gerekebilir. Şimdilik basit başlangıç eşleşmesi.
-
+      final QuerySnapshot<Map<String, dynamic>> snapshot =
+          await firestoreQuery.get();
       return snapshot.docs.map((doc) => FoodItem.fromSnapshot(doc)).toList();
     } catch (e) {
       print("Besin arama hatası: $e");
@@ -1811,5 +1844,45 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       whereArgs: [id],
     );
     print("Konuşmanın son aktivite zamanı güncellendi: $id, $now");
+  }
+
+  /// Belirli bir kullanıcıya ait tüm konuşmaları ve ilgili mesajları siler.
+  Future<void> deleteAllChatConversationsForUser(int userId) async {
+    final db = await database;
+    // Önce kullanıcıya ait konuşma ID'lerini al
+    final List<Map<String, dynamic>> conversationMaps = await db.query(
+      'chat_conversations',
+      columns: ['id'],
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    if (conversationMaps.isEmpty) {
+      print("Kullanıcı ID $userId için silinecek konuşma bulunamadı.");
+      return;
+    }
+
+    List<int> conversationIds =
+        conversationMaps.map((map) => map['id'] as int).toList();
+
+    var batch = db.batch();
+
+    // Bu konuşmalara ait tüm mesajları sil
+    batch.delete(
+      'chat_messages',
+      where:
+          'conversationId IN (${List.filled(conversationIds.length, '?').join(',')})',
+      whereArgs: conversationIds,
+    );
+
+    // Kullanıcıya ait tüm konuşmaları sil
+    batch.delete(
+      'chat_conversations',
+      where: 'userId = ?',
+      whereArgs: [userId],
+    );
+
+    await batch.commit(noResult: true);
+    print("Kullanıcı ID $userId için tüm konuşmalar ve mesajlar silindi.");
   }
 } // DatabaseService sınıfının kapanış parantezi

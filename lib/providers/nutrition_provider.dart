@@ -25,6 +25,15 @@ class NutritionProvider with ChangeNotifier {
   DateTime get selectedDate => _selectedDate;
   String get dailyTasksDate => _dailyTasksDate;
 
+  // YENİ: Seçili gün için toplam kalori
+  double get currentDailyCalories {
+    if (_meals.isEmpty) return 0.0;
+    // Sadece _selectedDate ile aynı güne ait öğünlerin kalorilerini topla
+    return _meals
+        .where((meal) => _isSameDay(meal.date, _selectedDate))
+        .fold(0.0, (sum, meal) => sum + (meal.calories ?? 0.0));
+  }
+
   NutritionProvider(this._dbService) {
     // refreshMeals(); // Artık ProxyProvider tetikleyecek
   }

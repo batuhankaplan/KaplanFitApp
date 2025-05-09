@@ -3,12 +3,14 @@ import 'package:intl/intl.dart';
 /// Bir sohbet oturumunu temsil eden model
 class ChatConversation {
   final int? id;
+  final int userId; // YENİ: Konuşmanın sahibi olan kullanıcının kimliği
   final String title; // Sohbet başlığı/adı
   final DateTime createdAt;
   final DateTime? lastMessageAt;
 
   ChatConversation({
     this.id,
+    required this.userId, // YENİ
     required this.title,
     required this.createdAt,
     this.lastMessageAt,
@@ -18,6 +20,7 @@ class ChatConversation {
   factory ChatConversation.fromMap(Map<String, dynamic> map) {
     return ChatConversation(
       id: map['id'],
+      userId: map['userId'], // YENİ
       title: map['title'] ?? 'Yeni Sohbet',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt']),
       lastMessageAt: map['lastMessageAt'] != null
@@ -30,6 +33,7 @@ class ChatConversation {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'userId': userId, // YENİ
       'title': title,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'lastMessageAt': lastMessageAt?.millisecondsSinceEpoch,
@@ -39,12 +43,14 @@ class ChatConversation {
   // Nesneyi değiştirerek yeni bir kopya oluşturma
   ChatConversation copyWith({
     int? id,
+    int? userId, // YENİ
     String? title,
     DateTime? createdAt,
     DateTime? lastMessageAt,
   }) {
     return ChatConversation(
       id: id ?? this.id,
+      userId: userId ?? this.userId, // YENİ
       title: title ?? this.title,
       createdAt: createdAt ?? this.createdAt,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../models/chat_model.dart';
+import '../providers/user_provider.dart';
 import 'ai_coach_screen.dart';
 import '../widgets/kaplan_loading.dart';
 
@@ -26,12 +27,27 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   Future<void> _loadConversations() async {
     setState(() {
       _isLoading = true;
+      _error = null;
     });
 
     try {
       final databaseService =
           Provider.of<DatabaseService>(context, listen: false);
-      final conversations = await databaseService.getAllChatConversations();
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final currentUserId = userProvider.user?.id;
+
+      if (currentUserId == null) {
+        if (mounted) {
+          setState(() {
+            _conversations = [];
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final conversations =
+          await databaseService.getAllChatConversations(currentUserId);
 
       if (mounted) {
         setState(() {
@@ -47,7 +63,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           _error = "Konuşmalar yüklenirken bir hata oluştu: $e";
         });
 
-        // InitState'de showDialog kullanmak yerine, bir sonraki frame'de gösterelim
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _showErrorDialog(_error!);
@@ -70,7 +85,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         ),
       )
           .then((_) {
-        // Konuşma ekranından döndükten sonra konuşmaları yeniden yükle
         _loadConversations();
       });
     } catch (e) {
@@ -233,7 +247,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                               ),
                             )
                                 .then((_) {
-                              // Konuşma ekranından döndükten sonra konuşmaları yeniden yükle
                               _loadConversations();
                             });
                           },

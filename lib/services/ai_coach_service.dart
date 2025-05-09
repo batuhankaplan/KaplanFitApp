@@ -7,7 +7,7 @@ import '../models/task_type.dart';
 
 class AICoachService {
   // API anahtarı geçici olarak boş bırakılmıştır, kullanıcı kendi anahtarını girecektir
-  String _apiKey = 'AIzaSyB5c4nbG1J7842wkmESVt0tUgD2I-Ey3M8';
+  String _apiKey = 'AIzaSyCpyD_2D-xJyYUlJni8YMLXiMxaVvTLswQ';
   final DatabaseService _dbService;
   late GenerativeModel _model;
 
@@ -118,9 +118,10 @@ class AICoachService {
     4. Tavsiyeleri madde madde, güzel ve samimicümlelerle listelemeyi tercih et.
     5. Kullanıcıyı sürekli motive et pozitife yönlendir cesaretlendir.
     6. Kullanıcının günlük aktivite planını kontrol et.
-    7. Kullanıcının aktivite ve yemek kayıtlarını kontrol et.
+    7. Kullanıcının aktivite, su, kalori, kilo ve beslenme kayıtlarını kontrol et.
     8. Kullanıcının hedeflerine yönelik yanıt ver.
-    
+    9. Kullanıcının aktivite ve yemek kayıtlarını kontrol et.
+    10. Kullanıcı ile olan tüm konuşmalarını kaydet, hatırla ve bunları dikkate alarak cevap ver..
     Kullanıcıya Türkçe yanıt ver.
     """;
   }

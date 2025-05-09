@@ -9,6 +9,7 @@ class FoodItem {
   final double carbsG;
   final double proteinG;
   final double fatG;
+  final List<String> keywords;
 
   FoodItem({
     this.id,
@@ -19,25 +20,36 @@ class FoodItem {
     required this.carbsG,
     required this.proteinG,
     required this.fatG,
-  });
+    List<String>? keywords,
+  }) : keywords = keywords ?? _generateKeywords(name);
 
-  // Firestore'dan okumak için factory constructor
+  static List<String> _generateKeywords(String name) {
+    if (name.isEmpty) return [];
+    return name
+        .toLowerCase()
+        .split(' ')
+        .where((k) => k.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+
   factory FoodItem.fromSnapshot(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return FoodItem(
       id: doc.id,
       name: data['name'] ?? '',
       category: data['category'] ?? '',
-      // Firestore'dan gelen sayısal değerlerin double olmasını sağla
       servingSizeG: (data['servingSizeG'] as num?)?.toDouble() ?? 0.0,
       caloriesKcal: (data['caloriesKcal'] as num?)?.toDouble() ?? 0.0,
       carbsG: (data['carbsG'] as num?)?.toDouble() ?? 0.0,
       proteinG: (data['proteinG'] as num?)?.toDouble() ?? 0.0,
       fatG: (data['fatG'] as num?)?.toDouble() ?? 0.0,
+      keywords: data['keywords'] != null
+          ? List<String>.from(data['keywords'])
+          : _generateKeywords(data['name'] ?? ''),
     );
   }
 
-  // Firestore'a yazmak için map
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -47,8 +59,8 @@ class FoodItem {
       'carbsG': carbsG,
       'proteinG': proteinG,
       'fatG': fatG,
-      // Büyük/küçük harf duyarsız arama için küçük harf alan ekleniyor
       'name_lowercase': name.toLowerCase(),
+      'keywords': keywords,
     };
   }
 }
