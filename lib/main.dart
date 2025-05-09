@@ -1,10 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:flutter/services.dart';
 import 'theme.dart';
 import 'screens/home_screen.dart';
@@ -14,21 +11,17 @@ import 'screens/ai_coach_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/program_screen.dart';
 import 'screens/stats_screen.dart';
-import 'screens/splash_screen.dart';
 import 'providers/user_provider.dart';
 import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
 import 'services/program_service.dart';
-import 'services/notification_service.dart';
 import 'services/exercise_service.dart';
 import 'services/database_service.dart';
-import 'services/ai_coach_service.dart';
 import 'widgets/kaplan_appbar.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:animations/animations.dart';
 import 'splash/custom_splash_screen.dart';
 import 'providers/workout_provider.dart';
-import 'widgets/kaplan_loading.dart';
 import 'screens/profile_screen.dart';
 import 'screens/goal_tracking_screen.dart';
 import 'screens/goal_settings_screen.dart';
@@ -155,86 +148,6 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildExtraMenuSheet(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            margin: EdgeInsets.only(top: 10),
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.calendar_today_rounded,
-              color: AppTheme.primaryColor,
-            ),
-            title: Text('Haftalık Program'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProgramScreen(),
-                  settings: RouteSettings(name: "ProgramScreen"),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.fitness_center_rounded,
-              color: AppTheme.accentColor,
-            ),
-            title: Text('Antrenman Programı'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WorkoutProgramScreen(),
-                  settings: RouteSettings(name: "WorkoutProgramScreen"),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.bar_chart_rounded,
-              color: AppTheme.primaryColor,
-            ),
-            title: Text('İstatistikler'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StatsScreen(),
-                  settings: RouteSettings(name: "StatsScreen"),
-                ),
-              );
-            },
-          ),
-          SizedBox(height: 10),
-        ],
       ),
     );
   }
@@ -573,8 +486,6 @@ class PermissionHandlerScreen extends StatefulWidget {
 }
 
 class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();

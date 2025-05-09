@@ -9,7 +9,7 @@ class ProgramSet {
   final String? repsDescription; // Örn: "12-10-8-8" veya "30 sn"
   final String? restTimeDescription; // Örn: "60 sn"
   final String? notes;
-  Exercise? exerciseDetails; // Populate edilecek egzersiz bilgisi
+  final Exercise? exerciseDetails; // Populate edilecek egzersiz bilgisi
 
   ProgramSet({
     required this.exerciseId,

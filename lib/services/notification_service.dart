@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+// import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart' as fln_platform_interface; // Bu importu kaldırıyoruz veya yorumluyoruz, çünkü enum doğrudan ana paketten gelebilir
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -358,7 +359,6 @@ class NotificationService {
         androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        // matchDateTimeComponents: DateTimeComponents.time, // Kaldırıldı, tek seferlik
         payload: payload ?? 'custom_one_time_${notificationId}',
       );
 

@@ -6,26 +6,26 @@ class ChatConversation {
   final String title; // Sohbet başlığı/adı
   final DateTime createdAt;
   final DateTime? lastMessageAt;
-  
+
   ChatConversation({
     this.id,
     required this.title,
     required this.createdAt,
     this.lastMessageAt,
   });
-  
+
   // Map'ten nesne oluşturma
   factory ChatConversation.fromMap(Map<String, dynamic> map) {
     return ChatConversation(
       id: map['id'],
       title: map['title'] ?? 'Yeni Sohbet',
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt']),
-      lastMessageAt: map['lastMessageAt'] != null 
-        ? DateTime.fromMillisecondsSinceEpoch(map['lastMessageAt']) 
-        : null,
+      lastMessageAt: map['lastMessageAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['lastMessageAt'])
+          : null,
     );
   }
-  
+
   // Nesneyi Map'e dönüştürme
   Map<String, dynamic> toMap() {
     return {
@@ -35,7 +35,7 @@ class ChatConversation {
       'lastMessageAt': lastMessageAt?.millisecondsSinceEpoch,
     };
   }
-  
+
   // Nesneyi değiştirerek yeni bir kopya oluşturma
   ChatConversation copyWith({
     int? id,
@@ -50,12 +50,12 @@ class ChatConversation {
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
     );
   }
-  
+
   // Formatlı tarih gösterimi
   String get formattedDate {
     return DateFormat('dd MMM yyyy HH:mm', 'tr_TR').format(createdAt);
   }
-  
+
   String get formattedLastMessageTime {
     if (lastMessageAt == null) return '';
     return DateFormat('dd MMM HH:mm', 'tr_TR').format(lastMessageAt!);
@@ -69,7 +69,7 @@ class ChatMessage {
   final String text;
   final bool isUser;
   final DateTime timestamp;
-  
+
   ChatMessage({
     this.id,
     required this.conversationId,
@@ -77,7 +77,24 @@ class ChatMessage {
     required this.isUser,
     required this.timestamp,
   });
-  
+
+  // ChatMessage için copyWith metodu
+  ChatMessage copyWith({
+    int? id,
+    int? conversationId,
+    String? text,
+    bool? isUser,
+    DateTime? timestamp,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      conversationId: conversationId ?? this.conversationId,
+      text: text ?? this.text,
+      isUser: isUser ?? this.isUser,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
+
   // Map'ten nesne oluşturma
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
     return ChatMessage(
@@ -88,7 +105,7 @@ class ChatMessage {
       timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp']),
     );
   }
-  
+
   // Nesneyi Map'e dönüştürme
   Map<String, dynamic> toMap() {
     return {
@@ -99,9 +116,9 @@ class ChatMessage {
       'timestamp': timestamp.millisecondsSinceEpoch,
     };
   }
-  
+
   // Formatlı zaman gösterimi
   String get formattedTime {
     return DateFormat('HH:mm', 'tr_TR').format(timestamp);
   }
-} 
+}

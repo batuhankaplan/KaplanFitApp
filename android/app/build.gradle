@@ -11,13 +11,13 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = '11'
     }
 
     defaultConfig {
@@ -45,7 +45,7 @@ flutter {
 }
 
 dependencies {
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:1.2.2"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
 }
 
 // Google Services eklentisini uygula

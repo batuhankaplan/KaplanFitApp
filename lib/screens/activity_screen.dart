@@ -3,13 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart'
-    hide PermissionStatus;
 import '../providers/activity_provider.dart';
 import '../providers/workout_provider.dart';
 import '../models/activity_record.dart';
 import '../models/task_type.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../theme.dart';
 import '../utils/animations.dart';
 import '../widgets/kaplan_loading.dart';
@@ -32,12 +29,7 @@ class _ActivityScreenState extends State<ActivityScreen>
   FitActivityType _selectedActivityType = FitActivityType.walking;
 
   // Konum izleme değişkenleri
-  bool _isTrackingActivity = false;
   bool _hasLocationPermission = false;
-  DateTime? _activityStartTime;
-  Position? _lastPosition;
-  double _distanceInMeters = 0;
-  int _elapsedTimeInSeconds = 0;
   late Location _location;
 
   // Sabit stil tanımları
@@ -116,134 +108,6 @@ class _ActivityScreenState extends State<ActivityScreen>
     }
   }
 
-  // Aktivite takibini başlat
-  Future<void> _startActivityTracking() async {
-    try {
-      // Konum izni kontrolü
-      if (!_hasLocationPermission) {
-        await _checkLocationPermission();
-        if (!_hasLocationPermission) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Aktivite takibi için konum izni gereklidir')),
-          );
-          return;
-        }
-      }
-
-      // Konum servisi aktif mi kontrolü
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Konum servisi kapalı. Lütfen açın.')),
-        );
-        return;
-      }
-
-      // Konumu yüksek doğrulukla almaya başla
-      _lastPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _isTrackingActivity = true;
-        _activityStartTime = DateTime.now();
-        _distanceInMeters = 0;
-        _elapsedTimeInSeconds = 0;
-      });
-
-      // Periyodik olarak konum güncelleme
-      Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          distanceFilter: 10, // 10 metre hareket edince bildirim
-        ),
-      ).listen((Position position) {
-        if (_lastPosition != null && _isTrackingActivity) {
-          // Mesafe hesaplama
-          double distance = Geolocator.distanceBetween(
-            _lastPosition!.latitude,
-            _lastPosition!.longitude,
-            position.latitude,
-            position.longitude,
-          );
-
-          setState(() {
-            _distanceInMeters += distance;
-            _elapsedTimeInSeconds =
-                DateTime.now().difference(_activityStartTime!).inSeconds;
-            _lastPosition = position;
-          });
-        }
-      });
-
-      // Süre takibi için timer
-      Stream.periodic(Duration(seconds: 1)).listen((event) {
-        if (_isTrackingActivity && mounted) {
-          setState(() {
-            _elapsedTimeInSeconds =
-                DateTime.now().difference(_activityStartTime!).inSeconds;
-          });
-        }
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Aktivite takibi başlatılamadı: $e')),
-      );
-    }
-  }
-
-  // Aktivite takibini durdur
-  Future<void> _stopActivityTracking() async {
-    if (!_isTrackingActivity) return;
-
-    // Aktiviteyi kaydet
-    final activityProvider =
-        Provider.of<ActivityProvider>(context, listen: false);
-
-    // Dakika olarak süre (en az 1 dakika)
-    int durationMinutes = (_elapsedTimeInSeconds / 60).ceil();
-    if (durationMinutes < 1) durationMinutes = 1;
-
-    // Mesafeyi kilometre cinsinden (2 decimal)
-    double distanceKm = _distanceInMeters / 1000;
-    String distanceStr = distanceKm.toStringAsFixed(2);
-
-    // Hız hesaplama (km/saat)
-    double speedKmH = _elapsedTimeInSeconds > 0
-        ? (distanceKm / (_elapsedTimeInSeconds / 3600))
-        : 0;
-    String speedStr = speedKmH.toStringAsFixed(1);
-
-    final activity = ActivityRecord(
-      type: _selectedActivityType,
-      durationMinutes: durationMinutes,
-      date: _activityStartTime ?? DateTime.now(),
-      notes: 'Mesafe: ${distanceStr} km, Hız: ${speedStr} km/s',
-    );
-
-    await activityProvider.addActivity(activity);
-
-    setState(() {
-      _isTrackingActivity = false;
-      _activityStartTime = null;
-      _lastPosition = null;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Aktivite kaydedildi!')),
-    );
-  }
-
-  // Süreyi formatlı gösterme
-  String _formatDuration(int seconds) {
-    final int hours = seconds ~/ 3600;
-    final int minutes = (seconds % 3600) ~/ 60;
-    final int remainingSeconds = seconds % 60;
-
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
-  }
-
   @override
   void dispose() {
     _durationController.dispose();
@@ -254,7 +118,6 @@ class _ActivityScreenState extends State<ActivityScreen>
   @override
   Widget build(BuildContext context) {
     final activityProvider = Provider.of<ActivityProvider>(context);
-    final workoutProvider = Provider.of<WorkoutProvider>(context);
     final isLoading = activityProvider.isLoading;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -264,7 +127,7 @@ class _ActivityScreenState extends State<ActivityScreen>
           ? const KaplanLoading()
           : Consumer<WorkoutProvider>(
               builder: (context, workoutProv, child) {
-                if (workoutProv.isWorkoutInProgress) {
+                if (workoutProv.currentWorkoutLog != null) {
                   return _buildWorkoutInProgressView(context, workoutProv);
                 } else {
                   return _buildActivityListView(

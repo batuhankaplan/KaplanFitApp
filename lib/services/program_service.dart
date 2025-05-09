@@ -778,14 +778,16 @@ class ProgramService extends ChangeNotifier {
   void _populateDetailsForItem(
       ProgramItem item, Map<String?, Exercise> exerciseMap) {
     if (item.type == ProgramItemType.workout && item.programSets != null) {
+      List<ProgramSet> updatedProgramSets = [];
       for (var ps in item.programSets!) {
         if (exerciseMap.containsKey(ps.exerciseId)) {
-          ps.exerciseDetails = exerciseMap[ps.exerciseId];
-          // debugPrint('[ProgramService] Assigned details for ${ps.exerciseId}: ${ps.exerciseDetails?.name}');
+          updatedProgramSets.add(
+              ps.copyWith(exerciseDetails: () => exerciseMap[ps.exerciseId]));
         } else {
-          // debugPrint('[ProgramService] Exercise ID ${ps.exerciseId} not found in fetched map for item: ${item.title}');
+          updatedProgramSets.add(ps);
         }
       }
+      item.programSets = updatedProgramSets;
     }
   }
 

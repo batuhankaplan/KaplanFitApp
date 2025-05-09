@@ -94,13 +94,23 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
                 .map((ex) => MapEntry(ex.id!, ex)));
 
             // Egzersiz detayları yüklendikten sonra programSet'lere atama yapalım
-            for (var item in _currentProgramItems) {
-              item.programSets?.forEach((set) {
-                if (set.exerciseId != null &&
-                    _exerciseDetails.containsKey(set.exerciseId)) {
-                  set.exerciseDetails = _exerciseDetails[set.exerciseId];
+            for (int i = 0; i < _currentProgramItems.length; i++) {
+              var item = _currentProgramItems[i];
+              if (item.programSets != null) {
+                List<ProgramSet> updatedProgramSets = [];
+                for (var set in item.programSets!) {
+                  if (set.exerciseId != null &&
+                      _exerciseDetails.containsKey(set.exerciseId)) {
+                    updatedProgramSets.add(set.copyWith(
+                        exerciseDetails: () =>
+                            _exerciseDetails[set.exerciseId]));
+                  } else {
+                    updatedProgramSets.add(set);
+                  }
                 }
-              });
+                _currentProgramItems[i] =
+                    item.copyWith(programSets: updatedProgramSets);
+              }
             }
           });
         }

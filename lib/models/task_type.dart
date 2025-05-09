@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+// import 'package:flutter/foundation.dart' kaldırıldı
 
 // Görev türleri
 enum TaskType {
@@ -27,4 +27,4 @@ enum FitMealType {
   dinner,
   snack,
   other,
-} 
+}

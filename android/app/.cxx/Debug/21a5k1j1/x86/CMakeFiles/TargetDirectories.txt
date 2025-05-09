@@ -1,0 +1,2 @@
+C:/Users/PC/Desktop/PythonVScode/KaplanFitApp/android/app/.cxx/Debug/21a5k1j1/x86/CMakeFiles/edit_cache.dir
+C:/Users/PC/Desktop/PythonVScode/KaplanFitApp/android/app/.cxx/Debug/21a5k1j1/x86/CMakeFiles/rebuild_cache.dir

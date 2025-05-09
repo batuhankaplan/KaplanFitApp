@@ -1423,11 +1423,13 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
       }
     }
 
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      space: 8.0, // Üst boşluk
-      child: text,
-    );
+    // SideTitleWidget yerine doğrudan Text döndürerek meta parametresi sorununu aşmayı deniyoruz.
+    // Eğer SideTitleWidget'ın space gibi özelliklerine ihtiyaç varsa, Text widget'ı Padding ile sarılabilir.
+    // return SideTitleWidget(
+    //   space: 8.0,
+    //   child: text,
+    // );
+    return text; // text zaten bir Widget (Text widget'ı)
   }
 
   // Grafiğin Sol Başlıkları (Y Ekseni - Değerler)

@@ -1,4 +1,4 @@
-import '../models/exercise_model.dart';
+// import '../models/exercise_model.dart'; // Kaldırıldı
 import 'package:flutter/foundation.dart';
 
 /// Bir antrenman programındaki tek bir egzersiz setini temsil eder.

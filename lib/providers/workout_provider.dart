@@ -4,20 +4,17 @@ import '../models/exercise_log.dart';
 import '../models/workout_set.dart';
 import '../models/exercise_model.dart';
 import '../services/database_service.dart';
-import 'package:flutter/foundation.dart';
 
 class WorkoutProvider extends ChangeNotifier {
   final DatabaseService _dbService;
   List<WorkoutLog> _workoutLogs = [];
   bool _isLoading = false;
   WorkoutLog? _currentWorkoutLog; // For live tracking/building a workout
-  bool _isWorkoutInProgress = false;
   List<WorkoutLog> _workoutHistory = [];
 
   List<WorkoutLog> get workoutLogs => _workoutLogs;
   bool get isLoading => _isLoading;
   WorkoutLog? get currentWorkoutLog => _currentWorkoutLog;
-  bool get isWorkoutInProgress => _isWorkoutInProgress;
   List<WorkoutLog> get workoutHistory => _workoutHistory;
 
   WorkoutProvider(this._dbService) {
@@ -67,25 +64,22 @@ class WorkoutProvider extends ChangeNotifier {
 
   void addExerciseToWorkout(Exercise exercise) {
     if (_currentWorkoutLog == null) return;
-    // Ensure exerciseLogs list is not null before accessing length or adding
-    final exerciseLogs = _currentWorkoutLog!.exerciseLogs ?? [];
+    // _currentWorkoutLog null olamayacağı için ! kullanımı güvenli.
+    // exerciseLogs WorkoutLog içinde [] ile initialize edildiği için null olamaz.
+    // final exerciseLogs = _currentWorkoutLog!.exerciseLogs ?? []; // Bu satır gereksizleşiyor
 
     final newExerciseLog = ExerciseLog(
       workoutLogId: -1, // Temporary ID, will be set during save
       exerciseId: exercise.id!,
-      sortOrder: exerciseLogs.length, // Set order based on current list size
+      sortOrder:
+          _currentWorkoutLog!.exerciseLogs!.length, // Direkt erişim güvenli
       createdAt: DateTime.now(),
       exerciseDetails: exercise, // Keep details for UI
       sets: [], // Start with empty sets - guaranteed non-null here
     );
 
-    // Assign back if it was initially null
-    if (_currentWorkoutLog!.exerciseLogs == null) {
-      _currentWorkoutLog =
-          _currentWorkoutLog!.copyWith(exerciseLogs: [newExerciseLog]);
-    } else {
-      _currentWorkoutLog!.exerciseLogs!.add(newExerciseLog);
-    }
+    // exerciseLogs null olamayacağı için bu if/else bloğu basitleştirilebilir.
+    _currentWorkoutLog!.exerciseLogs!.add(newExerciseLog);
 
     print("Exercise '${exercise.name}' added to current workout.");
     notifyListeners();
@@ -94,13 +88,11 @@ class WorkoutProvider extends ChangeNotifier {
   void addSetToExercise(int exerciseLogIndex, WorkoutSet set) {
     // Check currentWorkoutLog and its exerciseLogs list
     if (_currentWorkoutLog == null ||
-        _currentWorkoutLog!.exerciseLogs == null ||
         exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length) return;
 
     final exerciseLog = _currentWorkoutLog!.exerciseLogs![exerciseLogIndex];
     // Ensure sets list is not null before accessing length or adding
-    final sets = exerciseLog.sets ?? [];
-    final setNumber = sets.length + 1;
+    final setNumber = exerciseLog.sets!.length + 1; // Direkt erişim güvenli
 
     final newSet = WorkoutSet(
       exerciseLogId: -1, // Temporary ID
@@ -114,7 +106,7 @@ class WorkoutProvider extends ChangeNotifier {
     );
 
     // Create a new list with the added set
-    final updatedSets = [...sets, newSet];
+    final updatedSets = [...exerciseLog.sets!, newSet]; // Direkt erişim güvenli
     // Update the exercise log with the new sets list
     _currentWorkoutLog!.exerciseLogs![exerciseLogIndex] =
         exerciseLog.copyWith(sets: updatedSets);
@@ -127,13 +119,9 @@ class WorkoutProvider extends ChangeNotifier {
   void updateSetInExercise(int exerciseLogIndex, int setIndex, WorkoutSet set) {
     // Check currentWorkoutLog, its exerciseLogs list, and the specific exerciseLog's sets list
     if (_currentWorkoutLog == null ||
-        _currentWorkoutLog!.exerciseLogs == null ||
         exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length ||
-        _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets ==
-            null || // Null check for sets
         setIndex >=
-            _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets!
-                .length) // Null assertion (!) okay after check
+            _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets!.length)
       return;
 
     // Clone the sets list to make modifications safely
@@ -165,13 +153,9 @@ class WorkoutProvider extends ChangeNotifier {
   void deleteSetFromExercise(int exerciseLogIndex, int setIndex) {
     // Check currentWorkoutLog and its exerciseLogs list
     if (_currentWorkoutLog == null ||
-        _currentWorkoutLog!.exerciseLogs == null ||
         exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length ||
-        _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets ==
-            null || // Null check for sets
         setIndex >=
-            _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets!
-                .length) // Null assertion (!) okay after check
+            _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets!.length)
       return;
 
     // Clone the sets list to make modifications safely
@@ -192,7 +176,6 @@ class WorkoutProvider extends ChangeNotifier {
   void deleteExerciseFromWorkout(int exerciseLogIndex) {
     // Check currentWorkoutLog and its exerciseLogs list
     if (_currentWorkoutLog == null ||
-        _currentWorkoutLog!.exerciseLogs == null ||
         exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length) return;
 
     // Clone the exerciseLogs list to make modifications safely
@@ -221,7 +204,7 @@ class WorkoutProvider extends ChangeNotifier {
       int? rating,
       String? feeling}) async {
     if (_currentWorkoutLog == null ||
-        _currentWorkoutLog!.exerciseLogs.isEmpty) {
+        _currentWorkoutLog!.exerciseLogs!.isEmpty) {
       print("Cannot save an empty workout.");
       _currentWorkoutLog = null; // Clear the cancelled/empty workout
       notifyListeners();
@@ -245,31 +228,25 @@ class WorkoutProvider extends ChangeNotifier {
       final int workoutLogId = await _dbService.insertWorkoutLog(workoutToSave);
 
       // 2. Insert each ExerciseLog and its Sets
-      // Null check before iterating
-      if (workoutToSave.exerciseLogs != null) {
-        for (final exerciseLog in workoutToSave.exerciseLogs!) {
-          // Null assertion ok after check
-          // Insert ExerciseLog with the obtained workoutLogId
-          // Ensure sortOrder is passed correctly if needed by insertExerciseLog
-          final int exerciseLogId = await _dbService.insertExerciseLog(
-              exerciseLog.copyWith(
-                  workoutLogId: workoutLogId), // Pass the correct workoutLogId
-              workoutLogId // Redundant? Check insertExerciseLog signature
-              );
+      for (final exerciseLog in workoutToSave.exerciseLogs!) {
+        // Null assertion ok after check
+        // Insert ExerciseLog with the obtained workoutLogId
+        final int exerciseLogId = await _dbService.insertExerciseLog(
+            exerciseLog.copyWith(
+                workoutLogId: workoutLogId), // Pass the correct workoutLogId
+            workoutLogId // Redundant? Check insertExerciseLog signature
+            );
 
-          // Null check before iterating sets
-          if (exerciseLog.sets != null) {
-            for (final set in exerciseLog.sets!) {
-              // Null assertion ok after check
-              // Ensure exerciseLogId is passed correctly
-              await _dbService.insertWorkoutSet(
-                  set.copyWith(
-                      exerciseLogId:
-                          exerciseLogId), // Pass the correct exerciseLogId
-                  exerciseLogId // Redundant? Check insertWorkoutSet signature
-                  );
-            }
-          }
+        // Null check before iterating sets
+        for (final set in exerciseLog.sets!) {
+          // Null assertion ok after check
+          // Ensure exerciseLogId is passed correctly
+          await _dbService.insertWorkoutSet(
+              set.copyWith(
+                  exerciseLogId:
+                      exerciseLogId), // Pass the correct exerciseLogId
+              exerciseLogId // Redundant? Check insertWorkoutSet signature
+              );
         }
       }
 
