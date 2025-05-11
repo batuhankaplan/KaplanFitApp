@@ -15,13 +15,13 @@ import 'providers/user_provider.dart';
 import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
 import 'providers/gamification_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/program_service.dart';
 import 'services/exercise_service.dart';
 import 'services/database_service.dart';
 import 'widgets/kaplan_appbar.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:animations/animations.dart';
-import 'splash/custom_splash_screen.dart';
 import 'providers/workout_provider.dart';
 import 'screens/profile_screen.dart';
 import 'screens/goal_tracking_screen.dart';
@@ -29,7 +29,8 @@ import 'screens/goal_settings_screen.dart';
 import 'screens/notification_settings_screen.dart';
 import 'screens/workout_program_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'services/notification_service.dart';
+import 'services/ai_coach_service.dart';
 
 // Ana ekran
 class MainScreen extends StatefulWidget {
@@ -115,14 +116,14 @@ class _MainScreenState extends State<MainScreen> {
               gap: 4,
               activeColor: isDarkMode ? Colors.white : Colors.white,
               iconSize: 24,
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              duration: Duration(milliseconds: 400),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              duration: const Duration(milliseconds: 400),
               tabBackgroundColor:
                   isDarkMode ? AppTheme.primaryColor : AppTheme.primaryColor,
               color: isDarkMode
                   ? AppTheme.darkSecondaryTextColor
                   : Colors.grey.shade600,
-              tabs: [
+              tabs: const [
                 GButton(
                   icon: Icons.home_rounded,
                   text: 'Ana Sayfa',
@@ -162,18 +163,8 @@ void initPlatformSpecificFeatures() {
   }
 }
 
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({Key? key}) : super(key: key);
-
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,10 +173,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (userProvider.isLoading) {
           print(
               "[AuthWrapper build] Kullanıcı yükleniyor (Consumer isLoading).");
-          return const CustomSplashScreen();
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
         }
 
-        // isLoading false ise buraya gelinir.
         final bool userExists = userProvider.user != null;
         print(
             "[AuthWrapper build] Kullanıcı var mı (Provider kontrolü)? $userExists");
@@ -206,130 +197,120 @@ class _AuthWrapperState extends State<AuthWrapper> {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('tr_TR', null);
-  await Firebase.initializeApp(); // Firebase başlatma tekrar aktif.
-  // await NotificationService().init(); // Bildirim servisi (şimdilik yorumda)
-
-  // --- GEÇİCİ: Veritabanı İçe Aktarma (Sadece 1 Kez Çalıştır ve SİL!) ---
   try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool isFoodDbImported =
-        prefs.getBool('food_db_imported_v1') ?? false; // Kontrol tekrar AKTİF
-    if (!isFoodDbImported) {
-      // Kontrol tekrar AKTİF
-      print(
-          "[Firestore Import] İlk çalıştırma: Besin veritabanı Firestore'a aktarılıyor...");
-      // Şimdilik Firebase kullanılmadığı için yorum satırı haline getirildi
-      // DatabaseService tempDbService = DatabaseService();
-      // await tempDbService
-      //     .importFoodDatabaseFromAsset('assets/besinveritabanı.txt');
-      await prefs.setBool('food_db_imported_v1', true); // Kontrol tekrar AKTİF
-      print(
-          "[Firestore Import] Firestore'a besin aktarma işlemi tamamlandı ve işaretlendi.");
-    } else {
-      print("[Firestore Import] Besin veritabanı zaten içe aktarılmış.");
-    }
+    await Firebase.initializeApp();
   } catch (e) {
-    print("SharedPreferences veya DB import hatası: $e");
+    print("Firebase başlatma hatası: $e");
   }
-  // --- GEÇİCİ KOD SONU -> YORUM SATIRLARI KALDIRILDI ---
+  await NotificationService.instance.init();
 
-  // Servisleri oluştur
   final databaseService = DatabaseService();
   final exerciseService = ExerciseService();
-  // ProgramService positional parametreler bekliyor
-  final programService = ProgramService(
-    databaseService, // named parameter yerine positional
-    // exerciseService // initialize metodu ExerciseService bekliyor, constructor değil
-  );
+  final programService = ProgramService(databaseService);
+  final userProvider = UserProvider(databaseService);
+  final gamificationProvider =
+      GamificationProvider(databaseService, userProvider);
+  final themeProvider = ThemeProvider();
+  final workoutProvider = WorkoutProvider(databaseService);
 
-  // UserProvider'ı oluştur ve kullanıcıyı yükle
-  final userProvider = UserProvider(databaseService); // DatabaseService geç
-  // await userProvider.loadUser(); // UserProvider constructor'ında zaten çağrılıyor.
-
-  // ProgramService'i initialize et (User ID varsa)
   try {
-    // initialize ExerciseService bekliyor
     await programService.initialize(exerciseService);
-    print("ProgramService initialize edildi.");
-    // if (userProvider.user?.id != null) {
-    //   print("ProgramService initialize edildi (User ID: ${userProvider.user!.id!})");
-    // } else {
-    //   print("ProgramService initialize edildi (Kullanıcı ID'si olmadan).");
-    // }
-  } catch (e) {
-    print("ProgramService initialize hatası: $e");
-  }
-
-  // GamificationProvider'ı oluştur ve initialize et
-  final gamificationProvider = GamificationProvider();
-  try {
+    await userProvider.loadUser();
     await gamificationProvider.initialize();
-    print("GamificationProvider initialize edildi.");
   } catch (e) {
-    print("GamificationProvider initialize hatası: $e");
+    print("Servisler başlatılırken genel bir hata oluştu: $e");
   }
 
   runApp(
-    MultiProvider(
-      providers: [
-        // ... (Provider listesi önceki düzeltmedeki gibi)
-        Provider<DatabaseService>.value(value: databaseService),
-        Provider<ExerciseService>.value(value: exerciseService),
-        ChangeNotifierProvider<ProgramService>(
-          create: (context) => programService,
-        ),
-
-        ChangeNotifierProvider<UserProvider>.value(
-            value: userProvider), // value ile verelim
-
-        ChangeNotifierProvider<ActivityProvider>(
-          create: (context) => ActivityProvider(databaseService),
-        ),
-        ChangeNotifierProvider<WorkoutProvider>(
-          create: (context) => WorkoutProvider(databaseService),
-        ),
-        ChangeNotifierProxyProvider<UserProvider, NutritionProvider>(
-          create: (context) => NutritionProvider(databaseService),
-          update: (context, userProvider, previousNutritionProvider) {
-            previousNutritionProvider?.updateUserId(userProvider.user?.id);
-            return previousNutritionProvider ??
-                NutritionProvider(databaseService);
-          },
-        ),
-        ChangeNotifierProvider<GamificationProvider>.value(
-          value: gamificationProvider,
-        ),
-      ],
-      child: const MyApp(),
+    MyApp(
+      userProvider: userProvider,
+      databaseService: databaseService,
+      exerciseService: exerciseService,
+      programService: programService,
+      gamificationProvider: gamificationProvider,
+      themeProvider: themeProvider,
+      workoutProvider: workoutProvider,
     ),
   );
 }
 
-// Uygulama ana sınıfı
 class MyApp extends StatelessWidget {
-  // Servis parametreleri kaldırıldı
-  const MyApp({Key? key}) : super(key: key);
+  final UserProvider userProvider;
+  final DatabaseService databaseService;
+  final ExerciseService exerciseService;
+  final ProgramService programService;
+  final GamificationProvider gamificationProvider;
+  final ThemeProvider themeProvider;
+  final WorkoutProvider workoutProvider;
+
+  const MyApp({
+    Key? key,
+    required this.userProvider,
+    required this.databaseService,
+    required this.exerciseService,
+    required this.programService,
+    required this.gamificationProvider,
+    required this.themeProvider,
+    required this.workoutProvider,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'KaplanFit',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      debugShowCheckedModeBanner: false,
-      home: AuthWrapper(),
-      routes: {
-        '/home': (context) => MainScreen(),
-        '/profile': (context) => ProfileScreen(),
-        '/goal-settings': (context) => GoalSettingsScreen(),
-        '/goal-tracking': (context) => GoalTrackingScreen(),
-        '/program': (context) => ProgramScreen(),
-        '/stats': (context) => StatsScreen(),
-        '/settings': (context) => SettingsScreen(),
-        '/notification-settings': (context) => NotificationSettingsScreen(),
-        '/workout-program': (context) => WorkoutProgramScreen(),
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: userProvider),
+        Provider<DatabaseService>.value(value: databaseService),
+        Provider<ExerciseService>.value(value: exerciseService),
+        ChangeNotifierProvider<ProgramService>.value(value: programService),
+        Provider<AICoachService>(
+          create: (context) => AICoachService(
+            databaseService,
+            Provider.of<GamificationProvider>(context, listen: false),
+          ),
+        ),
+        ChangeNotifierProvider.value(value: gamificationProvider),
+        ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider<NutritionProvider>(
+          create: (context) => NutritionProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+            Provider.of<UserProvider>(context, listen: false),
+          ),
+        ),
+        ChangeNotifierProvider<ActivityProvider>(
+          create: (context) => ActivityProvider(
+            Provider.of<DatabaseService>(context, listen: false),
+            Provider.of<UserProvider>(context, listen: false),
+          ),
+        ),
+        ChangeNotifierProvider.value(value: workoutProvider),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProviderInstance, child) {
+          return MaterialApp(
+            title: 'KaplanFit',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProviderInstance.themeMode,
+            debugShowCheckedModeBanner: false,
+            home: const AuthWrapper(),
+            routes: {
+              '/home': (context) => const MainScreen(),
+              '/profile': (context) => const ProfileScreen(),
+              '/activity': (context) => const ActivityScreen(),
+              '/nutrition': (context) => const NutritionScreen(),
+              '/coach': (context) => const AICoachScreen(),
+              '/settings': (context) => const SettingsScreen(),
+              '/program': (context) => const ProgramScreen(),
+              '/workout_program': (context) => const WorkoutProgramScreen(),
+              '/stats': (context) => const StatsScreen(),
+              '/goal_tracking': (context) => const GoalTrackingScreen(),
+              '/goal_settings': (context) => const GoalSettingsScreen(),
+              '/notification_settings': (context) =>
+                  const NotificationSettingsScreen(),
+            },
+          );
+        },
+      ),
     );
   }
 }
@@ -440,7 +421,7 @@ class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => KaplanSplashScreen()),
+          MaterialPageRoute(builder: (context) => const AuthWrapper()),
         );
       }
     });

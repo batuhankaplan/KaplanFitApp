@@ -5,9 +5,12 @@ import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import 'package:flutter/foundation.dart';
 import '../models/food_item.dart';
+import 'user_provider.dart'; // UserProvider importu
 
 class NutritionProvider with ChangeNotifier {
   final DatabaseService _dbService;
+  final UserProvider _userProvider; // Eklendi
+
   List<MealRecord> _meals = [];
   List<MealRecord> _allMeals = []; // Tüm öğünler
   bool _isLoading = false;
@@ -15,10 +18,9 @@ class NutritionProvider with ChangeNotifier {
   DateTime? _startDate; // Tarih aralığı başlangıcı
   DateTime? _endDate; // Tarih aralığı sonu
   String _dailyTasksDate = '';
-  int? _currentUserId; // Mevcut kullanıcı ID'si
+  // int? _currentUserId; // Kaldırıldı, _userProvider.user.id kullanılacak
 
-  // YENİ: currentUserId için public getter
-  int? get currentUserId => _currentUserId;
+  // int? get currentUserId => _userProvider.user?.id; // _currentUserId getter'ı kaldırıldı
 
   List<MealRecord> get meals => _meals;
   bool get isLoading => _isLoading;
@@ -34,33 +36,20 @@ class NutritionProvider with ChangeNotifier {
         .fold(0.0, (sum, meal) => sum + (meal.calories ?? 0.0));
   }
 
-  NutritionProvider(this._dbService) {
-    // refreshMeals(); // Artık ProxyProvider tetikleyecek
-  }
-
-  // YENİ: Kullanıcı ID'sini güncellemek için metot
-  void updateUserId(int? userId) {
-    if (_currentUserId != userId) {
-      _currentUserId = userId;
-      // Kullanıcı değiştiğinde veya ilk kez ayarlandığında verileri yenile
-      if (_currentUserId != null) {
-        print("NutritionProvider: Kullanıcı ID güncellendi: $_currentUserId");
-        refreshMeals();
-      } else {
-        print(
-            "NutritionProvider: Kullanıcı ID null olarak ayarlandı, veriler temizleniyor.");
-        _meals = [];
-        _allMeals = [];
-        notifyListeners();
-      }
+  NutritionProvider(this._dbService, this._userProvider) {
+    // _userProvider eklendi
+    // UserProvider artık constructor'da alındığı için, başlangıç yüklemeleri yapılabilir.
+    if (_userProvider.user?.id != null) {
+      refreshMeals();
     }
   }
 
   Future<void> refreshMeals() async {
-    if (_currentUserId == null) {
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
       print(
           "NutritionProvider refreshMeals: Kullanıcı ID'si henüz ayarlanmadı.");
-      _meals = []; // Kullanıcı yoksa listeyi temizle
+      _meals = [];
       _allMeals = [];
       notifyListeners();
       return;
@@ -69,11 +58,8 @@ class NutritionProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Seçili gün için öğünleri veritabanından çek (userId ile)
-      _meals = await _dbService.getMealsForDay(_selectedDate, _currentUserId!);
+      _meals = await _dbService.getMealsForDay(_selectedDate, userId);
       notifyListeners();
-
-      // Tüm öğünleri de çekelim istatistikler için (userId ile)
       await _loadAllMeals();
     } catch (e) {
       print('Öğünleri yenilerken hata: $e');
@@ -84,7 +70,8 @@ class NutritionProvider with ChangeNotifier {
   }
 
   Future<void> _loadAllMeals() async {
-    if (_currentUserId == null) {
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
       print(
           "NutritionProvider _loadAllMeals: Kullanıcı ID'si henüz ayarlanmadı.");
       _allMeals = [];
@@ -94,14 +81,14 @@ class NutritionProvider with ChangeNotifier {
     try {
       // Eğer başlangıç ve bitiş tarihleri belirlenmişse aralıktaki verileri al (userId ile)
       if (_startDate != null && _endDate != null) {
-        _allMeals = await _dbService.getMealsInRange(
-            _startDate!, _endDate!, _currentUserId!);
+        _allMeals =
+            await _dbService.getMealsInRange(_startDate!, _endDate!, userId);
       } else {
         // Bir yıllık geçmiş verileri al (varsayılan) (userId ile)
         final endDate = DateTime.now();
         final startDate = endDate.subtract(Duration(days: 365));
-        _allMeals = await _dbService.getMealsInRange(
-            startDate, endDate, _currentUserId!);
+        _allMeals =
+            await _dbService.getMealsInRange(startDate, endDate, userId);
       }
     } catch (e) {
       print('Tüm öğünleri yüklerken hata: $e');
@@ -124,7 +111,8 @@ class NutritionProvider with ChangeNotifier {
   }
 
   Future<int?> addMeal(MealRecord meal) async {
-    if (_currentUserId == null) {
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
       print(
           "NutritionProvider addMeal: Kullanıcı ID'si ayarlanamadığı için öğün eklenemiyor.");
       return null;
@@ -134,7 +122,7 @@ class NutritionProvider with ChangeNotifier {
 
     try {
       // userId ile ekle
-      final id = await _dbService.insertMeal(meal, _currentUserId!);
+      final id = await _dbService.insertMeal(meal, userId);
       final newMeal = MealRecord(
         id: id,
         type: meal.type,
@@ -168,8 +156,9 @@ class NutritionProvider with ChangeNotifier {
   }
 
   Future<void> updateMeal(MealRecord meal) async {
+    final userId = _userProvider.user?.id;
     if (meal.id == null) return;
-    if (_currentUserId == null) {
+    if (userId == null) {
       print(
           "NutritionProvider updateMeal: Kullanıcı ID'si ayarlanamadığı için öğün güncellenemiyor.");
       return;
@@ -180,7 +169,7 @@ class NutritionProvider with ChangeNotifier {
 
     try {
       // userId ile güncelle
-      await _dbService.updateMeal(meal, _currentUserId!);
+      await _dbService.updateMeal(meal, userId);
 
       // Düzenlenen öğün seçili günde ise güncelle
       final index = _meals.indexWhere((m) => m.id == meal.id);
@@ -240,13 +229,14 @@ class NutritionProvider with ChangeNotifier {
   }
 
   Future<int> getTotalCaloriesForDay(DateTime date) async {
-    if (_currentUserId == null) {
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
       print(
           "NutritionProvider getTotalCaloriesForDay: Kullanıcı ID'si ayarlanamadı.");
       return 0;
     }
     // userId ile getir
-    final meals = await _dbService.getMealsForDay(date, _currentUserId!);
+    final meals = await _dbService.getMealsForDay(date, userId);
     return meals.fold<int>(0, (sum, meal) => sum + (meal.calories ?? 0));
   }
 

@@ -17,10 +17,10 @@ class UserProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   UserProvider(this._databaseService) {
-    _loadUser();
+    loadUser();
   }
 
-  Future<void> _loadUser() async {
+  Future<void> loadUser() async {
     _isLoading = true;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
@@ -268,7 +268,7 @@ class UserProvider extends ChangeNotifier {
 
     await _databaseService.updateUser(_user!);
 
-    await _loadUser(); // Yeniden tüm verileri yükle
+    await loadUser(); // Yeniden tüm verileri yükle
   }
 
   // Kullanıcı bilgilerini temizle

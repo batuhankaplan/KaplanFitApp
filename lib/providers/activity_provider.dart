@@ -6,9 +6,11 @@ import '../models/task_type.dart';
 import 'package:flutter/foundation.dart';
 import '../providers/gamification_provider.dart';
 import 'package:provider/provider.dart';
+import 'user_provider.dart'; // UserProvider importu
 
 class ActivityProvider with ChangeNotifier {
   final DatabaseService _dbService;
+  final UserProvider _userProvider; // Eklendi
   List<ActivityRecord> _activities = [];
   List<ActivityRecord> _allActivities = []; // Tüm aktiviteler
   bool _isLoading = false;
@@ -32,37 +34,45 @@ class ActivityProvider with ChangeNotifier {
         0, (sum, activity) => sum + (activity.durationMinutes ?? 0));
   }
 
-  ActivityProvider(this._dbService) {
-    // refreshActivities ve loadDailyTasks için userId gerekecek.
-    // Bu, UserProvider'dan alınmalı veya UI'dan sağlanmalı.
-    // Şimdilik başlangıçta yükleme yapılmayacak şekilde bırakıyorum,
-    // UI'da UserProvider yüklendikten sonra çağrılmalı.
-    // refreshActivities();
+  ActivityProvider(this._dbService, this._userProvider) {
+    // _userProvider eklendi
+    // UserProvider artık constructor'da alındığı için, başlangıç yüklemeleri yapılabilir.
+    // Ancak, _userProvider.user null olabilir, bu yüzden null check önemli.
+    if (_userProvider.user?.id != null) {
+      refreshActivities();
+    }
     loadDailyTasks();
   }
 
-  void setSelectedDate(DateTime date, int userId) {
-    // userId eklendi
+  void setSelectedDate(DateTime date) {
+    // userId parametresi kaldırıldı
     _selectedDate = date;
-    refreshActivities(userId); // userId ile çağır
-    // Seçili tarih değiştiğinde o günün görevlerini de yükle
-    // loadTasksForSelectedDate(); // Bu belki home_screen'de tetiklenmeli?
+    if (_userProvider.user?.id != null) {
+      refreshActivities();
+    }
   }
 
-  Future<void> refreshActivities(int userId) async {
-    // userId eklendi
+  Future<void> refreshActivities() async {
+    // userId parametresi kaldırıldı
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
+      _activities = [];
+      _allActivities = [];
+      _isLoading = false;
+      notifyListeners();
+      print(
+          'ActivityProvider: Kullanıcı ID bulunamadığı için aktiviteler yüklenemedi.');
+      return;
+    }
+
     _isLoading = true;
     notifyListeners();
 
     try {
-      // Seçili gün için aktiviteleri veritabanından çek (caloriesBurned dahil)
-      _activities = await _dbService.getActivitiesForDay(
-          _selectedDate, userId); // userId eklendi
-      _activities.sort((a, b) => b.date.compareTo(a.date)); // Sırala
+      _activities = await _dbService.getActivitiesForDay(_selectedDate, userId);
+      _activities.sort((a, b) => b.date.compareTo(a.date));
       notifyListeners();
-
-      // Tüm aktiviteleri de çekelim istatistikler için (caloriesBurned dahil)
-      await _loadAllActivities(userId); // userId eklendi
+      await _loadAllActivities(); // userId parametresi kaldırıldı
     } catch (e) {
       print('Aktiviteleri yenilerken hata: $e');
     } finally {
@@ -71,8 +81,15 @@ class ActivityProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _loadAllActivities(int userId) async {
-    // userId eklendi
+  Future<void> _loadAllActivities() async {
+    // userId parametresi kaldırıldı
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
+      _allActivities = [];
+      print(
+          'ActivityProvider: Kullanıcı ID bulunamadığı için tüm aktiviteler yüklenemedi.');
+      return;
+    }
     try {
       DateTime effectiveStartDate;
       DateTime effectiveEndDate;
@@ -86,19 +103,21 @@ class ActivityProvider with ChangeNotifier {
             effectiveEndDate.subtract(const Duration(days: 365));
       }
       _allActivities = await _dbService.getActivitiesInRange(
-          effectiveStartDate, effectiveEndDate, userId); // userId eklendi
-      _allActivities.sort((a, b) => b.date.compareTo(a.date)); // Sırala
+          effectiveStartDate, effectiveEndDate, userId);
+      _allActivities.sort((a, b) => b.date.compareTo(a.date));
     } catch (e) {
       print('Tüm aktiviteleri yüklerken hata: $e');
       _allActivities = [];
     }
   }
 
-  void setDateRange(DateTime startDate, DateTime endDate, int userId) {
-    // userId eklendi
+  void setDateRange(DateTime startDate, DateTime endDate) {
+    // userId parametresi kaldırıldı
     _startDate = startDate;
     _endDate = endDate;
-    refreshActivities(userId); // userId ile çağır
+    if (_userProvider.user?.id != null) {
+      refreshActivities();
+    }
   }
 
   List<ActivityRecord> getAllActivities() {
@@ -145,13 +164,21 @@ class ActivityProvider with ChangeNotifier {
   // }
 
   Future<int?> addActivity(
-      ActivityRecord activity, int userId, BuildContext context) async {
+      ActivityRecord activity, BuildContext context) async {
+    // userId parametresi kaldırıldı
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
+      print('ActivityProvider: Aktivite eklenemedi, kullanıcı ID bulunamadı.');
+      return null;
+    }
     _isLoading = true;
     notifyListeners();
     int? id;
     try {
       // caloriesBurned dahil veritabanına ekle
-      id = await _dbService.insertActivity(activity, userId); // userId eklendi
+      final activityWithUserId =
+          activity.copyWith(userId: userId); // Ensure userId is in the record
+      id = await _dbService.insertActivity(activityWithUserId, userId);
 
       final newActivityWithId = ActivityRecord(
         id: id,
@@ -159,10 +186,10 @@ class ActivityProvider with ChangeNotifier {
         durationMinutes: activity.durationMinutes,
         date: activity.date,
         notes: activity.notes,
-        caloriesBurned: activity.caloriesBurned, // caloriesBurned'ı aktar
+        caloriesBurned: activity.caloriesBurned,
         taskId: activity.taskId,
-        userId: userId, // userId eklendi
-        isFromProgram: activity.isFromProgram, // isFromProgram bilgisini aktar
+        userId: userId, // Burası _userProvider.user.id olacak
+        isFromProgram: activity.isFromProgram,
       );
 
       if (_isSameDay(activity.date, _selectedDate)) {
@@ -174,7 +201,6 @@ class ActivityProvider with ChangeNotifier {
 
       // Eğer aktivite bir programdan ise rozetleri kontrol et
       if (activity.isFromProgram) {
-        // YALNIZCA programdan ise çağır
         final gamificationProvider =
             Provider.of<GamificationProvider>(context, listen: false);
         await gamificationProvider.recordProgramWorkoutCompleted(userId, id!);
@@ -208,11 +234,19 @@ class ActivityProvider with ChangeNotifier {
     }
   }
 
-  Future<void> deleteActivityByTaskId(int? taskId, int userId) async {
+  Future<void> deleteActivityByTaskId(int? taskId) async {
+    // userId parametresi kaldırıldı
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
+      print(
+          'ActivityProvider: Task ID ile aktivite silinemedi, kullanıcı ID bulunamadı.');
+      return;
+    }
     if (taskId == null) return;
     try {
       await _dbService.deleteActivityByTaskId(taskId);
-      refreshActivities(userId);
+      // Silme işleminden sonra aktiviteleri yenilemek için userId gerekir.
+      refreshActivities();
     } catch (e) {
       print('Error deleting activity by taskId ' +
           taskId.toString() +

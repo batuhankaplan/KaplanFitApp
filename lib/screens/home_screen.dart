@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen>
     Color cardColor;
     if (title.contains('Sabah Egzersizi')) {
       cardColor = AppTheme.morningExerciseColor;
-    } else if (title.contains('Sağlıklı Öğle Yemeği')) {
+    } else if (title.contains('Öğle Yemeği')) {
       cardColor = AppTheme.lunchColor;
     } else if (title.contains('Akşam Antrenmanı')) {
       cardColor = AppTheme.eveningExerciseColor;
@@ -431,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             _TaskItem(
                               icon: Icons.restaurant_menu_rounded,
-                              title: 'Sağlıklı Öğle Yemeği',
+                              title: 'Öğle Yemeği',
                               time: '13:00',
                               isDone: isLunchDone,
                               color: AppTheme.lunchColor,

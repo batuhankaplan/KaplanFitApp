@@ -19,14 +19,9 @@ class AICoachScreen extends StatefulWidget {
 
 class _AICoachScreenState extends State<AICoachScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final TextEditingController _apiKeyController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<ChatMessage> _messages = [];
   bool _isLoading = false;
-  bool _showApiKeyInput =
-      false; // API anahtarı girişini varsayılan olarak gizli tutuyoruz
-  String _apiKey =
-      'AIzaSyCpyD_2D-xJyYUlJni8YMLXiMxaVvTLswQ'; // TODO: API anahtarını güvenli bir yerden al
   int? _conversationId;
   String _conversationTitle = 'Yeni Sohbet';
   ChatMessage?
@@ -117,7 +112,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
   @override
   void dispose() {
     _messageController.dispose();
-    _apiKeyController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -132,20 +126,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
         );
       }
     });
-  }
-
-  void _setApiKey() {
-    if (_apiKeyController.text.trim().isNotEmpty) {
-      setState(() {
-        _apiKey = _apiKeyController.text.trim();
-        _showApiKeyInput = false;
-      });
-
-      _addMessage(
-        'API anahtarı ayarlandı. Nasıl yardımcı olabilirim?',
-        false,
-      );
-    }
   }
 
   Future<void> _addMessage(String text, bool isUser) async {
@@ -290,9 +270,9 @@ class _AICoachScreenState extends State<AICoachScreen> {
     final databaseService =
         Provider.of<DatabaseService>(context, listen: false);
     final aiCoachService = AICoachService(
-      databaseService, // Sadece dbService gönderilecek
+      databaseService,
+      gamificationProvider,
     );
-    aiCoachService.apiKey = _apiKey; // apiKey ayrıca set edilecek
 
     int currentConversationId;
 
@@ -315,13 +295,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
           'Bekleyen hoşgeldin mesajı kaydedildi. ID: ${_pendingWelcomeMessage!.id}');
     }
     currentConversationId = _conversationId!;
-
-    final userMessage = ChatMessage(
-      conversationId: currentConversationId,
-      text: text,
-      isUser: true,
-      timestamp: DateTime.now(),
-    );
 
     await _addMessage(text, true);
     debugPrint(
@@ -351,10 +324,8 @@ class _AICoachScreenState extends State<AICoachScreen> {
       String errorMessage =
           "Üzgünüm, bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
       if (e.toString().toLowerCase().contains("api key not valid")) {
-        errorMessage = "API anahtarınız geçerli değil. Lütfen kontrol edin.";
-        if (mounted) {
-          setState(() => _showApiKeyInput = true);
-        }
+        errorMessage =
+            "API anahtarınız geçerli değil. Lütfen ai_coach_service.dart dosyasındaki API anahtarınızı kontrol edin.";
       } else if (e.toString().toLowerCase().contains("quota") ||
           e.toString().toLowerCase().contains("rate limit")) {
         errorMessage =
@@ -462,50 +433,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
     }
   }
 
-  Future<void> _deleteConversation(int conversationId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Sohbeti Sil'),
-        content: Text(
-            'Bu sohbeti ve içindeki tüm mesajları silmek istiyor musunuz?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Sil', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        final databaseService =
-            Provider.of<DatabaseService>(context, listen: false);
-        await databaseService.deleteChatConversation(conversationId);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sohbet silindi')),
-          );
-          if (_conversationId == conversationId) {
-            _startNewConversation();
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sohbet silinirken hata: $e')),
-          );
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -527,7 +454,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
       ),
       body: Column(
         children: [
-          if (_showApiKeyInput) _buildApiKeyInput(),
           Expanded(
             child: _isLoading && _messages.isEmpty
                 ? const KaplanLoading()
@@ -547,74 +473,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
               child: KaplanLoading(size: 40.0),
             ),
           _buildMessageInput(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildApiKeyInput() {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, 1),
-            blurRadius: 2.0,
-            color: Colors.black.withOpacity(0.1),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Gemini API Anahtarı',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _apiKeyController,
-                  decoration: const InputDecoration(
-                    hintText:
-                        'Google AI Studio\'dan API anahtarınızı yapıştırın',
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  ),
-                  obscureText: true,
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _setApiKey,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                ),
-                child: const Text('Kaydet'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Not: Gemini API anahtarınızı aistudio.google.com/app/apikey adresinden alabilirsiniz.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -698,33 +556,5 @@ class _AICoachScreenState extends State<AICoachScreen> {
         ],
       ),
     );
-  }
-
-  Future<void> _listModels() async {
-    if (_conversationId == null) {
-      debugPrint(
-          "[AICoachScreen] _listModels: Sohbet kalıcı değil. Modeller listelenemiyor/DB'ye yazılamaz.");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Model listesini görmek için önce bir mesaj göndererek sohbeti başlatın.')),
-        );
-      }
-      return;
-    }
-    final databaseService =
-        Provider.of<DatabaseService>(context, listen: false);
-    final AICoachService aiCoachService = AICoachService(databaseService)
-      ..apiKey = _apiKey;
-    if (mounted) setState(() => _isLoading = true);
-    try {
-      final modelsList = await aiCoachService.listAvailableModels();
-      await _addMessage(modelsList, false);
-    } catch (e) {
-      await _addMessage("Modeller listelenirken hata: $e", false);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 }

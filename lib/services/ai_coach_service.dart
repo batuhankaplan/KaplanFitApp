@@ -4,12 +4,19 @@ import '../models/user_model.dart';
 import '../models/activity_record.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
+import '../providers/gamification_provider.dart';
+import '../models/badge_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AICoachService {
-  // API anahtarı geçici olarak boş bırakılmıştır, kullanıcı kendi anahtarını girecektir
-  String _apiKey = 'AIzaSyCpyD_2D-xJyYUlJni8YMLXiMxaVvTLswQ';
+  // API anahtarı doğrudan kod içinde tanımlanıyor
+  String _apiKey =
+      'AIzaSyCpyD_2D-xJyYUlJni8YMLXiMxaVvTLswQ'; // << KENDİ API KEYİNİZİ BURAYA GİRİN!
   final DatabaseService _dbService;
+  final GamificationProvider _gamificationProvider;
   late GenerativeModel _model;
+  String _activeModel =
+      'gemini-1.5-flash-latest'; // Varsayılan olarak en son flash modeli
 
   // Getter ve setter tanımlamaları
   String get apiKey => _apiKey;
@@ -18,32 +25,87 @@ class AICoachService {
     _initModel(); // Anahtar değiştiğinde modeli yeniden başlat
   }
 
-  AICoachService(this._dbService) {
-    _initModel();
+  AICoachService(this._dbService, this._gamificationProvider) {
+    _initModel(); // SharedPreferences'dan yükleme yapmadan direkt başlat
+  }
+
+  Future<void> _loadApiKey() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedKey = prefs.getString('ai_coach_api_key');
+      if (savedKey != null && savedKey.isNotEmpty) {
+        _apiKey = savedKey;
+        print("API key başarıyla yüklendi");
+      } else {
+        print("Kaydedilmiş API key bulunamadı");
+      }
+    } catch (e) {
+      print("API key yüklenirken hata oluştu: $e");
+    }
+  }
+
+  Future<void> saveApiKey(String key) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('ai_coach_api_key', key);
+      _apiKey = key;
+      _initModel();
+      print("API key başarıyla kaydedildi");
+    } catch (e) {
+      print("API key kaydedilirken hata oluştu: $e");
+    }
   }
 
   void _initModel() {
     // Model başlatılıyor - API anahtarı geçerli olmadığında çalışmayacaktır
-    _model = GenerativeModel(
-      model: 'gemini-2.0-flash', // Kullanıcının belirttiği model
-      apiKey: _apiKey,
-    );
+    try {
+      if (_apiKey.isNotEmpty) {
+        print(
+            "API key mevcut (${_apiKey.length} karakter). Model başlatılıyor: $_activeModel");
+
+        _model = GenerativeModel(
+          model: _activeModel,
+          apiKey: _apiKey,
+        );
+
+        print("Gemini model başarıyla başlatıldı: $_activeModel");
+      } else {
+        print("API key boş olduğu için model başlatılamadı");
+      }
+    } catch (e) {
+      print("Model ($_activeModel) başlatılırken hata oluştu: $e");
+    }
+  }
+
+  // Alternatif bir model dene
+  void tryAlternativeModel() {
+    if (_activeModel == 'gemini-1.5-flash-latest') {
+      _activeModel = 'gemini-1.0-pro'; // Alternatif olarak stabil bir pro model
+    } else {
+      _activeModel = 'gemini-1.5-flash-latest';
+    }
+    print("Alternatif model deneniyor: $_activeModel");
+    _initModel();
+  }
+
+  // API key'in Google AI Studio'dan doğru alındığını kontrol eden metod
+  bool _isValidApiKeyFormat() {
+    // Google API keyleri genellikle "AIza" ile başlar
+    if (_apiKey.isEmpty || _apiKey.length < 15) return false;
+    return _apiKey.startsWith('AIza');
   }
 
   // Kullanılabilir modelleri listelemek için metot - API henüz bu özelliği direkt olarak desteklemediği için manuel olarak
   Future<String> listAvailableModels() async {
     try {
       // Şu anda kullanılabilir modeller
-      return """Kullanılabilir Gemini modeller:
-- gemini-pro (standart model)
-- gemini-pro-vision (görüntü desteği)
-- gemini-ultra (yüksek performans)
-- gemini-1.0-pro
-- gemini-1.0-pro-vision
-- gemini-1.0-ultra
-- gemini-2.0-flash (beta)
+      return """Kullanılabilir Gemini modeller (SDK tarafından desteklenenler):
+- gemini-pro
+- gemini-1.0-pro 
+- gemini-1.5-flash-latest (önerilen ve mevcut varsayılan)
+- gemini-1.5-pro-latest
       
-Şu anda kullanılan model: gemini-2.0-flash (beta)
+Şu anda kullanılan model: $_activeModel
       """;
     } catch (e) {
       return "Model bilgisi gösterilirken hata oluştu: $e";
@@ -51,7 +113,8 @@ class AICoachService {
   }
 
   // Kullanıcı verileri, aktiviteler ve beslenme bilgileriyle oluşturulan context
-  Future<String> _buildUserContext(UserModel? user) async {
+  Future<String> _buildUserContext(
+      UserModel? user, GamificationProvider gamificationProvider) async {
     if (user == null || user.id == null) {
       print(
           "AICoachService: Kullanıcı modeli null veya ID'si yok, bağlam oluşturulamıyor.");
@@ -72,6 +135,24 @@ class AICoachService {
     final avgCalories = _getAverageCaloriesPerDay(meals);
     final weeklyActivityStatus = _getWeeklyActivityStatus(activities);
 
+    // Oyunlaştırma Verileri
+    final totalPoints = gamificationProvider.totalEarnedPoints;
+    final dailyStreak = gamificationProvider.streaks['daily'] ?? 0;
+    final waterStreak = gamificationProvider.streaks['water'] ?? 0;
+    final workoutCount = gamificationProvider.workoutCount;
+    final List<BadgeModel> sortedUnlockedBadges =
+        List.from(gamificationProvider.unlockedBadges);
+    sortedUnlockedBadges.sort((a, b) {
+      if (a.unlockedAt == null && b.unlockedAt == null) return 0;
+      if (a.unlockedAt == null) return 1;
+      if (b.unlockedAt == null) return -1;
+      return b.unlockedAt!.compareTo(a.unlockedAt!);
+    });
+    final unlockedBadgesSummary = sortedUnlockedBadges
+        .take(3)
+        .map((b) => "- ${b.name} (${b.points} puan)")
+        .join("\n    ");
+
     return """
     KULLANICI BİLGİLERİ:
     Ad: ${user.name ?? 'Bilinmiyor'}
@@ -90,6 +171,14 @@ class AICoachService {
     SON AYLIK BESLENME ÖZET:
     Toplam öğün sayısı: ${meals.length}
     Ortalama günlük kalori: ${avgCalories.toStringAsFixed(0)} kcal
+
+    OYUNLAŞTIRMA DURUMU:
+    Toplam Kazanılan Puan: $totalPoints
+    Günlük Görev Serisi: $dailyStreak gün
+    Su İçme Serisi: $waterStreak gün
+    Tamamlanan Antrenman Sayısı: $workoutCount
+    Son Kazanılan Rozetler:
+    ${unlockedBadgesSummary.isNotEmpty ? unlockedBadgesSummary : "Henüz rozet kazanılmadı."}
     
     KAPLANFIT PROGRAMI GEREKSİNİMLERİ:
     1. Her hafta en az 3 gün egzersiz yapılmalı
@@ -205,14 +294,44 @@ class AICoachService {
   Future<String> getCoachResponse(
       String userMessage, UserModel? currentUser) async {
     try {
-      final context = await _buildUserContext(currentUser);
+      // API keyin doğru formatta olup olmadığını kontrol et
+      if (!_isValidApiKeyFormat()) {
+        print("API Key formatı geçersiz: $_apiKey");
+        return "Üzgünüm, API anahtarı geçersiz görünüyor. Lütfen Google AI Studio'dan (https://aistudio.google.com) geçerli bir API anahtarı alın ve kod içerisinde güncelleyin.";
+      }
+
+      print("API Key kontrolü başarılı, kullanılan model: $_activeModel");
+
+      final context =
+          await _buildUserContext(currentUser, _gamificationProvider);
       final prompt = "$context\n\nKullanıcı: $userMessage";
 
+      print("Gemini API'sine istek gönderiliyor...");
       final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
 
-      return response.text ?? "Üzgünüm, yanıt oluşturulamadı.";
+      try {
+        final response = await _model.generateContent(content);
+        print(
+            "Gemini API yanıt verdi: ${response.text != null ? "Başarılı" : "Boş yanıt"}");
+        return response.text ?? "Üzgünüm, yanıt oluşturulamadı.";
+      } catch (apiError) {
+        print("Gemini API hatası: $apiError");
+
+        // Eğer API key hatası varsa, kullanıcıya yardımcı olacak bir mesaj göster
+        if (apiError.toString().toLowerCase().contains("api key not valid") ||
+            apiError.toString().toLowerCase().contains("invalid api key") ||
+            apiError.toString().toLowerCase().contains("permission denied")) {
+          print(
+              "API key ile ilgili bir sorun oluştu. Alternatif model denenecek.");
+          tryAlternativeModel(); // Ana modelde sorun olursa alternatifi dene
+
+          return "API anahtarınızla ilgili bir sorun oluştu veya seçilen model için yetkiniz bulunmuyor. Google AI Studio (https://aistudio.google.com) üzerinden anahtarınızı kontrol edin. Alternatif bir model ($_activeModel) denendi. Lütfen sorunuzu tekrar sorun.";
+        }
+
+        return "Gemini API hatası ($_activeModel): $apiError. Lütfen API anahtarınızı ve internet bağlantınızı kontrol edin.";
+      }
     } catch (e) {
+      print("getCoachResponse genel hatası: $e");
       return "Üzgünüm, bir hata oluştu: $e";
     }
   }

@@ -285,6 +285,7 @@ class AppTheme {
       unselectedLabelStyle:
           TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
     ),
+    hintColor: darkSecondaryTextColor.withOpacity(0.8),
   );
 
   // Açık tema
@@ -292,20 +293,20 @@ class AppTheme {
     useMaterial3: true,
     brightness: Brightness.light,
     primaryColor: primaryColor,
-    scaffoldBackgroundColor: Color(0xFFF8F8FC),
-    cardColor: Colors.white,
+    scaffoldBackgroundColor: backgroundColor,
+    cardColor: surfaceColor,
     colorScheme: ColorScheme.light(
       primary: primaryColor,
       secondary: secondaryColor,
       tertiary: accentColor,
-      surface: Colors.white,
-      background: Color(0xFFF8F8FC),
-      error: Color(0xFFE53935),
+      surface: surfaceColor,
+      background: backgroundColor,
+      error: Color(0xFFD32F2F),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onTertiary: Colors.white,
-      onSurface: Color(0xFF212121),
-      onBackground: Color(0xFF212121),
+      onSurface: textColor,
+      onBackground: textColor,
       onError: Colors.white,
       brightness: Brightness.light,
     ),
@@ -314,40 +315,40 @@ class AppTheme {
         fontSize: 32,
         fontWeight: FontWeight.bold,
         letterSpacing: -0.5,
-        color: Color(0xFF212121),
+        color: textColor,
       ),
       headlineMedium: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.bold,
         letterSpacing: -0.3,
-        color: Color(0xFF212121),
+        color: textColor,
       ),
       headlineSmall: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
         letterSpacing: -0.2,
-        color: Color(0xFF212121),
+        color: textColor,
       ),
       bodyLarge: TextStyle(
         fontSize: 18,
         letterSpacing: 0.1,
-        color: Color(0xFF212121),
+        color: textColor,
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
         letterSpacing: 0.1,
-        color: Color(0xFF212121),
+        color: textColor,
       ),
       bodySmall: TextStyle(
         fontSize: 14,
         letterSpacing: 0.1,
-        color: Color(0xFF757575),
+        color: secondaryTextColor,
       ),
       labelLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
-        color: Color(0xFF212121),
+        color: textColor,
       ),
     ),
     appBarTheme: AppBarTheme(
@@ -366,9 +367,9 @@ class AppTheme {
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: Colors.white,
+      backgroundColor: surfaceColor,
       selectedItemColor: primaryColor,
-      unselectedItemColor: Color(0xFF757575),
+      unselectedItemColor: secondaryTextColor,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
       showSelectedLabels: true,
@@ -377,11 +378,11 @@ class AppTheme {
       unselectedLabelStyle: TextStyle(fontSize: 12),
     ),
     cardTheme: CardTheme(
-      color: Colors.white,
+      color: surfaceColor,
       elevation: 2,
       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
       ),
       clipBehavior: Clip.antiAlias,
     ),
@@ -390,6 +391,7 @@ class AppTheme {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
+      textTheme: ButtonTextTheme.primary,
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: secondaryColor,
@@ -404,59 +406,38 @@ class AppTheme {
         letterSpacing: 0.5,
       ),
     ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        elevation: 3,
-        textStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
+    dialogTheme: DialogTheme(
+      backgroundColor: surfaceColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
+      contentTextStyle: TextStyle(
+        fontSize: 16,
+        color: textColor,
       ),
     ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primaryColor,
-        side: BorderSide(color: primaryColor, width: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        textStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: textColor,
+      contentTextStyle: TextStyle(color: surfaceColor),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: primaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        textStyle: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-      ),
+      behavior: SnackBarBehavior.floating,
     ),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Color(0xFFBDBDBD), width: 1.5),
+        borderSide: BorderSide(color: secondaryTextColor, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Color(0xFFBDBDBD), width: 1.5),
+        borderSide:
+            BorderSide(color: secondaryTextColor.withOpacity(0.5), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -464,66 +445,14 @@ class AppTheme {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Color(0xFFE53935), width: 1.5),
+        borderSide: BorderSide(color: Color(0xFFD32F2F), width: 1.5),
       ),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      labelStyle: TextStyle(color: Color(0xFF757575), fontSize: 16),
-      hintStyle: TextStyle(color: Color(0xFF9E9E9E), fontSize: 16),
+      labelStyle: TextStyle(color: secondaryTextColor),
+      hintStyle: TextStyle(color: secondaryTextColor.withOpacity(0.7)),
+      prefixIconColor: secondaryTextColor,
+      suffixIconColor: secondaryTextColor,
     ),
-    dialogTheme: DialogTheme(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      titleTextStyle: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF212121),
-      ),
-      contentTextStyle: TextStyle(
-        fontSize: 16,
-        color: Color(0xFF212121),
-      ),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: Color(0xFF323232),
-      contentTextStyle: TextStyle(color: Colors.white),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      behavior: SnackBarBehavior.floating,
-    ),
-    dividerTheme: DividerThemeData(
-      thickness: 1,
-      color: Color(0xFFE0E0E0),
-    ),
-    chipTheme: ChipThemeData(
-      backgroundColor: Color(0xFFEEEEEE),
-      disabledColor: Color(0xFFE0E0E0),
-      selectedColor: primaryColor,
-      secondarySelectedColor: secondaryColor,
-      labelStyle: TextStyle(fontSize: 14),
-      secondaryLabelStyle: TextStyle(fontSize: 14),
-      brightness: Brightness.light,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-    progressIndicatorTheme: ProgressIndicatorThemeData(
-      color: primaryColor,
-      linearTrackColor: Color(0xFFE0E0E0),
-      circularTrackColor: Color(0xFFE0E0E0),
-    ),
-    tabBarTheme: TabBarTheme(
-      labelColor: primaryColor,
-      unselectedLabelColor: Color(0xFF757575),
-      indicatorColor: primaryColor,
-      indicatorSize: TabBarIndicatorSize.label,
-      labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      unselectedLabelStyle:
-          TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-    ),
+    dividerColor: secondaryTextColor.withOpacity(0.3),
+    hintColor: secondaryTextColor.withOpacity(0.8),
   );
 }

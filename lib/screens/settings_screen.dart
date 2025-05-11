@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import '../providers/user_provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme.dart';
 import 'profile_screen.dart';
 import 'notification_settings_screen.dart';
@@ -62,11 +63,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
     final user = userProvider.user;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark ||
+        (themeProvider.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
 
     return Scaffold(
-      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.white,
+      backgroundColor:
+          isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -85,6 +90,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   MaterialPageRoute(builder: (context) => ProfileScreen()),
                 );
               },
+            ),
+
+            Card(
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color:
+                  isDarkMode ? AppTheme.darkCardBackgroundColor : Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: 16.0, right: 16.0, top: 8.0, bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.palette_rounded,
+                            color: Colors.deepPurpleAccent, size: 24),
+                        SizedBox(width: 16),
+                        Text('Tema',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    DropdownButton<ThemeMode>(
+                      value: themeProvider.themeMode,
+                      icon: Icon(Icons.arrow_drop_down_rounded,
+                          color: isDarkMode ? Colors.white70 : Colors.black54),
+                      dropdownColor:
+                          isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+                      underline: SizedBox(),
+                      items: [
+                        DropdownMenuItem(
+                          value: ThemeMode.light,
+                          child: Text('Açık',
+                              style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black)),
+                        ),
+                        DropdownMenuItem(
+                          value: ThemeMode.dark,
+                          child: Text('Koyu',
+                              style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black)),
+                        ),
+                        DropdownMenuItem(
+                          value: ThemeMode.system,
+                          child: Text('Sistem Varsayılanı',
+                              style: TextStyle(
+                                  color: isDarkMode
+                                      ? Colors.white
+                                      : Colors.black)),
+                        ),
+                      ],
+                      onChanged: (ThemeMode? newValue) {
+                        if (newValue != null) {
+                          themeProvider.setThemeMode(newValue);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
 
             _buildSettingsOption(
@@ -190,7 +259,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildProfileSection() {
     final user = Provider.of<UserProvider>(context).user;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark ||
+        (themeProvider.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -242,7 +314,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color color,
     VoidCallback onTap,
   ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark ||
+        (themeProvider.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
 
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -267,6 +342,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark ||
+        (themeProvider.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -343,6 +422,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showAboutDialog(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark ||
+        (themeProvider.themeMode == ThemeMode.system &&
+            MediaQuery.of(context).platformBrightness == Brightness.dark);
+
     showAboutDialog(
       context: context,
       applicationName: 'KaplanFit',

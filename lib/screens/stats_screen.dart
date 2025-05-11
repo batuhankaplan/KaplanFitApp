@@ -91,8 +91,7 @@ class _StatsScreenState extends State<StatsScreen>
         final currentActivityRange = activityProvider.getCurrentDateRange();
         if (currentActivityRange.start != _startDate ||
             currentActivityRange.end != _endDate) {
-          activityProvider.setDateRange(
-              _startDate, _endDate, userProvider.user!.id!);
+          activityProvider.setDateRange(_startDate, _endDate);
         }
 
         final currentNutritionRange = nutritionProvider.getCurrentDateRange();

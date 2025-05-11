@@ -7,7 +7,7 @@ enum ProgramItemType { workout, meal, rest, other }
 
 class ProgramItem {
   String? id; // Veritabanı ID'si (opsiyonel, sonradan atanabilir)
-  final ProgramItemType type; // Öğenin türü
+  ProgramItemType type; // Öğenin türü - final olmaktan çıkardık, düzenlenebilir
   String title; // final olmaktan çıkardık, düzenlenebilir
   String? description; // Yemekler veya basit notlar için
   List<ProgramSet>? programSets; // final olmaktan çıkardık
@@ -24,11 +24,7 @@ class ProgramItem {
     required this.icon,
     required this.color,
     this.time,
-  }) : assert(
-            (type == ProgramItemType.workout &&
-                    programSets != null) || // workoutSets -> programSets
-                (type != ProgramItemType.workout && description != null),
-            'Workout tipindeki öğelerin programSets, diğerlerinin description alanı olmalıdır.');
+  });
 
   // Kopyalama metodu
   ProgramItem copyWith({

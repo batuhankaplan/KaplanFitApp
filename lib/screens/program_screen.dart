@@ -112,19 +112,23 @@ class _ProgramScreenState extends State<ProgramScreen> {
     if (result != null) {
       // Programı güncelle
       final currentProgram = _weeklyProgram[_selectedDayIndex];
-      final programService = Provider.of<ProgramService>(context,
-          listen: false); // YENİ: Provider'dan al
+      final programService =
+          Provider.of<ProgramService>(context, listen: false);
 
       setState(() {
         switch (type) {
           case 'morning':
             currentProgram.morningExercise = result;
+            // ProgramSets içindeki herhangi bir exercise ID'si geçersizse veya boşsa görsel düzeltme yap
+            _ensureValidProgramSets(currentProgram.morningExercise);
             break;
           case 'lunch':
             currentProgram.lunch = result;
             break;
           case 'evening':
             currentProgram.eveningExercise = result;
+            // ProgramSets içindeki herhangi bir exercise ID'si geçersizse veya boşsa görsel düzeltme yap
+            _ensureValidProgramSets(currentProgram.eveningExercise);
             break;
           case 'dinner':
             currentProgram.dinner = result;
@@ -139,16 +143,35 @@ class _ProgramScreenState extends State<ProgramScreen> {
       // Bugünün programı değiştirilmişse ana sayfayı güncelle
       if (_selectedDayIndex == DateTime.now().weekday - 1) {
         // Burada anasayfanın güncellenmesi için bir bildirim veya event gönderilebilir
-        // Örneğin bir GlobalKey veya Event Bus kullanılabilir
-        // Şimdilik Provider üzerinden doğrudan güncelleyeceğiz
-        // Provider.of<DatabaseProvider>(context, listen: false).notifyListeners(); // DatabaseProvider yerine ProgramService dinlenebilir veya başka bir state management yaklaşımı kullanılabilir.
-        // Ana sayfada ProgramService'i dinleyen bir yapı varsa bu otomatik olur.
-        // Şimdilik bu satırı yorumda bırakalım veya kaldıralım.
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Program güncellendi')),
       );
+    }
+  }
+
+  // Yeni yardımcı metod: ProgramSets içindeki geçersiz veya boş exercise ID'lerini temizler
+  void _ensureValidProgramSets(ProgramItem item) {
+    if (item.type == ProgramItemType.workout && item.programSets != null) {
+      // Geçersiz programSets öğelerini filtrele
+      item.programSets = item.programSets!.where((set) {
+        return set.exerciseId != null && set.exerciseId!.isNotEmpty;
+      }).toList();
+
+      // Eğer hiç geçerli programSet kalmadıysa, item'ın tipini değiştir
+      if (item.programSets!.isEmpty) {
+        item.programSets = null;
+        // Başlık boşsa varsayılan bir başlık ekle
+        if (item.title.isEmpty) {
+          if (item == _weeklyProgram[_selectedDayIndex].morningExercise) {
+            item.title = "Sabah Aktivitesi";
+          } else if (item ==
+              _weeklyProgram[_selectedDayIndex].eveningExercise) {
+            item.title = "Akşam Aktivitesi";
+          }
+        }
+      }
     }
   }
 
@@ -376,9 +399,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 onTap: () {
                                   final item = _weeklyProgram[_selectedDayIndex]
                                       .morningExercise;
-                                  if (item.type != ProgramItemType.workout) {
-                                    _showEditDialog(item, 'morning');
-                                  }
+                                  _showEditDialog(item, 'morning');
                                 },
                               ),
 
@@ -417,9 +438,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 onTap: () {
                                   final item = _weeklyProgram[_selectedDayIndex]
                                       .eveningExercise;
-                                  if (item.type != ProgramItemType.workout) {
-                                    _showEditDialog(item, 'evening');
-                                  }
+                                  _showEditDialog(item, 'evening');
                                 },
                               ),
 
@@ -520,11 +539,10 @@ class _ProgramScreenState extends State<ProgramScreen> {
     required VoidCallback onTap,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final bool isWorkout = item.type == ProgramItemType.workout &&
-        item.programSets != null &&
-        item.programSets!.isNotEmpty;
-    final String itemId = item.id ?? 'item_${item.hashCode}';
-    final bool isExpanded = _expansionStates[itemId] ?? false;
+    final bool isWorkout = item.type == ProgramItemType.workout;
+    final bool hasSets =
+        item.programSets != null && item.programSets!.isNotEmpty;
+    bool isExpanded = _expansionStates[item.id ?? ''] ?? false;
 
     Widget cardContent = Padding(
       padding: const EdgeInsets.all(16.0),
@@ -558,14 +576,14 @@ class _ProgramScreenState extends State<ProgramScreen> {
                   ),
                 ),
               ),
-              if (isWorkout)
+              if (hasSets)
                 Icon(
                   isExpanded ? Icons.expand_less : Icons.expand_more,
                   color: isDarkMode ? Colors.white70 : Colors.black54,
                 ),
             ],
           ),
-          if (!isWorkout) ...[
+          if (!hasSets) ...[
             const Divider(height: 24),
             _buildItemContent(context, item, isDarkMode),
           ]
@@ -573,47 +591,49 @@ class _ProgramScreenState extends State<ProgramScreen> {
       ),
     );
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(isDarkMode ? 0.3 : 0.2),
-              color.withOpacity(isDarkMode ? 0.1 : 0.05),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        child: isWorkout
-            ? ExpansionTile(
-                key: ValueKey(itemId),
-                initiallyExpanded: isExpanded,
-                onExpansionChanged: (expanding) {
-                  setState(() {
-                    _expansionStates[itemId] = expanding;
-                  });
-                },
-                title: cardContent,
-                trailing: SizedBox.shrink(),
-                childrenPadding: const EdgeInsets.only(
-                    left: 16.0, right: 16.0, bottom: 16.0),
-                tilePadding: EdgeInsets.zero,
-                children: <Widget>[
-                  const SizedBox(height: 10),
-                  _buildItemContent(context, item, isDarkMode),
-                ],
-              )
-            : InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(12),
-                child: cardContent,
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(isDarkMode ? 0.3 : 0.2),
+                color.withOpacity(isDarkMode ? 0.1 : 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: isWorkout
+              ? ExpansionTile(
+                  key: ValueKey(item.id ?? ''),
+                  initiallyExpanded: isExpanded,
+                  onExpansionChanged: (expanding) {
+                    setState(() {
+                      _expansionStates[item.id ?? ''] = expanding;
+                    });
+                  },
+                  title: cardContent,
+                  trailing: SizedBox.shrink(),
+                  childrenPadding: const EdgeInsets.only(
+                      left: 16.0, right: 16.0, bottom: 16.0),
+                  tilePadding: EdgeInsets.zero,
+                  children: <Widget>[
+                    const SizedBox(height: 10),
+                    _buildItemContent(context, item, isDarkMode),
+                  ],
+                )
+              : InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  child: cardContent,
+                ),
+        ),
       ),
     );
   }
@@ -621,20 +641,16 @@ class _ProgramScreenState extends State<ProgramScreen> {
   /// ProgramItem tipine göre içeriği oluşturan yardımcı metod
   Widget _buildItemContent(
       BuildContext context, ProgramItem item, bool isDarkMode) {
-    // Log the item type and program sets
-    // debugPrint('[ProgramScreen] Building content for item: ${item.title}, type: ${item.type}');
     if (item.type == ProgramItemType.workout &&
         item.programSets != null &&
         item.programSets!.isNotEmpty) {
-      // debugPrint('[ProgramScreen] Program sets: ${item.programSets?.length}');
       // Antrenman içeriği (ExpansionTile içinde gösterilecek)
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: item.programSets!.map((set) {
           final exerciseName =
               set.exerciseDetails?.name ?? 'Egzersiz #${set.exerciseId}';
-          // Log exercise details
-          // debugPrint('[ProgramScreen] Set for exercise: $exerciseName, details: ${set.exerciseDetails}');
+
           String details = '';
           if (set.setsDescription != null && set.repsDescription != null) {
             details +=
@@ -677,10 +693,9 @@ class _ProgramScreenState extends State<ProgramScreen> {
       );
     } else {
       // Yemek, dinlenme veya diğer içerik (açıklama)
-      // debugPrint('[ProgramScreen] Showing description: ${item.description}');
       if (item.type == ProgramItemType.workout) {
         return Text(
-          'Bu antrenman için henüz egzersiz eklenmemiş.',
+          item.description ?? 'Bu antrenman için henüz egzersiz eklenmemiş.',
           style: TextStyle(
             fontSize: 15,
             color: isDarkMode ? Colors.white70 : Colors.black87,

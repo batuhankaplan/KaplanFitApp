@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../services/database_service.dart';
 import '../models/chat_model.dart';
 import '../models/user_model.dart';
+import 'user_provider.dart'; // UserProvider importu
 
 class GamificationProvider with ChangeNotifier {
   final List<BadgeModel> _badges = [];
@@ -19,8 +20,15 @@ class GamificationProvider with ChangeNotifier {
   bool _monthlyGoalCompleted = false;
   bool _yearlyGoalCompleted = false;
 
-  final DatabaseService _dbService =
-      DatabaseService(); // Veritabanı servisi ekle
+  final DatabaseService _dbService; // Değiştirildi
+  final UserProvider _userProvider; // Eklendi
+
+  // Constructor eklendi
+  GamificationProvider(this._dbService, this._userProvider) {
+    // initialize(); // initialize çağrısı main.dart içinde yapılabilir veya burada kalabilir.
+    // Şimdilik burada bırakalım, main.dart'taki çağrıyı kaldırırız.
+    initialize();
+  }
 
   // Getter'lar
   List<BadgeModel> get badges => _badges;
