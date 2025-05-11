@@ -5,6 +5,7 @@ import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:geolocator/geolocator.dart';
 import '../providers/activity_provider.dart';
 import '../providers/workout_provider.dart';
+import '../providers/user_provider.dart';
 import '../models/activity_record.dart';
 import '../models/task_type.dart';
 import '../theme.dart';
@@ -13,6 +14,12 @@ import '../widgets/kaplan_loading.dart';
 import '../models/exercise_model.dart';
 import 'exercise_library_screen.dart';
 import 'dart:io';
+
+// Servisleri import et
+import '../services/program_service.dart';
+import '../services/exercise_service.dart';
+import '../models/program_model.dart';
+import '../models/program_set.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({Key? key}) : super(key: key);
@@ -74,8 +81,12 @@ class _ActivityScreenState extends State<ActivityScreen>
 
     // Provider'a seçilen tarihi bildir
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ActivityProvider>(context, listen: false)
-          .setSelectedDate(_selectedDate);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.user?.id;
+      if (userId != null) {
+        Provider.of<ActivityProvider>(context, listen: false)
+            .setSelectedDate(_selectedDate, userId);
+      }
     });
   }
 
@@ -416,24 +427,32 @@ class _ActivityScreenState extends State<ActivityScreen>
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: days));
     });
-    Provider.of<ActivityProvider>(context, listen: false)
-        .setSelectedDate(_selectedDate);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userId = userProvider.user?.id;
+    if (userId != null) {
+      Provider.of<ActivityProvider>(context, listen: false)
+          .setSelectedDate(_selectedDate, userId);
+    }
   }
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      locale: const Locale('tr', 'TR'),
     );
-
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
-      Provider.of<ActivityProvider>(context, listen: false)
-          .setSelectedDate(_selectedDate);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userId = userProvider.user?.id;
+      if (userId != null) {
+        Provider.of<ActivityProvider>(context, listen: false)
+            .setSelectedDate(_selectedDate, userId);
+      }
     }
   }
 
@@ -442,6 +461,7 @@ class _ActivityScreenState extends State<ActivityScreen>
     _notesController.clear();
     _selectedActivityType = FitActivityType.walking;
     Exercise? _selectedExercise;
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -449,65 +469,164 @@ class _ActivityScreenState extends State<ActivityScreen>
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Aktivite Ekle'),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Aktivite türü seçici
-                _buildActivityTypeDropdown(setDialogState),
-                const SizedBox(height: 16),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  // Aktivite türü seçici
+                  _buildActivityTypeDropdown(setDialogState),
+                  const SizedBox(height: 16),
 
-                // Süre girişi
-                _buildDurationTextField(),
-                const SizedBox(height: 16),
+                  // Süre girişi
+                  _buildDurationTextField(),
+                  const SizedBox(height: 16),
 
-                // Egzersiz Seçim Butonu
-                _buildExerciseSelectionButton(context, setDialogState,
-                    (exercise) {
-                  _selectedExercise = exercise;
-                  _notesController.text =
-                      'Egzersiz: ${exercise.name}\n${_notesController.text}';
-                  if (_selectedActivityType != FitActivityType.weightTraining) {
-                    _selectedActivityType = FitActivityType.weightTraining;
-                  }
-                  setDialogState(() {});
-                }),
-                const SizedBox(height: 16),
-
-                // Notlar
-                _buildNotesTextField(
-                    selectedExerciseName: _selectedExercise?.name),
-              ],
+                  // Egzersiz Seçim Butonu
+                  _buildExerciseSelectionButton(
+                    context,
+                    setDialogState,
+                    (Exercise exercise) {
+                      setDialogState(() {
+                        _selectedExercise = exercise;
+                        _notesController.text = (_notesController.text.isEmpty
+                                ? ""
+                                : "${_notesController.text}\n") +
+                            "Seçilen Egzersiz: ${exercise.name}";
+                        // Aktivite tipini egzersize göre ayarla (varsa)
+                        if (exercise.targetMuscleGroup
+                                .toLowerCase()
+                                .contains('kardiyo') ||
+                            exercise.name.toLowerCase().contains('kardiyo')) {
+                          _selectedActivityType = FitActivityType
+                              .other; // Kardiyo için genel 'other' veya özel bir tip
+                        } else if (exercise.targetMuscleGroup
+                                .toLowerCase()
+                                .contains('koşu') ||
+                            exercise.name.toLowerCase().contains('koşu')) {
+                          _selectedActivityType = FitActivityType.running;
+                        } else if (exercise.targetMuscleGroup
+                                .toLowerCase()
+                                .contains('yürüyüş') ||
+                            exercise.name.toLowerCase().contains('yürüyüş')) {
+                          _selectedActivityType = FitActivityType.walking;
+                        } else if (exercise.targetMuscleGroup
+                                .toLowerCase()
+                                .contains('bisiklet') ||
+                            exercise.name.toLowerCase().contains('bisiklet')) {
+                          _selectedActivityType = FitActivityType.cycling;
+                        } else {
+                          _selectedActivityType = FitActivityType
+                              .weightTraining; // Genel antrenman için
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _buildProgramSelectionButton(
+                    context,
+                    setDialogState,
+                    (List<Exercise> programExercises) {
+                      setDialogState(() {
+                        _selectedExercise = null;
+                        _selectedActivityType = FitActivityType
+                            .weightTraining; // Programlar genellikle ağırlık/genel antrenmandır
+                        String programNotes = programExercises
+                            .map((e) => "- ${e.name}")
+                            .join("\n");
+                        _notesController.text = (_notesController.text.isEmpty
+                                ? ""
+                                : "${_notesController.text}\n") +
+                            "Seçilen Program Egzersizleri:\n$programNotes";
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-          actions: [
+          actions: <Widget>[
             TextButton(
               child: const Text('İptal'),
               onPressed: () => Navigator.of(context).pop(),
             ),
             ElevatedButton(
               child: const Text('Ekle'),
-              onPressed: () {
-                if (_durationController.text.isNotEmpty) {
-                  final duration = int.tryParse(_durationController.text);
-                  if (duration != null && duration > 0) {
-                    final provider =
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  final duration = int.tryParse(_durationController.text) ?? 0;
+                  if (duration > 0) {
+                    final activityProvider =
                         Provider.of<ActivityProvider>(context, listen: false);
-                    final now = DateTime.now();
+                    final userProvider =
+                        Provider.of<UserProvider>(context, listen: false);
+                    final userId = userProvider.user?.id;
 
-                    String notes = _notesController.text.trim();
+                    if (userId == null) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'Aktivite eklemek için kullanıcı girişi yapılmalı.')),
+                      );
+                      return;
+                    }
 
-                    final activity = ActivityRecord(
+                    // Programdan mı eklendiğini kontrol et
+                    // Basit bir kontrol: _selectedExercise null ve notlar programla ilgiliyse
+                    final bool activityIsFromProgram =
+                        _selectedExercise == null &&
+                            _notesController.text
+                                .contains("Seçilen Program Egzersizleri:");
+
+                    // Kalori hesaplama (Örnek)
+                    double caloriesBurned = 0;
+                    if (_selectedExercise?.fixedCaloriesPerActivity != null &&
+                        _selectedExercise!.fixedCaloriesPerActivity! > 0) {
+                      caloriesBurned =
+                          _selectedExercise!.fixedCaloriesPerActivity!;
+                    } else if (_selectedExercise?.metValue != null &&
+                        userProvider.user?.weight != null) {
+                      caloriesBurned = (_selectedExercise!.metValue! *
+                          userProvider.user!.weight! *
+                          (duration / 60.0));
+                    } else {
+                      // FitnessCalculator.calculateCaloriesBurned çağrısı yorum satırı yapıldı.
+                      // Geçici olarak 0 veya basit bir tahmin eklenebilir.
+                      // print("FitnessCalculator bulunamadı, MET veya sabit kalori de yok. Kalori 0 olarak ayarlandı.");
+                      // Örnek: Basit bir aktivite türüne göre tahmin (çok kaba)
+                      // switch (_selectedActivityType) {
+                      //   case FitActivityType.running:
+                      //     caloriesBurned = duration * 8.0; // Dakikada 8 kalori gibi
+                      //     break;
+                      //   case FitActivityType.walking:
+                      //     caloriesBurned = duration * 4.0;
+                      //     break;
+                      //   default:
+                      //     caloriesBurned = duration * 5.0;
+                      // }
+                    }
+
+                    final newActivity = ActivityRecord(
                       type: _selectedActivityType,
                       durationMinutes: duration,
-                      date: _selectedDate.copyWith(
-                        hour: now.hour,
-                        minute: now.minute,
-                      ),
-                      notes: notes.isNotEmpty ? notes : null,
+                      date: _selectedDate,
+                      notes:
+                          "${_notesController.text}${_selectedExercise != null ? '\nEgzersiz: ${_selectedExercise!.name}' : ''}",
+                      caloriesBurned: caloriesBurned.roundToDouble(),
+                      userId: userId,
+                      isFromProgram:
+                          activityIsFromProgram, // isFromProgram alanı set edildi
                     );
 
-                    provider.addActivity(activity);
+                    await activityProvider.addActivity(
+                        newActivity, userId, context);
                     Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              'Aktivite eklendi: ${_selectedActivityType.displayName}')),
+                    );
                   }
                 }
               },
@@ -771,6 +890,14 @@ class _ActivityScreenState extends State<ActivityScreen>
                   "Aktiviteler - Seçilen egzersiz listesi: ${selectedExercise.length} öğe");
               final exercise = selectedExercise.first as Exercise;
               onExerciseSelected(exercise);
+            } else if (selectedExercise is Set &&
+                selectedExercise.isNotEmpty &&
+                selectedExercise.first is Exercise) {
+              // Set olarak geliyorsa ilk elemanı al
+              print(
+                  "Aktiviteler - Seçilen egzersiz seti: ${selectedExercise.length} öğe");
+              final exercise = selectedExercise.first as Exercise;
+              onExerciseSelected(exercise);
             } else if (selectedExercise is Exercise) {
               // Direkt Exercise objesi olarak geliyorsa
               print("Aktiviteler - Seçilen egzersiz: ${selectedExercise.name}");
@@ -792,6 +919,52 @@ class _ActivityScreenState extends State<ActivityScreen>
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Egzersiz seçme işleminde hata: $e")),
           );
+        }
+      },
+    );
+  }
+
+  // YENİ: Program Seçim Butonu Widget'ı (İskelet)
+  Widget _buildProgramSelectionButton(
+    BuildContext context,
+    void Function(void Function()) setDialogState,
+    void Function(List<Exercise>)
+        onProgramSelected, // Callback programın egzersiz listesini döndürür
+  ) {
+    return TextButton.icon(
+      icon: Icon(Icons.fitness_center,
+          color: Theme.of(context).colorScheme.secondary),
+      label: Text(
+        'Programdan Seç',
+        style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+        ),
+        foregroundColor:
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+      ),
+      onPressed: () async {
+        final selectedProgramExercises =
+            await Navigator.of(context).push<List<Exercise>>(
+          MaterialPageRoute(
+              builder: (context) => const ProgramSelectionScreen()),
+        );
+        if (selectedProgramExercises != null &&
+            selectedProgramExercises.isNotEmpty) {
+          onProgramSelected(selectedProgramExercises);
+          // Seçilen egzersizleri logla
+          print("Programdan seçilen egzersizler:");
+          for (var ex in selectedProgramExercises) {
+            print(
+                "- ${ex.name}, Sets: ${ex.defaultSets}, Reps: ${ex.defaultReps}");
+          }
+        } else {
+          print("Program seçilmedi veya program boş.");
         }
       },
     );
@@ -929,6 +1102,147 @@ class _ActivityScreenState extends State<ActivityScreen>
           style: _buttonTextStyle,
         ),
       ),
+    );
+  }
+}
+
+// YENİ: Program Seçme Ekranı (StatefulWidget'a dönüştürüldü)
+class ProgramSelectionScreen extends StatefulWidget {
+  const ProgramSelectionScreen({super.key});
+
+  @override
+  State<ProgramSelectionScreen> createState() => _ProgramSelectionScreenState();
+}
+
+class _ProgramSelectionScreenState extends State<ProgramSelectionScreen> {
+  List<ProgramItem> _workoutPrograms = [];
+  Map<String, List<Exercise>> _programExercises =
+      {}; // Program ID -> Egzersiz Listesi
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProgramsAndExercises();
+  }
+
+  Future<void> _loadProgramsAndExercises() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final programService =
+          Provider.of<ProgramService>(context, listen: false);
+      final exerciseService =
+          Provider.of<ExerciseService>(context, listen: false);
+
+      // 1. Tüm antrenman programlarını al
+      final allProgramItems =
+          programService.getAllProgramItemsIncludingUnassigned();
+      _workoutPrograms = allProgramItems
+          .where((item) =>
+              item.type == ProgramItemType.workout &&
+              (item.title?.isNotEmpty ?? false) && // Kategori başlığı olanlar
+              (item.programSets?.isNotEmpty ??
+                  false)) // İçi boş olmayan programlar
+          .toList();
+
+      // 2. Her program için egzersiz detaylarını çek
+      for (var program in _workoutPrograms) {
+        if (program.id == null) continue;
+        List<String> exerciseIds = [];
+        program.programSets?.forEach((set) {
+          if (set.exerciseId != null) {
+            exerciseIds.add(set.exerciseId!);
+          }
+        });
+
+        if (exerciseIds.isNotEmpty) {
+          final List<Exercise>? detailsList =
+              await exerciseService.getExercisesByIds(
+                  exerciseIds.toSet().toList()); // Benzersiz ID'ler
+          if (detailsList != null) {
+            // Egzersizleri program setlerindeki sıraya göre (yaklaşık olarak) dizmeye çalışalım
+            List<Exercise> orderedExercises = [];
+            program.programSets?.forEach((set) {
+              final foundExercise = detailsList.firstWhere(
+                (ex) => ex.id == set.exerciseId,
+                orElse: () => Exercise(
+                    id: 'notfound',
+                    name: 'Bilinmeyen Egzersiz',
+                    targetMuscleGroup: '',
+                    defaultSets: set.setsDescription?.toString() ?? '',
+                    defaultReps: set.repsDescription?.toString() ??
+                        ''), // Egzersiz bulunamazsa placeholder
+              );
+              // Eğer egzersiz bulunduysa ve placeholder değilse, setteki set/rep bilgilerini egzersize ata (Exercise modeli varsayılanları kullanıyor)
+              if (foundExercise.id != 'notfound') {
+                orderedExercises.add(foundExercise.copyWith(
+                  // copyWith metodu Exercise modelinde olmalı
+                  defaultSets: set.setsDescription?.toString() ??
+                      foundExercise.defaultSets,
+                  defaultReps: set.repsDescription?.toString() ??
+                      foundExercise.defaultReps,
+                  // Diğer bilgiler (duration, weight vb.) ProgramSet modelinde varsa buraya eklenebilir
+                ));
+              } else {
+                // Eğer ExerciseService egzersizi bulamadıysa, yine de bir placeholder ekle
+                orderedExercises.add(foundExercise);
+              }
+            });
+            _programExercises[program.id!] = orderedExercises;
+          }
+        }
+      }
+    } catch (e, stackTrace) {
+      print("Programlar ve egzersizler yüklenirken hata: $e\\n$stackTrace");
+      // Kullanıcıya hata mesajı gösterilebilir
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Program Seç'),
+      ),
+      body: _isLoading
+          ? const Center(child: KaplanLoading())
+          : _workoutPrograms.isEmpty
+              ? const Center(
+                  child: Text('Kullanılabilir antrenman programı bulunamadı.'),
+                )
+              : ListView.builder(
+                  itemCount: _workoutPrograms.length,
+                  itemBuilder: (context, index) {
+                    final program = _workoutPrograms[index];
+                    final exercisesForProgram =
+                        _programExercises[program.id] ?? [];
+                    return ListTile(
+                      title: Text(program.title ?? 'İsimsiz Program'),
+                      subtitle: Text(
+                          '${exercisesForProgram.length} egzersiz${program.description != null && program.description!.isNotEmpty ? " - ${program.description}" : ""}'),
+                      onTap: () {
+                        if (exercisesForProgram.isNotEmpty) {
+                          Navigator.of(context).pop(exercisesForProgram);
+                        } else {
+                          print(
+                              "Seçilen programda gösterilecek egzersiz bulunamadı: ${program.title}");
+                          // Kullanıcıya bilgi verilebilir
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    '"${program.title}" programında tanımlı egzersiz bulunamadı.')),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
     );
   }
 }

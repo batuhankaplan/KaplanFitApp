@@ -88,30 +88,33 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
         isDarkMode: isDarkMode,
         showBackButton: true, // Geri dönüş butonunu göster
         isRequiredPage: true, // AppBar'ın her zaman görünmesini sağla
-        actions: [
-          // Sadece seçim modunda görünen action'lar
-          if (widget.isSelectionMode)
-            TextButton(
-              child: Text(
-                'Ekle (${_selectedExercises.length})',
-                style: TextStyle(
-                    color: _selectedExercises.isNotEmpty
-                        ? (isDarkMode ? Colors.white : AppTheme.primaryColor)
-                        : Colors.grey,
-                    fontWeight: FontWeight.bold),
-              ),
-              onPressed: _selectedExercises.isEmpty
-                  ? null // Seçili egzersiz yoksa pasif
-                  : () {
-                      // Seçilen listeyi geri döndür
-                      print(
-                          "Egzersiz seçimi: ${_selectedExercises.length} egzersiz seçildi");
-                      print(
-                          "Egzersiz listesi dönüyor: ${_selectedExercises.length} adet");
-                      Navigator.of(context).pop(_selectedExercises.toList());
+        actions: widget.isSelectionMode
+            ? [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: TextButton(
+                    onPressed: () {
+                      if (_selectedExercises.isNotEmpty) {
+                        Navigator.of(context).pop(_selectedExercises);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Lütfen en az bir egzersiz seçin.')),
+                        );
+                      }
                     },
-            ),
-        ],
+                    child: Text(
+                      'Ekle (${_selectedExercises.length})',
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                )
+              ]
+            : null,
       ),
       backgroundColor:
           isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor,

@@ -106,46 +106,10 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
   }
 
   void _showAddCategoryDialog(BuildContext context) {
-    final TextEditingController categoryNameController =
-        TextEditingController();
-
     showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Yeni Kategori Ekle'),
-          content: TextField(
-            controller: categoryNameController,
-            decoration: InputDecoration(
-              labelText: 'Kategori Adı',
-              hintText: 'Örn: Bacak Günü',
-              border: OutlineInputBorder(),
-            ),
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            TextButton(
-                child: Text('İptal'),
-                onPressed: () {
-                  categoryNameController.dispose();
-                  Navigator.of(context).pop();
-                }),
-            TextButton(
-              child: Text('Ekle'),
-              onPressed: () {
-                final newCategoryName = categoryNameController.text.trim();
-                if (newCategoryName.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Kategori adı boş olamaz')),
-                  );
-                } else {
-                  categoryNameController.dispose();
-                  Navigator.of(context).pop(newCategoryName);
-                }
-              },
-            ),
-          ],
-        );
+        return _AddCategoryDialog(); // Kullanılacak yeni StatefulWidget
       },
     ).then((newCategoryName) {
       if (newCategoryName != null && newCategoryName.isNotEmpty) {
@@ -602,6 +566,66 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+// Yeni StatefulWidget dialog içeriği için
+class _AddCategoryDialog extends StatefulWidget {
+  @override
+  _AddCategoryDialogState createState() => _AddCategoryDialogState();
+}
+
+class _AddCategoryDialogState extends State<_AddCategoryDialog> {
+  late TextEditingController _categoryNameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _categoryNameController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _categoryNameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Yeni Kategori Ekle'),
+      content: TextField(
+        controller: _categoryNameController,
+        decoration: InputDecoration(
+          labelText: 'Kategori Adı',
+          hintText: 'Örn: Bacak Günü',
+          border: OutlineInputBorder(),
+        ),
+        autofocus: true,
+      ),
+      actions: <Widget>[
+        TextButton(
+          child: Text('İptal'),
+          onPressed: () {
+            Navigator.of(context).pop(); // Değer döndürmeden kapat
+          },
+        ),
+        TextButton(
+          child: Text('Ekle'),
+          onPressed: () {
+            final newCategoryName = _categoryNameController.text.trim();
+            if (newCategoryName.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Kategori adı boş olamaz')),
+              );
+            } else {
+              Navigator.of(context)
+                  .pop(newCategoryName); // Kategori adını döndürerek kapat
+            }
+          },
+        ),
+      ],
     );
   }
 }

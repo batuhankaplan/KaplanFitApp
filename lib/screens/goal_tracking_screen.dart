@@ -163,7 +163,8 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
 
           // Aktivite verilerini yükle
           dbService
-              .getDailyActivitySummaryInRange(queryStartDate, queryEndDate)
+              .getDailyActivitySummaryInRange(
+                  queryStartDate, queryEndDate, user.id!)
               .then((data) {
             _activityData = data;
             print(
@@ -1082,71 +1083,35 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         break;
 
       case TrackingType.activity:
-        // Aktivite grafiğinde haftalık toplam hedefi kullan (günlük ortalama yerine)
-        targetLineY =
-            user.weeklyActivityGoal?.toDouble() ?? 0; // Haftalık toplam hedef
-        maxY = (targetLineY == 0 ? 180 : targetLineY) *
-            1.5; // Hedef yoksa varsayılan
+        // Günlük aktivite hedefi (varsa) veya haftalık hedefin 7'ye bölümü
+        double dailyTarget = (user.weeklyActivityGoal ?? 0) / 7.0;
+        targetLineY = dailyTarget > 0 ? dailyTarget : null;
+
+        maxY = (user.weeklyActivityGoal == null || user.weeklyActivityGoal == 0
+            ? 180
+            : user.weeklyActivityGoal! /
+                7 *
+                1.5); // Günlük ortalama hedefin 1.5 katı
+        if (maxY < 60) maxY = 60; // Minimum 60 dk olsun
         minY = 0;
 
-        // ActivityProvider'dan güncel aktivite verilerini alalım
-        final activityProvider =
-            Provider.of<ActivityProvider>(context, listen: false);
-        Map<DateTime, int> updatedActivityData = Map.from(_activityData);
+        // _activityData zaten _loadTrackingData içinde doğru tarih aralığı için yüklenmiş günlük özetleri içerir.
+        // Bu yüzden activityProvider.getAllActivities() ve haftalık yeniden hesaplama yerine doğrudan _activityData kullanılmalı.
 
-        // Tüm aktiviteleri alalım
-        final activities = activityProvider.getAllActivities();
+        // spots = _generateSpotsForGraph(dateMap, _activityData, (data, date) => data[date]?.toDouble() ?? 0);
+        // _generateSpotsForGraph metodu Map<DateTime, T> bekliyor.
+        // _activityData zaten Map<DateTime, int> formatında.
 
-        // Haftalık toplam aktivite dakikasını hesapla
-        Map<int, double> weeklyTotals =
-            {}; // Haftanın toplam değerlerini tutacak
-
-        // Tarih aralığı için aktiviteleri filtreleyelim ve haftalık toplam süreleri hesaplayalım
+        List<FlSpot> activitySpots = [];
         for (int i = 0; i < numberOfDays; i++) {
           final date = dateMap[i]!;
-          final dayStart = DateTime(date.year, date.month, date.day);
-          final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59);
-
-          // Bu güne ait aktiviteleri filtrele
-          final dayActivities = activities.where((activity) =>
-              activity.date.isAfter(dayStart) &&
-              activity.date.isBefore(dayEnd));
-
-          // Günlük toplam süreyi hesapla
-          int totalMinutes = 0;
-          for (final activity in dayActivities) {
-            totalMinutes += activity.durationMinutes;
-          }
-
-          // Bu tarihin hangi haftaya ait olduğunu belirle (0'dan başlayarak)
-          int weekIndex = i ~/ 7;
-
-          // Bu günü haftalık toplama ekle
-          weeklyTotals[weekIndex] =
-              (weeklyTotals[weekIndex] ?? 0) + totalMinutes;
-
-          // Günlük verileri de güncelleyelim (liste görünümü için)
-          if (totalMinutes > 0) {
-            updatedActivityData[dayStart] = totalMinutes;
-          } else if (!updatedActivityData.containsKey(dayStart)) {
-            updatedActivityData[dayStart] = 0;
+          final dateKey = DateTime(date.year, date.month, date.day);
+          final value = _activityData[dateKey]?.toDouble();
+          if (value != null) {
+            activitySpots.add(FlSpot(i.toDouble(), value));
           }
         }
-
-        // Her haftanın toplam değerini o haftanın son gününe ekle (grafikte göstermek için)
-        // Bu sayede grafik, haftalık birikimli aktivite süresini gösterir
-        Map<DateTime, double> weeklyActivityData = {};
-        for (int week = 0; week < (numberOfDays / 7).ceil(); week++) {
-          int endDayIndex = ((week + 1) * 7) - 1;
-          if (endDayIndex >= numberOfDays) endDayIndex = numberOfDays - 1;
-
-          final weekEndDate = dateMap[endDayIndex]!;
-          weeklyActivityData[weekEndDate] = weeklyTotals[week] ?? 0;
-        }
-
-        // Haftalık toplam verilerle grafik spotlarını oluştur
-        spots = _generateSpotsForGraph(
-            dateMap, weeklyActivityData, (data, date) => data[date] ?? 0);
+        spots = activitySpots;
 
         maxY = _calculateMaxYForGraph(spots, targetLineY, maxY);
         break;

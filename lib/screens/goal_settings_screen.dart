@@ -6,6 +6,7 @@ import '../models/user_model.dart'; // UserModel'i kullanmak için eklendi
 import 'package:flutter/services.dart'; // Sayısal giriş için
 import '../theme.dart'; // AppTheme renkleri için eklendi
 import '../services/database_service.dart'; // DatabaseService'e erişim için eklendi
+import '../providers/gamification_provider.dart'; // GamificationProvider importu
 
 class GoalSettingsScreen extends StatefulWidget {
   const GoalSettingsScreen({Key? key}) : super(key: key);
@@ -956,7 +957,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _weeklyActivityGoalController,
-              enabled: !_autoCalculateNutrition,
+              enabled: true,
               decoration: const InputDecoration(
                 labelText: 'Haftalık Aktivite Hedefi (dakika)',
                 prefixIcon: Icon(Icons.timer),
@@ -989,137 +990,142 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
       color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile(
-              title: const Text('Otomatik Hesapla'),
-              subtitle: const Text(
-                  'Aktivite seviyesi ve hedeflerinize göre beslenme hedeflerinizi hesaplayın'),
-              value: _autoCalculateNutrition,
-              activeColor: AppTheme.primaryColor,
-              contentPadding: EdgeInsets.zero,
-              onChanged: (bool value) {
-                setState(() {
-                  _autoCalculateNutrition = value;
-                  if (value) {
-                    _autoCalculateNutritionTargets();
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _caloriesController,
-              decoration: const InputDecoration(
-                labelText: 'Günlük Kalori Hedefi (kcal)',
-                prefixIcon: Icon(Icons.local_fire_department),
-                border: OutlineInputBorder(),
-                isDense: true,
+        child: Form(
+          key: _nutritionTargetsFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SwitchListTile(
+                title: const Text('Otomatik Hesapla'),
+                subtitle: const Text(
+                    'Aktivite seviyesi ve hedeflerinize göre beslenme hedeflerinizi hesaplayın'),
+                value: _autoCalculateNutrition,
+                activeColor: AppTheme.primaryColor,
+                contentPadding: EdgeInsets.zero,
+                onChanged: (bool value) {
+                  setState(() {
+                    _autoCalculateNutrition = value;
+                    if (value) {
+                      _autoCalculateNutritionTargets();
+                    }
+                  });
+                },
               ),
-              keyboardType: TextInputType.number,
-              enabled: !_autoCalculateNutrition,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: AppTheme.infoColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8)),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline, color: AppTheme.infoColor, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Minimum güvenli günlük kalori alımı kadınlarda 1200 kcal, erkeklerde 1500 kcal olmalıdır.',
-                      style: TextStyle(fontSize: 12, color: AppTheme.infoColor),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _caloriesController,
+                decoration: const InputDecoration(
+                  labelText: 'Günlük Kalori Hedefi (kcal)',
+                  prefixIcon: Icon(Icons.local_fire_department),
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                enabled: !_autoCalculateNutrition,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                    color: AppTheme.infoColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8)),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline,
+                        color: AppTheme.infoColor, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Minimum güvenli günlük kalori alımı kadınlarda 1200 kcal, erkeklerde 1500 kcal olmalıdır.',
+                        style:
+                            TextStyle(fontSize: 12, color: AppTheme.infoColor),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _proteinController,
-              decoration: const InputDecoration(
-                labelText: 'Günlük Protein Hedefi (g)',
-                prefixIcon: Icon(Icons.egg_alt),
-                helperText: 'Önerilen: Kg başına 1.6-2.2g protein',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _proteinController,
+                decoration: const InputDecoration(
+                  labelText: 'Günlük Protein Hedefi (g)',
+                  prefixIcon: Icon(Icons.egg_alt),
+                  helperText: 'Önerilen: Kg başına 1.6-2.2g protein',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                enabled: !_autoCalculateNutrition,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
-              keyboardType: TextInputType.number,
-              enabled: !_autoCalculateNutrition,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _carbsController,
-              decoration: const InputDecoration(
-                labelText: 'Günlük Karbonhidrat Hedefi (g)',
-                prefixIcon: Icon(Icons.grain),
-                helperText: 'Toplam kalorinin %45-65\'i',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _carbsController,
+                decoration: const InputDecoration(
+                  labelText: 'Günlük Karbonhidrat Hedefi (g)',
+                  prefixIcon: Icon(Icons.grain),
+                  helperText: 'Toplam kalorinin %45-65\'i',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                enabled: !_autoCalculateNutrition,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
-              keyboardType: TextInputType.number,
-              enabled: !_autoCalculateNutrition,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _fatController,
-              decoration: const InputDecoration(
-                labelText: 'Günlük Yağ Hedefi (g)',
-                prefixIcon: Icon(Icons.opacity),
-                helperText: 'Toplam kalorinin %20-35\'i',
-                border: OutlineInputBorder(),
-                isDense: true,
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _fatController,
+                decoration: const InputDecoration(
+                  labelText: 'Günlük Yağ Hedefi (g)',
+                  prefixIcon: Icon(Icons.opacity),
+                  helperText: 'Toplam kalorinin %20-35\'i',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                keyboardType: TextInputType.number,
+                enabled: !_autoCalculateNutrition,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
-              keyboardType: TextInputType.number,
-              enabled: !_autoCalculateNutrition,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? AppTheme.primaryColor.withOpacity(0.1)
-                    : AppTheme.primaryColor.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? AppTheme.primaryColor.withOpacity(0.1)
+                      : AppTheme.primaryColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Makro Besin Değerleri Hakkında',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryColor)),
+                    const SizedBox(height: 8),
+                    Text(
+                        '• Protein: Kas yapımı ve onarımı için gereklidir.\n'
+                        '• Karbonhidrat: Ana enerji kaynağıdır.\n'
+                        '• Yağ: Hormon üretimi ve vitamin emilimi için önemlidir.',
+                        style: TextStyle(fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Text('Kalori Eşdeğerleri:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(
+                        '• 1g Protein = 4 kalori\n'
+                        '• 1g Karbonhidrat = 4 kalori\n'
+                        '• 1g Yağ = 9 kalori',
+                        style: TextStyle(fontSize: 13)),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Makro Besin Değerleri Hakkında',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryColor)),
-                  const SizedBox(height: 8),
-                  Text(
-                      '• Protein: Kas yapımı ve onarımı için gereklidir.\n'
-                      '• Karbonhidrat: Ana enerji kaynağıdır.\n'
-                      '• Yağ: Hormon üretimi ve vitamin emilimi için önemlidir.',
-                      style: TextStyle(fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Text('Kalori Eşdeğerleri:',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Text(
-                      '• 1g Protein = 4 kalori\n'
-                      '• 1g Karbonhidrat = 4 kalori\n'
-                      '• 1g Yağ = 9 kalori',
-                      style: TextStyle(fontSize: 13)),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1154,103 +1160,75 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
 
   // Hedefleri kaydet ve UserModel'i güncelle
   Future<void> _saveGoals() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      // validate null olabilir
-      print("[GoalSettings] Form geçerli değil, kaydetme iptal edildi.");
+    if (!(_formKey.currentState?.validate() ?? false) ||
+        !_nutritionTargetsFormKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen tüm gerekli alanları doldurun.')),
+      );
       return;
     }
-    if (mounted)
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final gamificationProvider = Provider.of<GamificationProvider>(context,
+        listen: false); // GamificationProvider'ı al
+    final currentUser = userProvider.user;
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mevcut kullanıcı bulunamadı.')),
+      );
       setState(() {
-        _isLoading = true;
+        _isLoading = false;
       });
-    print("[GoalSettings] Hedefler kaydediliyor...");
+      return;
+    }
 
     try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final currentUser = userProvider.user;
-
-      if (currentUser == null) {
-        print("[GoalSettings] Mevcut kullanıcı bulunamadı.");
-        if (mounted) {
-          // ScaffoldMessenger için mounted kontrolü
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Önce profil bilgilerinizi oluşturun')),
-          );
-          setState(() {
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
-      final double height = double.tryParse(_heightController.text) ??
-          currentUser.height ??
-          0; // null ise 0 ata
-      final double weight = double.tryParse(_weightController.text) ??
-          currentUser.weight ??
-          0; // null ise 0 ata
-      final int age = int.tryParse(_ageController.text) ??
-          currentUser.age ??
-          0; // null ise 0 ata
-      final double? targetWeight = _targetWeightController.text.isNotEmpty
-          ? double.tryParse(_targetWeightController.text)
-          : currentUser.targetWeight;
-      final double? waterIntakeLiters = _waterIntakeController.text.isNotEmpty
-          ? double.tryParse(_waterIntakeController.text)
-          : currentUser.targetWaterIntake;
-      final double? weeklyActivityGoal =
-          _weeklyActivityGoalController.text.isNotEmpty
-              ? double.tryParse(_weeklyActivityGoalController.text)
-              : currentUser.weeklyActivityGoal;
-      final double? calories = _caloriesController.text.isNotEmpty
-          ? double.tryParse(_caloriesController.text)
-          : currentUser.targetCalories;
-      final double? protein = _proteinController.text.isNotEmpty
-          ? double.tryParse(_proteinController.text)
-          : currentUser.targetProtein;
-      final double? carbs = _carbsController.text.isNotEmpty
-          ? double.tryParse(_carbsController.text)
-          : currentUser.targetCarbs;
-      final double? fat = _fatController.text.isNotEmpty
-          ? double.tryParse(_fatController.text)
-          : currentUser.targetFat;
-
+      // Kullanıcı bilgilerini güncelle
       final updatedUser = currentUser.copyWith(
-        height: height,
-        weight: weight,
-        age: age,
-        targetWeight: targetWeight,
+        height: double.tryParse(_heightController.text),
+        weight: double.tryParse(_weightController.text),
+        age: int.tryParse(_ageController.text),
+        targetWeight: double.tryParse(_targetWeightController.text),
         weeklyWeightGoal: _selectedWeeklyGoal,
         activityLevel: _selectedActivityLevel,
-        gender: _selectedGender, // Cinsiyeti kaydet
-        targetWaterIntake: waterIntakeLiters,
-        weeklyActivityGoal: weeklyActivityGoal,
-        targetCalories: calories,
-        targetProtein: protein,
-        targetCarbs: carbs,
-        targetFat: fat,
+        gender: _selectedGender,
+        targetWaterIntake: double.tryParse(_waterIntakeController.text),
+        weeklyActivityGoal: double.tryParse(_weeklyActivityGoalController.text),
+        targetCalories: double.tryParse(_caloriesController.text),
+        targetProtein: double.tryParse(_proteinController.text),
+        targetCarbs: double.tryParse(_carbsController.text),
+        targetFat: double.tryParse(_fatController.text),
         autoCalculateNutrition: _autoCalculateNutrition,
+        // lastWeightUpdate, updateUser içinde otomatik olarak güncelleniyor
       );
 
+      print("[GoalSettings] Hedefler kaydediliyor...");
       print(
           "[GoalSettings] Kaydedilecek Kullanıcı Verisi: ${updatedUser.toMap()}");
+
       await userProvider.saveUser(updatedUser);
-      print("[GoalSettings] Kullanıcı başarıyla kaydedildi.");
-      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Kilo verme rozetlerini kontrol et
+      await gamificationProvider.checkWeightLossBadges(currentUser.id!);
+      print("[GoalSettings] Kilo verme rozetleri kontrol edildi.");
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hedefleriniz kaydedildi')),
+          const SnackBar(content: Text('Hedefler başarıyla kaydedildi!')),
         );
-        Navigator.pop(context);
+        // İsteğe bağlı: Bir önceki ekrana dön
+        // Navigator.of(context).pop();
       }
-    } catch (e, stacktrace) {
-      print("Hedef kaydetme hatası: $e");
-      print("Stacktrace: $stacktrace");
+    } catch (e) {
+      print("[GoalSettings] Hedefler kaydedilirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: $e')),
+          SnackBar(content: Text('Hedefler kaydedilirken bir hata oluştu: $e')),
         );
       }
     } finally {

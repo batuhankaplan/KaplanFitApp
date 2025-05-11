@@ -51,49 +51,39 @@ class AICoachService {
   }
 
   // Kullanıcı verileri, aktiviteler ve beslenme bilgileriyle oluşturulan context
-  Future<String> _buildUserContext() async {
-    // GEÇİCİ ÇÖZÜM: Varsayılan ID 1
-    // TODO: Gerçek kullanıcı ID yönetimini ekle
-    const int currentUserId = 1;
-    final user =
-        await _dbService.getUser(currentUserId); // ID parametresi eklendi
-
-    // Kullanıcı yoksa veya ID'si yoksa, bağlam oluşturmadan çık
+  Future<String> _buildUserContext(UserModel? user) async {
     if (user == null || user.id == null) {
-      print("AICoachService: Kullanıcı bulunamadı, bağlam oluşturulamıyor.");
-      return "Kullanıcı bilgileri alınamadı."; // veya başka bir uygun mesaj
+      print(
+          "AICoachService: Kullanıcı modeli null veya ID'si yok, bağlam oluşturulamıyor.");
+      return "Kullanıcı bilgileri alınamadı.";
     }
 
-    final userId = user.id!; // Null check zaten yapıldı
-    print("AICoachService: Bağlam oluşturuluyor - Kullanıcı ID: $userId");
+    final userId = user.id!;
+    print(
+        "AICoachService: Bağlam oluşturuluyor - Kullanıcı ID: $userId, Ad: ${user.name}");
 
-    // Aktiviteleri al (şimdilik userId gerektirmiyor varsayıyoruz)
     final activities = await _dbService.getActivitiesInRange(
-        DateTime.now().subtract(Duration(days: 30)), DateTime.now());
+        DateTime.now().subtract(Duration(days: 30)), DateTime.now(), userId);
 
-    // Öğünleri userId ile al
     final meals = await _dbService.getMealsInRange(
         DateTime.now().subtract(Duration(days: 30)), DateTime.now(), userId);
 
-    // En sık yapılan aktivite ve ortalama kalori hesaplamaları
     final mostFrequentActivity = _getMostFrequentActivity(activities);
     final avgCalories = _getAverageCaloriesPerDay(meals);
-
-    // Haftalık aktivite durumu
     final weeklyActivityStatus = _getWeeklyActivityStatus(activities);
 
     return """
     KULLANICI BİLGİLERİ:
-    Ad: ${user?.name ?? 'Bilinmiyor'}
-    Yaş: ${user?.age ?? 'Bilinmiyor'}
-    Boy: ${user?.height ?? 'Bilinmiyor'} cm
-    Kilo: ${user?.weight ?? 'Bilinmiyor'} kg
-    BMI: ${user?.bmi.toStringAsFixed(1) ?? 'Bilinmiyor'}
-    BMI Kategorisi: ${user?.bmiCategory ?? 'Bilinmiyor'}
+    Ad: ${user.name ?? 'Bilinmiyor'}
+    Yaş: ${user.age ?? 'Bilinmiyor'}
+    Boy: ${user.height ?? 'Bilinmiyor'} cm
+    Kilo: ${user.weight ?? 'Bilinmiyor'} kg
+    BMI: ${user.bmi?.toStringAsFixed(1) ?? 'Bilinmiyor'}
+    BMI Kategorisi: ${user.bmiCategory ?? 'Bilinmiyor'}
     
     SON AYLIK AKTİVİTE ÖZET:
     Toplam aktivite sayısı: ${activities.length}
-    Toplam süre: ${activities.fold(0, (sum, a) => sum + a.durationMinutes)} dakika
+    Toplam süre: ${activities.fold(0, (sum, a) => sum + (a.durationMinutes ?? 0))} dakika
     En sık yapılan aktivite: $mostFrequentActivity
     Bu hafta aktivite yapılan gün sayısı: $weeklyActivityStatus
     
@@ -114,7 +104,7 @@ class AICoachService {
     YANITLAMA KURALLARI:
     1. Selamlaşma, hal hatır sorma gibi sorulara kısa cümlelerle yanıt ver.
     2. Kullanıcı detaylı bilgi istediğinde bilgiyi net, anlaşılır tut. 
-    3. Kullanıcının sorusu kısaysa, yanıtın da kısa olmalı. Örneğin "selam" denildiğinde "Merhaba (kullanıcı adı)!" gibi tek kelime/cümle ile yanıt ver.
+    3. Kullanıcının sorusu kısaysa, yanıtın da kısa olmalı. Örneğin "selam" denildiğinde "Merhaba ${user.name ?? 'Kullanıcı'}!" gibi tek kelime/cümle ile yanıt ver.
     4. Tavsiyeleri madde madde, güzel ve samimicümlelerle listelemeyi tercih et.
     5. Kullanıcıyı sürekli motive et pozitife yönlendir cesaretlendir.
     6. Kullanıcının günlük aktivite planını kontrol et.
@@ -212,11 +202,10 @@ class AICoachService {
     return numberOfDays > 0 ? totalCalories / numberOfDays : 0;
   }
 
-  Future<String> getCoachResponse(String userMessage) async {
+  Future<String> getCoachResponse(
+      String userMessage, UserModel? currentUser) async {
     try {
-      // API anahtarı kontrolünü kaldırıyoruz
-
-      final context = await _buildUserContext();
+      final context = await _buildUserContext(currentUser);
       final prompt = "$context\n\nKullanıcı: $userMessage";
 
       final content = [Content.text(prompt)];

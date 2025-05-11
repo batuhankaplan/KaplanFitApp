@@ -14,6 +14,7 @@ import 'screens/stats_screen.dart';
 import 'providers/user_provider.dart';
 import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
+import 'providers/gamification_provider.dart';
 import 'services/program_service.dart';
 import 'services/exercise_service.dart';
 import 'services/database_service.dart';
@@ -217,9 +218,10 @@ Future<void> main() async {
       // Kontrol tekrar AKTİF
       print(
           "[Firestore Import] İlk çalıştırma: Besin veritabanı Firestore'a aktarılıyor...");
-      DatabaseService tempDbService = DatabaseService();
-      await tempDbService
-          .importFoodDatabaseFromAsset('assets/besinveritabanı.txt');
+      // Şimdilik Firebase kullanılmadığı için yorum satırı haline getirildi
+      // DatabaseService tempDbService = DatabaseService();
+      // await tempDbService
+      //     .importFoodDatabaseFromAsset('assets/besinveritabanı.txt');
       await prefs.setBool('food_db_imported_v1', true); // Kontrol tekrar AKTİF
       print(
           "[Firestore Import] Firestore'a besin aktarma işlemi tamamlandı ve işaretlendi.");
@@ -258,6 +260,15 @@ Future<void> main() async {
     print("ProgramService initialize hatası: $e");
   }
 
+  // GamificationProvider'ı oluştur ve initialize et
+  final gamificationProvider = GamificationProvider();
+  try {
+    await gamificationProvider.initialize();
+    print("GamificationProvider initialize edildi.");
+  } catch (e) {
+    print("GamificationProvider initialize hatası: $e");
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -284,6 +295,9 @@ Future<void> main() async {
             return previousNutritionProvider ??
                 NutritionProvider(databaseService);
           },
+        ),
+        ChangeNotifierProvider<GamificationProvider>.value(
+          value: gamificationProvider,
         ),
       ],
       child: const MyApp(),

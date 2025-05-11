@@ -4,6 +4,7 @@ import '../services/database_service.dart';
 import '../services/ai_coach_service.dart';
 import '../models/chat_model.dart';
 import '../providers/user_provider.dart';
+import '../providers/gamification_provider.dart';
 import 'conversations_screen.dart';
 import '../widgets/kaplan_loading.dart';
 
@@ -264,98 +265,84 @@ class _AICoachScreenState extends State<AICoachScreen> {
   }
 
   Future<void> _sendMessage() async {
-    final messageText = _messageController.text.trim();
-    if (messageText.isEmpty) {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final currentUser = userProvider.user;
+    final gamificationProvider =
+        Provider.of<GamificationProvider>(context, listen: false);
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kullanıcı bilgisi bulunamadı.')),
+      );
       return;
     }
 
+    _messageController.clear();
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLoading = true;
+    });
+
     final databaseService =
         Provider.of<DatabaseService>(context, listen: false);
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final currentUserId = userProvider.user?.id;
+    final aiCoachService = AICoachService(
+      databaseService, // Sadece dbService gönderilecek
+    );
+    aiCoachService.apiKey = _apiKey; // apiKey ayrıca set edilecek
 
-    bool conversationJustCreated = false;
+    int currentConversationId;
 
-    if (_conversationId == null) {
-      if (currentUserId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Sohbet başlatmak için aktif bir kullanıcı gereklidir. Lütfen giriş yapın.')),
-        );
-        return;
-      }
-
-      conversationJustCreated = true;
-      String tempTitle = messageText.length > 30
-          ? "${messageText.substring(0, 27)}..."
-          : messageText;
-      if (tempTitle.isEmpty) tempTitle = "Yeni Sohbet";
-
+    if (_conversationId == null && _pendingWelcomeMessage != null) {
       final newConversation = ChatConversation(
-        userId: currentUserId,
-        title: tempTitle,
-        createdAt: DateTime.now(),
+        userId: currentUser.id!,
+        title: 'Yeni Sohbet', // Başlık daha sonra ilk mesajdan alınacak
+        createdAt: DateTime.now(), // createdAt eklendi
         lastMessageAt: DateTime.now(),
       );
+      _conversationId =
+          await databaseService.createChatConversation(newConversation);
+      debugPrint(
+          'Yeni sohbet oluşturuldu ve kaydedildi. ID: $_conversationId, Başlık: ${newConversation.title}');
 
-      try {
-        final newConversationId =
-            await databaseService.createChatConversation(newConversation);
-        _conversationId = newConversationId;
-        _conversationTitle = tempTitle;
-        debugPrint(
-            "Yeni sohbet oluşturuldu ve kaydedildi. ID: $_conversationId, Başlık: $_conversationTitle");
+      _pendingWelcomeMessage =
+          _pendingWelcomeMessage!.copyWith(conversationId: _conversationId);
+      await databaseService.createChatMessage(_pendingWelcomeMessage!);
+      debugPrint(
+          'Bekleyen hoşgeldin mesajı kaydedildi. ID: ${_pendingWelcomeMessage!.id}');
+    }
+    currentConversationId = _conversationId!;
 
-        if (_pendingWelcomeMessage != null) {
-          final welcomeMessageToSave = _pendingWelcomeMessage!.copyWith(
-            conversationId: _conversationId!,
-          );
-          final welcomeMessageId =
-              await databaseService.createChatMessage(welcomeMessageToSave);
-          final savedWelcomeMessage =
-              welcomeMessageToSave.copyWith(id: welcomeMessageId);
+    final userMessage = ChatMessage(
+      conversationId: currentConversationId,
+      text: text,
+      isUser: true,
+      timestamp: DateTime.now(),
+    );
 
-          int welcomeIndex = _messages.indexWhere(
-              (msg) => msg.text == _pendingWelcomeMessage!.text && !msg.isUser);
-          if (welcomeIndex != -1 && mounted) {
-            setState(() {
-              _messages[welcomeIndex] = savedWelcomeMessage;
-            });
-          }
-          _pendingWelcomeMessage = null;
-          debugPrint(
-              "Bekleyen hoşgeldin mesajı kaydedildi. ID: $welcomeMessageId");
-        }
-      } catch (e) {
-        debugPrint("Yeni sohbet veya hoşgeldin mesajı kaydedilirken hata: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sohbet başlatılırken hata oluştu: $e')),
-          );
-        }
-        return;
-      }
+    await _addMessage(text, true);
+    debugPrint(
+        '[AICoachScreen] Mesaj (isUser: true) veritabanına kaydedildi. ID: (bilinmiyor, _addMessage içinde loglanır), Text: \'$text\'');
+
+    if (currentUser.id != null) {
+      await gamificationProvider.recordChatInteraction(currentUser.id!);
+      print(
+          '[AICoachScreen] Recorded chat interaction for user ${currentUser.id}');
     }
 
-    await _addMessage(messageText, true);
-    _messageController.clear();
-
-    if (mounted) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
-
-    if (conversationJustCreated) {
-      await _updateConversationTitle(messageText);
+    if (_conversationTitle == 'Yeni Sohbet' || _conversationId == null) {
+      final newTitle = text.length > 50 ? '${text.substring(0, 47)}...' : text;
+      await databaseService.updateChatConversationTitle(
+          currentConversationId, newTitle);
+      _conversationTitle = newTitle;
+      debugPrint('Konuşma başlığı veritabanında güncellendi: $newTitle');
     }
 
     try {
-      final AICoachService aiCoachService = AICoachService(databaseService)
-        ..apiKey = _apiKey;
-
-      final response = await aiCoachService.getCoachResponse(messageText);
+      final response = await aiCoachService.getCoachResponse(text, currentUser);
       await _addMessage(response, false);
 
       await _updateConversationLastActivity();
@@ -380,37 +367,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  Future<void> _updateConversationTitle(String userMessage) async {
-    if (_conversationId == null) {
-      debugPrint(
-          "[AICoachScreen] Başlık güncellenemedi, _conversationId null.");
-      return;
-    }
-
-    final databaseService =
-        Provider.of<DatabaseService>(context, listen: false);
-
-    String newTitle = userMessage.length > 30
-        ? "${userMessage.substring(0, 27)}..."
-        : userMessage;
-    if (newTitle.trim().isEmpty) newTitle = "Sohbet";
-
-    try {
-      await databaseService.updateChatConversationTitle(
-        _conversationId!,
-        newTitle,
-      );
-      if (mounted) {
-        setState(() {
-          _conversationTitle = newTitle;
-        });
-      }
-      debugPrint('Konuşma başlığı veritabanında güncellendi: $newTitle');
-    } catch (e) {
-      debugPrint('Konuşma başlığı güncellenirken hata: $e');
     }
   }
 

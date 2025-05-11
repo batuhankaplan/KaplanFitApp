@@ -1,3 +1,4 @@
+import 'dart:convert'; // JSON dönüşümleri için eklendi
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FoodItem {
@@ -10,6 +11,8 @@ class FoodItem {
   final double proteinG;
   final double fatG;
   final List<String> keywords;
+  final bool isCustom;
+  final String? nameLowercase;
 
   FoodItem({
     this.id,
@@ -21,9 +24,11 @@ class FoodItem {
     required this.proteinG,
     required this.fatG,
     List<String>? keywords,
-  }) : keywords = keywords ?? _generateKeywords(name);
+    this.isCustom = false,
+  })  : keywords = keywords ?? generateKeywords(name),
+        nameLowercase = name.toLowerCase();
 
-  static List<String> _generateKeywords(String name) {
+  static List<String> generateKeywords(String name) {
     if (name.isEmpty) return [];
     return name
         .toLowerCase()
@@ -46,12 +51,39 @@ class FoodItem {
       fatG: (data['fatG'] as num?)?.toDouble() ?? 0.0,
       keywords: data['keywords'] != null
           ? List<String>.from(data['keywords'])
-          : _generateKeywords(data['name'] ?? ''),
+          : generateKeywords(data['name'] ?? ''),
+      isCustom: data['isCustom'] as bool? ?? false,
+    );
+  }
+
+  // SQLite için factory constructor
+  factory FoodItem.fromDbMap(Map<String, dynamic> map) {
+    List<String> keywordsList = [];
+    if (map['keywords'] != null && (map['keywords'] as String).isNotEmpty) {
+      // Virgülle ayrılmış string'i listeye çevir
+      keywordsList = (map['keywords'] as String).split(',');
+    } else if (map['name'] != null) {
+      keywordsList = generateKeywords(map['name'] ?? '');
+    }
+
+    return FoodItem(
+      id: map['id']?.toString(), // SQLite ID integer olabilir, string'e çevir
+      name: map['name'] ?? '',
+      category: map['category'] ?? '',
+      servingSizeG: (map['servingSizeG'] as num?)?.toDouble() ?? 0.0,
+      caloriesKcal: (map['caloriesKcal'] as num?)?.toDouble() ?? 0.0,
+      carbsG: (map['carbsG'] as num?)?.toDouble() ?? 0.0,
+      proteinG: (map['proteinG'] as num?)?.toDouble() ?? 0.0,
+      fatG: (map['fatG'] as num?)?.toDouble() ?? 0.0,
+      keywords: keywordsList,
+      isCustom: (map['isCustom'] as int? ?? 0) == 1,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      // id SQLite tarafından otomatik üretildiği için toMap'e eklenmeyebilir (insert için)
+      // update için gerekirse eklenebilir.
       'name': name,
       'category': category,
       'servingSizeG': servingSizeG,
@@ -59,8 +91,10 @@ class FoodItem {
       'carbsG': carbsG,
       'proteinG': proteinG,
       'fatG': fatG,
-      'name_lowercase': name.toLowerCase(),
-      'keywords': keywords,
+      'name_lowercase': nameLowercase ?? name.toLowerCase(),
+      'keywords': keywords.join(','),
+      'isCustom': isCustom ? 1 : 0,
+      // 'createdAt': createdAt?.toIso8601String(), // Modelde yok
     };
   }
 }

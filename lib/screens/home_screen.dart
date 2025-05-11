@@ -28,6 +28,12 @@ import '../services/exercise_service.dart';
 import 'profile_screen.dart';
 import 'workout_program_screen.dart';
 import '../widgets/home_mini_dashboard.dart';
+import '../widgets/badges_showcase.dart';
+import '../providers/gamification_provider.dart';
+import '../widgets/badge_grid.dart';
+import '../widgets/badge_detail_dialog.dart';
+import '../widgets/badge_widget.dart';
+import '../models/badge_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -474,6 +480,19 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
 
+            // YENİ: Rozet Vitrini
+            SliverToBoxAdapter(
+              child: KFSlideAnimation(
+                offsetBegin: Offset(0, 0.1),
+                delay: Duration(milliseconds: 500),
+                child: BadgesShowcase(
+                  onViewAllPressed: () {
+                    _showAllBadgesScreen();
+                  },
+                ),
+              ),
+            ),
+
             // Alt boşluk
             SliverToBoxAdapter(
               child: SizedBox(height: 16),
@@ -647,23 +666,6 @@ class _HomeScreenState extends State<HomeScreen>
                 MaterialPageRoute(
                   builder: (context) => const WorkoutProgramScreen(),
                   settings: RouteSettings(name: "WorkoutProgramScreen"),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.bar_chart_rounded,
-              color: AppTheme.primaryColor,
-            ),
-            title: Text('İstatistikler'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StatsScreen(),
-                  settings: RouteSettings(name: "StatsScreen"),
                 ),
               );
             },
@@ -1036,7 +1038,282 @@ class _HomeScreenState extends State<HomeScreen>
     }
     */
 
+    // Görev tamamlama durumuna göre GamificationProvider'ı güncelle
+    _updateGameProgressForTask(taskType, newState);
+
     print("Görev durumu güncellendi: $taskType -> $newState"); // Loglama
+  }
+
+  // Oyunlaştırma sistemini güncelleyen yardımcı metot
+  void _updateGameProgressForTask(TaskType taskType, bool isCompleted) {
+    try {
+      final gamificationProvider =
+          Provider.of<GamificationProvider>(context, listen: false);
+
+      // Günlük görev seri takibi
+      if (isCompleted) {
+        // Tüm günlük görevler tamamlandı mı kontrol et
+        final allDailyTasksCompleted = isMorningExerciseDone &&
+            isLunchDone &&
+            isEveningExerciseDone &&
+            isDinnerDone;
+
+        if (allDailyTasksCompleted) {
+          // Tüm günlük görevler tamamlandıysa daily streak'i güncelle
+          gamificationProvider.updateStreak('daily', true);
+
+          // Puan ekle
+          gamificationProvider
+              .addPoints(50); // Günlük tüm görevleri tamamlama puanı
+
+          // Günlük seri rozeti kazanıldı mı kontrol et
+          final currentStreak = gamificationProvider.streaks['daily'] ?? 0;
+          final unlockedBadge = _checkForNewBadge(
+              gamificationProvider, BadgeType.dailyStreak, currentStreak);
+
+          if (unlockedBadge != null) {
+            _showGameReward("Günlük görevleri tamamladınız!",
+                unlockedBadge: unlockedBadge);
+          } else {
+            _showGameReward(
+                "Günlük görevleri tamamladınız! +50 puan kazandınız!");
+          }
+        }
+      }
+
+      // Spesifik görev türüne göre rozet ve puan işlemleri
+      switch (taskType) {
+        case TaskType.morningExercise:
+        case TaskType.eveningExercise:
+          // ANASAYFA GÖREVLERİ ARTIK ANTRENMAN SAYISINI ETKİLEMEYECEK.
+          // if (isCompleted) {
+          //   // Antrenman sayısını artır ve kaydet
+          //   gamificationProvider.updateWorkoutCount(1);
+
+          //   // Rozet kontrol et
+          //   final workoutCount = gamificationProvider.workoutCount;
+          //   final unlockedBadge = _checkForNewBadge(
+          //       gamificationProvider, BadgeType.workoutCount, workoutCount);
+
+          //   if (unlockedBadge != null) {
+          //     _showGameReward("Antrenman tamamlandı!",
+          //         unlockedBadge: unlockedBadge);
+          //   } else {
+          //     _showGameReward("Antrenman tamamlandı! +10 puan kazandınız!");
+          //   }
+          // }
+          // Sadece puan verilebilir veya hiçbir şey yapılmayabilir.
+          // Şimdilik, bu görevler için özel bir puan/rozet işlemi yapmayalım,
+          // genel günlük görev tamamlama zaten puan veriyor.
+          if (isCompleted) {
+            gamificationProvider
+                .addPoints(5); // Sabah/Akşam egzersizi için küçük bir puan
+            _showGameReward("Günlük egzersiz görevi tamamlandı! +5 puan.");
+          }
+          break;
+
+        case TaskType.lunch:
+        case TaskType.dinner:
+          if (isCompleted) {
+            // Beslenme puanı ekle
+            gamificationProvider.addPoints(5); // Her beslenme için +5 puan
+            _showGameReward("Beslenme kaydedildi! +5 puan kazandınız!");
+          }
+          break;
+        case TaskType.other:
+          // Diğer görev türleri için özel bir işlem yapılmıyor
+          break;
+      }
+    } catch (e) {
+      print("Oyunlaştırma güncellemesi sırasında hata: $e");
+    }
+  }
+
+  // Yeni rozet kazanıldı mı kontrol eden yardımcı metot
+  BadgeModel? _checkForNewBadge(
+      GamificationProvider provider, BadgeType type, int currentValue) {
+    // Belirli türdeki kilitli rozetleri bul
+    final relevantBadges =
+        provider.badges.where((b) => b.type == type && !b.isUnlocked).toList();
+
+    // Threshold'a göre sırala
+    relevantBadges.sort((a, b) => a.threshold.compareTo(b.threshold));
+
+    // Mevcut değere göre kilidini açabileceğimiz rozeti bul
+    for (var badge in relevantBadges) {
+      if (currentValue >= badge.threshold) {
+        // Rozet kilidini aç ve bildirim için döndür
+        provider.unlockBadge(badge.id);
+        // Kilidini yeni açtığımız rozeti al
+        final unlockedBadge =
+            provider.badges.firstWhere((b) => b.id == badge.id);
+        return unlockedBadge;
+      }
+    }
+
+    return null;
+  }
+
+  // Oyun ödüllerini göstermek için yardımcı metot
+  void _showGameReward(String message, {BadgeModel? unlockedBadge}) {
+    // Eğer bir rozet açıldıysa, bu bildirimi rozet bilgisiyle zenginleştir
+    Widget content;
+
+    if (unlockedBadge != null) {
+      // Rozet kazanımı bildirimi
+      content = Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: unlockedBadge.color.withOpacity(0.8),
+            radius: 20,
+            child: Icon(
+              _getBadgeIconForNotification(unlockedBadge),
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Yeni rozet kazandınız!',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  '${unlockedBadge.name} - ${unlockedBadge.points} puan',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Standart ödül bildirimi
+      content = Row(
+        children: [
+          Icon(Icons.emoji_events, color: Colors.amber),
+          const SizedBox(width: 10),
+          Expanded(child: Text(message)),
+        ],
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: content,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: unlockedBadge != null
+            ? unlockedBadge.color.withOpacity(0.9)
+            : AppTheme.primaryColor.withOpacity(0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        action: unlockedBadge != null
+            ? SnackBarAction(
+                label: 'DETAYLAR',
+                textColor: Colors.white,
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) =>
+                        BadgeDetailDialog(badge: unlockedBadge),
+                  );
+                },
+              )
+            : null,
+      ),
+    );
+  }
+
+  // Bildirim için rozet ikonunu döndüren yardımcı metot
+  IconData _getBadgeIconForNotification(BadgeModel badge) {
+    switch (badge.type) {
+      case BadgeType.dailyStreak:
+        switch (badge.threshold) {
+          case 3:
+            return Icons.looks_3_rounded; // 3 günlük seri
+          case 7:
+            return Icons.calendar_view_week_rounded; // 7 günlük seri
+          case 30:
+            return Icons.calendar_month_rounded; // 30 günlük seri
+          case 90:
+            return Icons.calendar_view_month_rounded; // 90 günlük seri
+          case 365:
+            return Icons.emoji_events_rounded; // 365 günlük seri
+          default:
+            return Icons.calendar_today_rounded;
+        }
+      case BadgeType.weeklyGoal:
+        return Icons.flag_rounded;
+      case BadgeType.monthlyGoal:
+        return Icons.insert_invitation_rounded;
+      case BadgeType.yearlyGoal:
+        return Icons.workspace_premium_rounded;
+      case BadgeType.workoutCount:
+        switch (badge.threshold) {
+          case 1:
+            return Icons.fitness_center_rounded; // İlk antrenman
+          case 10:
+            return Icons.sports_gymnastics_rounded; // 10 antrenman
+          case 50:
+            return Icons.sports_martial_arts_rounded; // 50 antrenman
+          case 100:
+            return Icons.directions_run_rounded; // 100 antrenman
+          case 500:
+            return Icons.sports_score_rounded; // 500 antrenman
+          default:
+            return Icons.fitness_center_rounded;
+        }
+      case BadgeType.waterStreak:
+        switch (badge.threshold) {
+          case 5:
+            return Icons.water_drop_rounded; // 5 günlük su serisi
+          case 20:
+            return Icons.water_rounded; // 20 günlük su serisi
+          default:
+            return Icons.water_drop_rounded;
+        }
+      case BadgeType.weightLoss:
+        switch (badge.threshold) {
+          case 1:
+            return Icons.monitor_weight_rounded; // 1 kg
+          case 5:
+            return Icons.trending_down_rounded; // 5 kg
+          case 10:
+            return Icons.balance_rounded; // 10 kg
+          default:
+            return Icons.monitor_weight_rounded;
+        }
+      case BadgeType.chatInteraction:
+        switch (badge.threshold) {
+          case 1:
+            return Icons.chat_bubble_outline_rounded; // İlk sohbet
+          case 50:
+            return Icons.forum_rounded; // 50 sohbet
+          case 100:
+            return Icons.psychology_rounded; // 100 sohbet
+          default:
+            return Icons.chat_rounded;
+        }
+      case BadgeType.beginner:
+        return Icons.rocket_launch_rounded;
+      case BadgeType.consistent:
+        return Icons.repeat_rounded;
+      case BadgeType.expert:
+        return Icons.auto_awesome_rounded;
+      case BadgeType.master:
+        return Icons.workspace_premium_rounded;
+      default:
+        return Icons.emoji_events_rounded;
+    }
   }
 
   // Kullanıcıyı karşılayan başlık
@@ -1084,6 +1361,333 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ],
+    );
+  }
+
+  // Tüm rozetleri gösteren ekranı aç
+  void _showAllBadgesScreen() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AllBadgesScreen(),
+      ),
+    );
+  }
+}
+
+// Tüm rozetleri gösteren ekran
+class AllBadgesScreen extends StatelessWidget {
+  const AllBadgesScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final gamificationProvider = Provider.of<GamificationProvider>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Tüm Rozetlerim'),
+        backgroundColor: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+        foregroundColor: isDarkMode ? Colors.white : Colors.black87,
+        elevation: 0,
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          color: isDarkMode ? AppTheme.darkBackgroundColor : Color(0xFFF8F8FC),
+        ),
+        child: CustomScrollView(
+          physics: BouncingScrollPhysics(),
+          slivers: [
+            // Puan özeti kartı
+            SliverToBoxAdapter(
+              child: _buildPointsSummaryCard(
+                  context, gamificationProvider, isDarkMode),
+            ),
+
+            SliverPadding(
+              padding: const EdgeInsets.all(16.0),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  'Açılan Rozetler',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ),
+            if (gamificationProvider.unlockedBadges.isEmpty)
+              SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(
+                      'Henüz rozet kazanmadınız. Görevleri tamamlayarak rozetler kazanın!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.all(16.0),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.8,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final badge = gamificationProvider.unlockedBadges[index];
+                      return BadgeWidget(
+                        badge: badge,
+                        size: 80,
+                        showInfo: true,
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) =>
+                                BadgeDetailDialog(badge: badge),
+                          );
+                        },
+                      );
+                    },
+                    childCount: gamificationProvider.unlockedBadges.length,
+                  ),
+                ),
+              ),
+            SliverPadding(
+              padding: const EdgeInsets.all(16.0),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  'Kilitli Rozetler',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.all(16.0),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.8,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final badge = gamificationProvider.lockedBadges[index];
+                    return BadgeWidget(
+                      badge: badge,
+                      size: 80,
+                      showInfo: true,
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => BadgeDetailDialog(badge: badge),
+                        );
+                      },
+                    );
+                  },
+                  childCount: gamificationProvider.lockedBadges.length,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(height: 24),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Puanları ve rozet durumlarını gösteren özet kart
+  Widget _buildPointsSummaryCard(
+      BuildContext context, GamificationProvider provider, bool isDarkMode) {
+    final totalEarnedPoints = provider.totalEarnedPoints;
+    final maxPossiblePoints = provider.maxPossiblePoints;
+    final progress =
+        maxPossiblePoints > 0 ? totalEarnedPoints / maxPossiblePoints : 0.0;
+    final unlockedCount = provider.unlockedBadges.length;
+    final totalBadgesCount = provider.badges.length;
+    final badgeProgress =
+        totalBadgesCount > 0 ? unlockedCount / totalBadgesCount : 0.0;
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Oyunlaştırma Özeti',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // Puan dairesi
+                Container(
+                  width: 100,
+                  height: 100,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.primaryColor),
+                        strokeWidth: 10,
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$totalEarnedPoints',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                          Text(
+                            'puan',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color:
+                                  isDarkMode ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Toplam Puan: $totalEarnedPoints / $maxPossiblePoints',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.primaryColor),
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Açılan Rozetler: $unlockedCount / $totalBadgesCount',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: badgeProgress,
+                        backgroundColor:
+                            AppTheme.secondaryColor.withOpacity(0.1),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.secondaryColor),
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (provider.streaks.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Mevcut Seriler:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (provider.streaks['daily'] != null &&
+                      provider.streaks['daily']! > 0)
+                    _buildStreakChip(
+                      'Günlük: ${provider.streaks['daily']} gün',
+                      Icons.calendar_today,
+                      AppTheme.primaryColor,
+                    ),
+                  if (provider.streaks['water'] != null &&
+                      provider.streaks['water']! > 0)
+                    _buildStreakChip(
+                      'Su: ${provider.streaks['water']} gün',
+                      Icons.water_drop,
+                      AppTheme.waterColor,
+                    ),
+                  if (provider.workoutCount > 0)
+                    _buildStreakChip(
+                      'Antrenman: ${provider.workoutCount}',
+                      Icons.fitness_center,
+                      AppTheme.workoutColor,
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Seri durumunu gösteren chip widget
+  Widget _buildStreakChip(String label, IconData icon, Color color) {
+    return Chip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+        ),
+      ),
+      avatar: Icon(
+        icon,
+        color: Colors.white,
+        size: 16,
+      ),
+      backgroundColor: color,
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
     );
   }
 }

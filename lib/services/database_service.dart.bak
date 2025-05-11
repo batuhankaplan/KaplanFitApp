@@ -38,7 +38,7 @@ class DatabaseService {
   DatabaseService._internal();
 
   static const int _dbVersion =
-      24; // 23'ten 24'e yükseltildi (activities.isFromProgram eklendi)
+      20; // 19'dan 20'ye yükseltildi (chat_conversations.userId eklendi)
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -88,8 +88,7 @@ class DatabaseService {
         activityLevel TEXT,
         targetWaterIntake REAL,
         weeklyActivityGoal REAL,
-        autoCalculateNutrition INTEGER DEFAULT 0, -- YENİ: Varsayılan 0 (false)
-        currentDailyWaterIntake REAL DEFAULT 0.0 -- YENİ: EKLENDİ
+        autoCalculateNutrition INTEGER DEFAULT 0 -- YENİ: Varsayılan 0 (false)
       )
     ''');
     print("Users tablosu oluşturuldu.");
@@ -113,10 +112,7 @@ class DatabaseService {
         date INTEGER NOT NULL,
         notes TEXT,
         taskId INTEGER,
-        caloriesBurned REAL,
-        userId INTEGER, -- YENİ: userId eklendi
-        isFromProgram INTEGER DEFAULT 0, -- YENİ: Programdan mı eklendi?
-        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE -- YENİ: Foreign key eklendi
+        caloriesBurned REAL
       )
     ''');
     print("Activities tablosu oluşturuldu.");
@@ -203,13 +199,12 @@ class DatabaseService {
         carbsG REAL NOT NULL, -- carbsPerServing -> carbsG
         fatG REAL NOT NULL, -- fatPerServing -> fatG
         name_lowercase TEXT, -- Arama için eklendi
-        keywords TEXT, -- YENİ: Anahtar kelimeler için eklendi
         isCustom INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT -- NOT NULL kaldırıldı, import sırasında ayarlanmayabilir
       )
     ''');
     print("Foods tablosu oluşturuldu.");
-    await _prepopulateFoods(db); // YORUM SATIRI KALDIRILDI
+    // _prepopulateFoods(db); // Bu fonksiyon yerine asset'ten import kullanılıyor gibi
   }
 
   Future<void> _prepopulateFoods(Database db) async {
@@ -725,14 +720,13 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
           if (existing.isEmpty) {
             foodsToInsert.add(FoodItem(
               name: name,
-              category: category,
-              servingSizeG: servingSize,
-              caloriesKcal: calories,
-              proteinG: protein,
-              carbsG: carbs,
-              fatG: fat,
-              // keywords ve nameLowercase kurucuda otomatik atanacak
-              isCustom: false, // Ön tanımlı besinler custom değil
+              category: category, // Kategori eklendi
+              servingSizeG: servingSize, // Doğru parametre adı ve tipi (double)
+              caloriesKcal: calories, // Doğru parametre adı
+              proteinG: protein, // Doğru parametre adı
+              carbsG: carbs, // Doğru parametre adı
+              fatG: fat, // Doğru parametre adı
+              // isCustom ve createdAt modelden kaldırıldı, Firestore'da otomatik yönetilebilir
             ));
           } else {
             // print("Zaten var: $name");
@@ -931,13 +925,11 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     return List.generate(maps.length, (i) => DailyTask.fromMap(maps[i]));
   }
 
-  Future<int> insertActivity(ActivityRecord activity, int userId) async {
+  Future<int> insertActivity(ActivityRecord activity) async {
     final db = await database;
-    Map<String, dynamic> activityMap = activity.toMap();
-    activityMap['userId'] = userId; // userId eklendi
     return await db.insert(
       'activities',
-      activityMap, // Güncellenmiş map kullanıldı
+      activity.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -962,8 +954,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     await db.delete('activities', where: 'taskId = ?', whereArgs: [taskId]);
   }
 
-  Future<List<ActivityRecord>> getActivitiesForDay(
-      DateTime date, int userId) async {
+  Future<List<ActivityRecord>> getActivitiesForDay(DateTime date) async {
     final db = await database;
     final startOfDay =
         DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
@@ -973,12 +964,8 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
     final List<Map<String, dynamic>> maps = await db.query(
       'activities',
-      where: 'date >= ? AND date < ? AND userId = ?', // userId filtresi eklendi
-      whereArgs: [
-        startOfDay,
-        endOfDay,
-        userId
-      ], // userId whereArg olarak eklendi
+      where: 'date >= ? AND date < ?',
+      whereArgs: [startOfDay, endOfDay],
       orderBy: 'date ASC',
     );
 
@@ -988,8 +975,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   }
 
   Future<List<ActivityRecord>> getActivitiesInRange(
-      DateTime start, DateTime end, int userId) async {
-    // userId parametresi eklendi
+      DateTime start, DateTime end) async {
     final db = await database;
     final startDate =
         DateTime(start.year, start.month, start.day).millisecondsSinceEpoch;
@@ -999,8 +985,8 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
     final List<Map<String, dynamic>> maps = await db.query(
       'activities',
-      where: 'date >= ? AND date < ? AND userId = ?', // userId filtresi eklendi
-      whereArgs: [startDate, endDate, userId], // userId whereArg olarak eklendi
+      where: 'date >= ? AND date < ?',
+      whereArgs: [startDate, endDate],
       orderBy: 'date ASC',
     );
 
@@ -1187,29 +1173,23 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
   Future<List<FoodItem>> getFoodItems({
     String? query,
-    bool?
-        isCustom, // SQLite için isCustom şu an modelde yok, gerekirse eklenecek
+    bool? isCustom,
     int? limit,
   }) async {
+    // --- YORUM SATIRI: Eski SQLite kodu, Firestore'a taşınmalı ---
+    /*
     final db = await database;
     List<String> whereClauses = [];
     List<dynamic> whereArgs = [];
 
     if (query != null && query.isNotEmpty) {
-      // Hem 'name' hem de 'keywords' alanlarında arama yap
-      // SQLite'da LIKE ile case-insensitive arama için LOWER() kullanılabilir
-      // Ancak keywords alanı zaten virgülle ayrılmış bir string olduğu için LIKE %keyword% şeklinde arama daha mantıklı olabilir.
-      // Şimdilik sadece name_lowercase ve keywords üzerinde basit LIKE ile arama yapalım.
-      // Daha gelişmiş arama için FTS (Full Text Search) tabloları düşünülebilir.
-      String lowercaseQuery = query.toLowerCase();
-      whereClauses.add('(name_lowercase LIKE ? OR keywords LIKE ?)');
-      whereArgs.add('%$lowercaseQuery%');
-      whereArgs.add('%$lowercaseQuery%'); // keywords içinde de ara
+      whereClauses.add('name LIKE ?');
+      whereArgs.add('%$query%');
     }
-    // if (isCustom != null) { // FoodItem modelinde isCustom yok, db şemasında var. Eklenebilir.
-    //   whereClauses.add('isCustom = ?');
-    //   whereArgs.add(isCustom ? 1 : 0);
-    // }
+    if (isCustom != null) {
+      whereClauses.add('isCustom = ?');
+      whereArgs.add(isCustom ? 1 : 0);
+    }
 
     String? whereString =
         whereClauses.isNotEmpty ? whereClauses.join(' AND ') : null;
@@ -1222,20 +1202,15 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       limit: limit,
     );
 
-    if (maps.isEmpty && (query == null || query.isEmpty)) {
-      print("Veritabanında hiç besin yok, _prepopulateFoods çağrılıyor...");
-      // await _prepopulateFoods(db); // Başlangıç besinlerini yükle (dikkat, tekrar tekrar çağrılabilir)
-      // Tekrar sorgula (bu kısmı dikkatli yönetmek lazım, sonsuz döngüye girebilir)
-      // final List<Map<String, dynamic>> newMaps = await db.query('foods', orderBy: 'name ASC', limit: limit);
-      // return List.generate(newMaps.length, (i) => FoodItem.fromDbMap(newMaps[i]));
-    }
-
-    print(
-        "[DB Service] getFoodItems: ${maps.length} adet besin bulundu. Sorgu: $query");
-    return List.generate(maps.length, (i) => FoodItem.fromDbMap(maps[i]));
+    return List.generate(maps.length, (i) => FoodItem.fromMap(maps[i]));
+    */
+    print("[WARN] getFoodItems (SQLite) fonksiyonu Firestore'a taşınmalı.");
+    return []; // Şimdilik boş liste döndür
   }
 
   Future<FoodItem?> getFoodItemById(int id) async {
+    // --- YORUM SATIRI: Eski SQLite kodu, Firestore'a taşınmalı ---
+    /*
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'foods',
@@ -1243,11 +1218,12 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       whereArgs: [id],
     );
     if (maps.isNotEmpty) {
-      print("[DB Service] getFoodItemById: ID $id için besin bulundu.");
-      return FoodItem.fromDbMap(maps.first);
+      return FoodItem.fromMap(maps.first);
     }
-    print("[DB Service] getFoodItemById: ID $id için besin bulunamadı.");
     return null;
+     */
+    print("[WARN] getFoodItemById (SQLite) fonksiyonu Firestore'a taşınmalı.");
+    return null; // Şimdilik null döndür
   }
 
   Future<int> updateFoodItem(FoodItem food) async {
@@ -1624,51 +1600,6 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
             "chat_conversations tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
-    // YENİ: Sürüm 21 için yükseltme (users.currentDailyWaterIntake)
-    if (oldVersion < 21) {
-      try {
-        batch.execute(
-            'ALTER TABLE users ADD COLUMN currentDailyWaterIntake REAL DEFAULT 0.0');
-        print(
-            "Users tablosuna currentDailyWaterIntake sütunu eklendi (upgrade v21).");
-      } catch (e) {
-        print(
-            "Users tablosuna currentDailyWaterIntake sütunu eklenirken hata (zaten olabilir): $e");
-      }
-    }
-    // YENİ: Sürüm 22 için yükseltme (foods.keywords)
-    if (oldVersion < 22) {
-      try {
-        batch.execute('ALTER TABLE foods ADD COLUMN keywords TEXT');
-        print("Foods tablosuna keywords sütunu eklendi (upgrade v22).");
-      } catch (e) {
-        print(
-            "Foods tablosuna keywords sütunu eklenirken hata (zaten olabilir): $e");
-      }
-    }
-    // YENİ: Sürüm 23 için yükseltme (activities.userId)
-    if (oldVersion < 23) {
-      try {
-        batch.execute(
-            'ALTER TABLE activities ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
-        print("Activities tablosuna userId sütunu eklendi (upgrade v23).");
-      } catch (e) {
-        print(
-            "Activities tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
-      }
-    }
-    // YENİ: Sürüm 24 için yükseltme (activities.isFromProgram)
-    if (oldVersion < 24) {
-      try {
-        batch.execute(
-            'ALTER TABLE activities ADD COLUMN isFromProgram INTEGER DEFAULT 0');
-        print(
-            "Activities tablosuna isFromProgram sütunu eklendi (upgrade v24).");
-      } catch (e) {
-        print(
-            "Activities tablosuna isFromProgram sütunu eklenirken hata (zaten olabilir): $e");
-      }
-    }
 
     await batch.commit();
     print("Veritabanı yükseltme tamamlandı.");
@@ -1729,8 +1660,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
   // YENİ: Belirli bir tarih aralığındaki günlük toplam aktivite süresini (dakika) alır.
   Future<Map<DateTime, int>> getDailyActivitySummaryInRange(
-      DateTime start, DateTime end, int userId) async {
-    // userId parametresi eklendi
+      DateTime start, DateTime end) async {
     final db = await database;
     final startDateMillis =
         DateTime(start.year, start.month, start.day).millisecondsSinceEpoch;
@@ -1743,14 +1673,10 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         (date / 86400000) * 86400000 as dayStartMillis, 
         SUM(COALESCE(durationMinutes, 0)) as totalDuration
       FROM activities
-      WHERE date >= ? AND date < ? AND userId = ? -- userId filtresi eklendi
+      WHERE date >= ? AND date < ?
       GROUP BY dayStartMillis
       ORDER BY dayStartMillis ASC
-    ''', [
-      startDateMillis,
-      endDateMillis,
-      userId
-    ]); // userId whereArg olarak eklendi
+    ''', [startDateMillis, endDateMillis]);
 
     Map<DateTime, int> results = {};
     for (var map in maps) {
@@ -1766,11 +1692,10 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   }
 
   // Besin arama fonksiyonu - Firebase devre dışıyken de çalışacak
-  Future<List<FoodItem>> searchFoodItems(String query, {int? limit}) async {
-    // Firebase devre dışı olduğunda SQLite'dan arama yap
-    print("Firebase devre dışı, SQLite'dan besin aranıyor: $query");
-    return getFoodItems(
-        query: query, limit: limit); // getFoodItems zaten SQLite kullanıyor
+  Future<List<FoodItem>> searchFoodItems(String query) async {
+    // Firebase devre dışı olduğunda boş liste döndür
+    print("Firebase devre dışı: searchFoodItems çalıştırılmadı");
+    return [];
   }
 
   Future<void> updateChatConversationLastActivity(int id) async {
@@ -1841,6 +1766,11 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   }
 
   // Besin arama fonksiyonu - Firebase devre dışıyken de çalışacak
+  Future<List<FoodItem>> searchFoodItems(String query) async {
+    // Firebase devre dışı olduğunda boş liste döndür
+    print("Firebase devre dışı: searchFoodItems çalıştırılmadı");
+    return [];
+  }
 
   // Besin veritabanını Firestore'a aktarır (ÇOK SAYIDA YAZMA - DİKKAT!)
   Future<void> importFoodDatabaseFromAsset(String assetPath) async {

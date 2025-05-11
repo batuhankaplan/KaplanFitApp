@@ -3,6 +3,8 @@ import '../models/user_model.dart';
 import '../services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import '../providers/gamification_provider.dart';
+import 'package:provider/provider.dart';
 
 class UserProvider extends ChangeNotifier {
   UserModel? _user;
@@ -132,7 +134,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // YENİ: Günlük su tüketimini kaydetmek için metot
-  Future<void> logWater(double amountInMl) async {
+  Future<void> logWater(double amountInMl, BuildContext context) async {
     if (_user == null) return;
 
     _isLoading = true;
@@ -159,19 +161,49 @@ class UserProvider extends ChangeNotifier {
         currentDailyWaterIntake: newTotalWater.clamp(0.0, 10000.0)); // Max 10L
 
     try {
-      // saveUser metodu zaten _user'ı güncelleyip, DB'ye yazıp, notifyListeners çağıracak.
-      // Ayrıca SharedPreferences için activeUserId'yi de hallediyor.
-      // lastWaterLogDate'i yukarıda zaten ayarladık.
-      await _databaseService.updateUser(_user!); // Sadece DB'yi güncelleyelim
-      // ve _user state'ini tuttuktan sonra notify edelim.
-
-      // await saveUser(_user!); // saveUser'ı burada çağırmak döngüye veya gereksiz işlemlere yol açabilir.
-      // saveUser içindeki SharedPreferences activeUserId ve _isLoading yönetimi önemli.
-      // Şimdilik doğrudan DB update ve notifyListeners yapalım.
-      // Eğer saveUser'daki diğer mantıklar (prefs vs.) gerekliyse, saveUser'ı daha dikkatli çağırmalı.
+      // Önce water_log tablosuna güncel toplamı kaydet
+      await _databaseService.insertOrUpdateWaterLog(
+          DateTime.now(),
+          newTotalWater.round(), // amount_ml INTEGER olduğu için yuvarla
+          _user!.id!);
+      // Sonra user modelini ve users tablosunu güncelle
+      await _databaseService.updateUser(_user!);
 
       print(
           "[UserProvider] Water logged: $amountInMl ml. New total: $newTotalWater ml for user ${_user!.id}");
+
+      // Su hedefi rozetlerini kontrol et
+      final targetIntakeLiters = _user!.targetWaterIntake;
+      if (targetIntakeLiters != null && targetIntakeLiters > 0) {
+        final targetIntakeMl = targetIntakeLiters * 1000;
+        final bool goalAchieved = newTotalWater >= targetIntakeMl;
+
+        final gamificationProvider =
+            Provider.of<GamificationProvider>(context, listen: false);
+        // updateStreak, günün ilk loglamasında false ile çağrılsa bile, o günkü durumu doğru yansıtacaktır.
+        // Eğer o gün daha önce true ile çağrıldıysa ve sonraki loglamada hedefin altına düşülürse,
+        // updateStreak mantığı seriyi kırmamalı, sadece o günkü "isCompleted" durumunu false yapmalı.
+        // Ancak mevcut updateStreak, isCompleted false ise seriyi direkt sıfırlıyor gibi.
+        // Bu yüzden, sadece hedefe ulaşıldığında true ile çağıralım.
+        // Eğer gün içinde hedefin altına düşülürse ve tekrar üstüne çıkılırsa seri devam eder.
+        // Gün sonunda hedefin altında kalınırsa, ertesi günkü ilk loglamada updateStreak false ile çağrılır ve seri kırılır.
+        // Bu yaklaşım daha basit.
+        if (goalAchieved) {
+          await gamificationProvider.updateStreak('water', true);
+          print(
+              "[UserProvider] Water goal achieved for today. Streak updated.");
+        } else {
+          // Hedefe henüz ulaşılmadıysa veya altına düşüldüyse, updateStreak'i false ile çağırmak seriyi kırabilir.
+          // updateStreak'in kendisi zaten lastUpdate kontrolü yapıyor. Gün içinde birden fazla çağrılması sorun olmamalı.
+          // Eğer gün içinde hedefe ulaşılıp sonra altına düşülürse, seri korunmalı.
+          // Sadece gün sonunda hedefin altında kalındıysa, ertesi günkü log'da seri kırılmalı.
+          // Bu nedenle, burada false ile çağırmayalım. updateStreak('water', false) sadece gün başında veya hiç su içilmediğinde mantıklı.
+          // Şimdilik sadece hedefe ulaşıldığında true gönderiyoruz.
+          // GamificationProvider._syncWaterConsumption daha kapsamlı bir kontrol yapabilir.
+          print(
+              "[UserProvider] Water goal NOT YET achieved for today ($newTotalWater ml / $targetIntakeMl ml).");
+        }
+      }
     } catch (e) {
       print("[UserProvider] Error logging water: $e");
     } finally {

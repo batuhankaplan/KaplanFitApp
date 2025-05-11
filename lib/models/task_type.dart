@@ -17,7 +17,28 @@ enum FitActivityType {
   weightTraining,
   cycling,
   yoga,
-  other,
+  other;
+
+  String get displayName {
+    switch (this) {
+      case FitActivityType.walking:
+        return 'Yürüyüş';
+      case FitActivityType.running:
+        return 'Koşu';
+      case FitActivityType.swimming:
+        return 'Yüzme';
+      case FitActivityType.weightTraining:
+        return 'Ağırlık Antrenmanı';
+      case FitActivityType.cycling:
+        return 'Bisiklet';
+      case FitActivityType.yoga:
+        return 'Yoga';
+      case FitActivityType.other:
+        return 'Diğer Aktivite';
+      default:
+        return 'Bilinmeyen Aktivite';
+    }
+  }
 }
 
 // Öğün türleri
@@ -26,5 +47,22 @@ enum FitMealType {
   lunch,
   dinner,
   snack,
-  other,
+  other;
+
+  String get displayName {
+    switch (this) {
+      case FitMealType.breakfast:
+        return 'Kahvaltı';
+      case FitMealType.lunch:
+        return 'Öğle Yemeği';
+      case FitMealType.dinner:
+        return 'Akşam Yemeği';
+      case FitMealType.snack:
+        return 'Ara Öğün';
+      case FitMealType.other:
+        return 'Diğer Öğün';
+      default:
+        return 'Bilinmeyen Öğün';
+    }
+  }
 }

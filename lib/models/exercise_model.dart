@@ -18,6 +18,11 @@ class Exercise {
   final String? defaultReps; // Varsayılan tekrar sayısı
   final String? defaultRestTime; // Varsayılan dinlenme süresi
 
+  // Kalori hesaplama için
+  final double? metValue; // Egzersizin Metabolik Eşdeğeri
+  final double?
+      fixedCaloriesPerActivity; // Aktivite başına sabit yakılan kalori (varsa MET'i geçersiz kılar)
+
   Exercise({
     this.id,
     required this.name,
@@ -30,6 +35,8 @@ class Exercise {
     this.defaultSets,
     this.defaultReps,
     this.defaultRestTime,
+    this.metValue,
+    this.fixedCaloriesPerActivity,
   });
 
   // Firestore'a yazmak için Map'e dönüştürme
@@ -45,6 +52,8 @@ class Exercise {
       'defaultSets': defaultSets,
       'defaultReps': defaultReps,
       'defaultRestTime': defaultRestTime,
+      'metValue': metValue,
+      'fixedCaloriesPerActivity': fixedCaloriesPerActivity,
     };
   }
 
@@ -67,6 +76,9 @@ class Exercise {
       defaultSets: data['defaultSets'] as String?,
       defaultReps: data['defaultReps'] as String?,
       defaultRestTime: data['defaultRestTime'] as String?,
+      metValue: (data['metValue'] as num?)?.toDouble(),
+      fixedCaloriesPerActivity:
+          (data['fixedCaloriesPerActivity'] as num?)?.toDouble(),
     );
   }
 
@@ -82,6 +94,8 @@ class Exercise {
     String? defaultSets,
     String? defaultReps,
     String? defaultRestTime,
+    double? metValue,
+    double? fixedCaloriesPerActivity,
   }) {
     return Exercise(
       id: id ?? this.id,
@@ -95,6 +109,9 @@ class Exercise {
       defaultSets: defaultSets ?? this.defaultSets,
       defaultReps: defaultReps ?? this.defaultReps,
       defaultRestTime: defaultRestTime ?? this.defaultRestTime,
+      metValue: metValue ?? this.metValue,
+      fixedCaloriesPerActivity:
+          fixedCaloriesPerActivity ?? this.fixedCaloriesPerActivity,
     );
   }
 }

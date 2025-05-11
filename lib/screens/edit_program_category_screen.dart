@@ -182,6 +182,8 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
             exercisesToAdd.add(result);
           } else if (result is List<Exercise>) {
             exercisesToAdd = result;
+          } else if (result is Set<Exercise>) {
+            exercisesToAdd = result.toList();
           }
 
           if (exercisesToAdd.isNotEmpty) {

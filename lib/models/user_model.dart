@@ -61,7 +61,7 @@ class UserModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'uid': uid,
+      if (uid != null) 'uid': uid, // uid sadece null değilse eklenecek
       'name': name,
       'age': age,
       'height': height,
@@ -94,8 +94,8 @@ class UserModel {
       uid: map['uid'],
       name: map['name'],
       age: map['age'],
-      height: map['height'],
-      weight: map['weight'],
+      height: (map['height'] as num?)?.toDouble() ?? 0.0,
+      weight: (map['weight'] as num?)?.toDouble() ?? 0.0,
       profileImagePath: map['profileImagePath'],
       email: map['email'],
       phoneNumber: map['phoneNumber'],
@@ -104,16 +104,18 @@ class UserModel {
       lastWeightUpdate: map['lastWeightUpdate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['lastWeightUpdate'])
           : null,
-      targetCalories: map['targetCalories'],
-      targetProtein: map['targetProtein'],
-      targetCarbs: map['targetCarbs'],
-      targetFat: map['targetFat'],
-      targetWeight: map['targetWeight'],
-      weeklyWeightGoal: map['weeklyWeightGoal'], // Yeni
+      targetCalories: (map['targetCalories'] as num?)?.toDouble() ?? 0.0,
+      targetProtein: (map['targetProtein'] as num?)?.toDouble() ?? 0.0,
+      targetCarbs: (map['targetCarbs'] as num?)?.toDouble() ?? 0.0,
+      targetFat: (map['targetFat'] as num?)?.toDouble() ?? 0.0,
+      targetWeight: (map['targetWeight'] as num?)?.toDouble() ?? 0.0,
+      weeklyWeightGoal:
+          (map['weeklyWeightGoal'] as num?)?.toDouble() ?? 0.0, // Yeni
       activityLevel: map['activityLevel'], // Yeni
-      targetWaterIntake: map['targetWaterIntake'], // Yeni
-      weeklyActivityGoal:
-          map['weeklyActivityGoal'], // Yeni: Haftalık aktivite hedefi
+      targetWaterIntake:
+          (map['targetWaterIntake'] as num?)?.toDouble() ?? 0.0, // Yeni
+      weeklyActivityGoal: (map['weeklyActivityGoal'] as num?)?.toDouble() ??
+          0.0, // Yeni: Haftalık aktivite hedefi
       autoCalculateNutrition:
           map['autoCalculateNutrition'] == 1, // YENİ: Integer'dan bool'a çevir
       currentDailyWaterIntake:

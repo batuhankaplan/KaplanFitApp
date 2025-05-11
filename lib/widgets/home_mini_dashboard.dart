@@ -51,7 +51,7 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                 final double? amount =
                     double.tryParse(_waterInputController.text);
                 if (amount != null && amount > 0) {
-                  userProvider.logWater(amount);
+                  userProvider.logWater(amount, dialogContext);
                   Navigator.of(dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -183,7 +183,7 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                     icon: Icons.water_drop_rounded,
                     color: AppTheme.waterReminderColor,
                     onAddWater: (amount) {
-                      userProvider.logWater(amount);
+                      userProvider.logWater(amount, context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('$amount ml su eklendi.'),
