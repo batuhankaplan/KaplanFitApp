@@ -8,7 +8,7 @@ import '../models/user_model.dart';
 import '../theme.dart';
 
 class HomeMiniDashboard extends StatefulWidget {
-  const HomeMiniDashboard({Key? key}) : super(key: key);
+  const HomeMiniDashboard({super.key});
 
   @override
   State<HomeMiniDashboard> createState() => _HomeMiniDashboardState();
@@ -154,7 +154,7 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                           icon: Icons.local_fire_department_rounded,
                           primaryColor: Colors.orange.shade700,
                           secondaryColor:
-                              Colors.orange.shade200.withOpacity(0.2),
+                              Colors.orange.shade200.withValues(alpha: 0.2),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -168,7 +168,7 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                           icon: Icons.directions_run_rounded,
                           primaryColor: AppTheme.activityColor,
                           secondaryColor:
-                              AppTheme.activityColor.withOpacity(0.3),
+                              AppTheme.activityColor.withValues(alpha: 0.3),
                         ),
                       ),
                     ],
@@ -231,8 +231,8 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: isDarkMode
-                    ? Colors.white.withOpacity(0.9)
-                    : Colors.black.withOpacity(0.8),
+                    ? Colors.white.withValues(alpha: 0.9)
+                    : Colors.black.withValues(alpha: 0.8),
               ),
             ),
           ],
@@ -277,7 +277,7 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: primaryColor.withOpacity(0.9),
+                  color: primaryColor.withValues(alpha: 0.9),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -319,8 +319,8 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: isDarkMode
-                        ? Colors.white.withOpacity(0.9)
-                        : Colors.black.withOpacity(0.8),
+                        ? Colors.white.withValues(alpha: 0.9)
+                        : Colors.black.withValues(alpha: 0.8),
                   ),
                 ),
               ],
@@ -341,13 +341,13 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
         if (targetValue > 0)
           LinearProgressIndicator(
             value: progress,
-            backgroundColor: color.withOpacity(0.2),
+            backgroundColor: color.withValues(alpha: 0.2),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 10,
             borderRadius: BorderRadius.circular(5),
           )
         else
-          Container(height: 10),
+          SizedBox(height: 10),
         const SizedBox(height: 16),
         Wrap(
           alignment: WrapAlignment.spaceEvenly,
@@ -384,7 +384,7 @@ class _HomeMiniDashboardState extends State<HomeMiniDashboard> {
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor:
-            isOutlined ? Colors.transparent : color.withOpacity(0.15),
+            isOutlined ? Colors.transparent : color.withValues(alpha: 0.15),
         foregroundColor: color,
         side:
             isOutlined ? BorderSide(color: color, width: 1.5) : BorderSide.none,

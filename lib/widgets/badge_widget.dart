@@ -13,7 +13,7 @@ class BadgeWidget extends StatelessWidget {
     this.onTap,
     this.size = 60.0,
     this.showInfo = false,
-  }) : super(key: key);
+  }) ;
 
   @override
   Widget build(BuildContext context) {
@@ -40,12 +40,10 @@ class BadgeWidget extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         // Rozet arka planı
-        Container(
-          width: size,
-          height: size,
+        Container(width: size, height: size,
           decoration: BoxDecoration(
             color: isUnlocked
-                ? badge.color.withOpacity(0.2)
+                ? badge.color.withValues(alpha:0.2)
                 : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300),
             shape: BoxShape.circle,
             border: Border.all(
@@ -55,7 +53,7 @@ class BadgeWidget extends StatelessWidget {
             boxShadow: isUnlocked
                 ? [
                     BoxShadow(
-                      color: badge.color.withOpacity(0.3),
+                      color: badge.color.withValues(alpha:0.3),
                       blurRadius: 8,
                       spreadRadius: 1,
                     )
@@ -75,7 +73,7 @@ class BadgeWidget extends StatelessWidget {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha:0.5),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -289,3 +287,5 @@ class BadgeWidget extends StatelessWidget {
     }
   }
 }
+
+

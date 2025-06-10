@@ -16,7 +16,7 @@ class BadgesShowcase extends StatelessWidget {
     this.maxBadges = 5,
     this.title = 'Rozetlerim',
     this.onViewAllPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +96,7 @@ class BadgesShowcase extends StatelessWidget {
               child: CircularProgressIndicator(
                 value: progress,
                 strokeWidth: 4,
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
                 valueColor:
                     AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
               ),

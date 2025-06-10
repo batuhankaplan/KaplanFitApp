@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../providers/activity_provider.dart';
 import '../services/database_service.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import '../models/user_model.dart'; // WeightRecord için
 import '../theme.dart'; // AppTheme'i ekledik
 import 'package:collection/collection.dart'; // lastWhereOrNull ve whereNotNull için eklendi
@@ -21,7 +22,7 @@ enum TrackingType { water, weight, calories, activity }
 enum TrackingViewMode { list, graph }
 
 class GoalTrackingScreen extends StatefulWidget {
-  const GoalTrackingScreen({Key? key}) : super(key: key);
+  const GoalTrackingScreen({super.key});
 
   @override
   State<GoalTrackingScreen> createState() => _GoalTrackingScreenState();
@@ -52,17 +53,17 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
   @override
   void initState() {
     super.initState();
-    print("[GoalTrackingScreen] initState called."); // Log eklendi
+    debugPrint("[GoalTrackingScreen] initState called."); // Log eklendi
     WidgetsBinding.instance.addObserver(this); // Observer'ı ekle
     // Kullanıcı yüklendiğinde verileri yükle
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       if (userProvider.user != null && userProvider.user!.id != null) {
-        print(
+        debugPrint(
             "[GoalTrackingScreen] initState: User found, calling _loadTrackingData."); // Log eklendi
         _loadTrackingData();
       } else {
-        print(
+        debugPrint(
             "[GoalTrackingScreen] initState: User not found yet."); // Log eklendi
         // Kullanıcı yüklenince dinlemek için listener eklenebilir veya build'de kontrol edilir.
       }
@@ -91,7 +92,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
 
   Future<void> _loadTrackingData() async {
     if (!mounted) return;
-    print("[GoalTrackingScreen] _loadTrackingData started.");
+    debugPrint("[GoalTrackingScreen] _loadTrackingData started.");
 
     if (!mounted) return;
     setState(() {
@@ -103,7 +104,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
       final user = userProvider.user;
 
       if (user != null && user.id != null) {
-        print(
+        debugPrint(
             "[GoalTrackingScreen] User found (ID: ${user.id}). Fetching data...");
         final dbService = DatabaseService();
         final now = DateTime.now();
@@ -118,16 +119,16 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
               .getWaterLogInRange(queryStartDate, queryEndDate, user.id!)
               .then((data) {
             _waterLogData = data;
-            print(
+            debugPrint(
                 "[GoalTrackingScreen] Water data loaded: ${data.length} entries");
           }).catchError((e) {
-            print("[GoalTrackingScreen] Error loading water data: $e");
+            debugPrint("[GoalTrackingScreen] Error loading water data: $e");
           }),
 
           // Kilo verilerini yükle
           dbService.getWeightHistory(user.id!).then((data) {
             _weightLogData = data..sort((a, b) => a.date.compareTo(b.date));
-            print(
+            debugPrint(
                 "[GoalTrackingScreen] Weight data loaded: ${data.length} entries");
 
             // Kullanıcının mevcut kilosunu gösteren yeni bir kilo kaydı ekleyelim
@@ -142,11 +143,11 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                 date: DateTime.now(),
               );
               _weightLogData.add(currentWeightRecord);
-              print(
+              debugPrint(
                   "[GoalTrackingScreen] Added current weight record from user data");
             }
           }).catchError((e) {
-            print("[GoalTrackingScreen] Error loading weight data: $e");
+            debugPrint("[GoalTrackingScreen] Error loading weight data: $e");
           }),
 
           // Kalori verilerini yükle
@@ -155,10 +156,10 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                   queryStartDate, queryEndDate, user.id!)
               .then((data) {
             _calorieData = data;
-            print(
+            debugPrint(
                 "[GoalTrackingScreen] Calorie data loaded: ${data.length} entries");
           }).catchError((e) {
-            print("[GoalTrackingScreen] Error loading calorie data: $e");
+            debugPrint("[GoalTrackingScreen] Error loading calorie data: $e");
           }),
 
           // Aktivite verilerini yükle
@@ -167,21 +168,22 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                   queryStartDate, queryEndDate, user.id!)
               .then((data) {
             _activityData = data;
-            print(
+            debugPrint(
                 "[GoalTrackingScreen] Activity data loaded: ${data.length} entries");
           }).catchError((e) {
-            print("[GoalTrackingScreen] Error loading activity data: $e");
+            debugPrint("[GoalTrackingScreen] Error loading activity data: $e");
           }),
         ]);
       } else {
-        print("[GoalTrackingScreen] User not found or invalid. Clearing data.");
+        debugPrint(
+            "[GoalTrackingScreen] User not found or invalid. Clearing data.");
         _waterLogData = {};
         _weightLogData = [];
         _calorieData = {};
         _activityData = {};
       }
     } catch (e) {
-      print("[GoalTrackingScreen] Error during data loading: $e");
+      debugPrint("[GoalTrackingScreen] Error during data loading: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -195,7 +197,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           _isLoading = false;
         });
       }
-      print("[GoalTrackingScreen] _loadTrackingData finished.");
+      debugPrint("[GoalTrackingScreen] _loadTrackingData finished.");
     }
   }
 
@@ -232,7 +234,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
 
   @override
   Widget build(BuildContext context) {
-    print(
+    debugPrint(
         "[GoalTrackingScreen] build called. isLoading: $_isLoading"); // Log eklendi
     final userProvider = Provider.of<UserProvider>(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -292,7 +294,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                   title: 'Ana Hedefler',
                   icon: Icons.flag_outlined,
                   gradientColors: [
-                    AppTheme.primaryColor.withOpacity(0.7),
+                    AppTheme.primaryColor.withValues(alpha: 0.7),
                     AppTheme.primaryColor,
                   ],
                   child: Column(
@@ -340,7 +342,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                   title: 'Beslenme Hedefleri',
                   icon: Icons.restaurant_outlined,
                   gradientColors: [
-                    AppTheme.nutritionColor.withOpacity(0.7),
+                    AppTheme.nutritionColor.withValues(alpha: 0.7),
                     AppTheme.nutritionColor,
                   ],
                   child: Column(
@@ -420,31 +422,31 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
     switch (_selectedTrackingType) {
       case TrackingType.water:
         gradientColors = [
-          AppTheme.waterReminderColor.withOpacity(0.7),
+          AppTheme.waterReminderColor.withValues(alpha: 0.7),
           AppTheme.waterReminderColor
         ];
         break;
       case TrackingType.weight:
         gradientColors = [
-          AppTheme.categoryWorkoutColor.withOpacity(0.7),
+          AppTheme.categoryWorkoutColor.withValues(alpha: 0.7),
           AppTheme.categoryWorkoutColor
         ];
         break;
       case TrackingType.calories:
         gradientColors = [
-          AppTheme.lunchColor.withOpacity(0.7),
+          AppTheme.lunchColor.withValues(alpha: 0.7),
           AppTheme.lunchColor
         ];
         break;
       case TrackingType.activity:
         gradientColors = [
-          AppTheme.eveningExerciseColor.withOpacity(0.7),
+          AppTheme.eveningExerciseColor.withValues(alpha: 0.7),
           AppTheme.eveningExerciseColor
         ];
         break;
       default: // Fallback
         gradientColors = [
-          AppTheme.primaryColor.withOpacity(0.7),
+          AppTheme.primaryColor.withValues(alpha: 0.7),
           AppTheme.primaryColor
         ];
     }
@@ -457,7 +459,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -468,7 +470,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           colors: isDarkMode
               ? [
                   AppTheme.darkCardBackgroundColor,
-                  AppTheme.darkCardBackgroundColor.withOpacity(0.8),
+                  AppTheme.darkCardBackgroundColor.withValues(alpha: 0.8),
                 ]
               : [Colors.white, Colors.white],
         ),
@@ -594,7 +596,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                     border: Border.all(
                       color: isSelected
                           ? colorScheme.primary
-                          : colorScheme.outline.withOpacity(0.3),
+                          : colorScheme.outline.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -603,7 +605,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                       icon,
                       color: isSelected
                           ? colorScheme.onPrimary
-                          : colorScheme.onSurface.withOpacity(0.7),
+                          : colorScheme.onSurface.withValues(alpha: 0.7),
                       size: 20,
                     ),
                   ),
@@ -623,7 +625,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
     final colorScheme = Theme.of(context).colorScheme;
     final color = isSelected
         ? colorScheme.onPrimary
-        : colorScheme.onSurface.withOpacity(0.7);
+        : colorScheme.onSurface.withValues(alpha: 0.7);
 
     return Tooltip(
       message: label, // Tooltip ile etiketi göster
@@ -648,12 +650,12 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
       margin: EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: _selectedTrackingType == TrackingType.water
-            ? AppTheme.waterReminderColor.withOpacity(0.1)
+            ? AppTheme.waterReminderColor.withValues(alpha: 0.1)
             : _selectedTrackingType == TrackingType.weight
-                ? AppTheme.weightColor.withOpacity(0.1)
+                ? AppTheme.weightColor.withValues(alpha: 0.1)
                 : _selectedTrackingType == TrackingType.calories
-                    ? AppTheme.calorieColor.withOpacity(0.1)
-                    : AppTheme.activityColor.withOpacity(0.1),
+                    ? AppTheme.calorieColor.withValues(alpha: 0.1)
+                    : AppTheme.activityColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -691,7 +693,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         alignment: Alignment.center,
         margin: EdgeInsets.symmetric(horizontal: 2, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
@@ -716,8 +718,8 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
             Icons.list,
             color: _selectedViewMode == TrackingViewMode.list
                 ? Colors.white // Seçili ikon beyaz
-                : Colors.white
-                    .withOpacity(0.6), // Seçili olmayan ikon biraz saydam beyaz
+                : Colors.white.withValues(
+                    alpha: 0.6), // Seçili olmayan ikon biraz saydam beyaz
           ),
           onPressed: () =>
               setState(() => _selectedViewMode = TrackingViewMode.list),
@@ -727,8 +729,8 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
             Icons.show_chart,
             color: _selectedViewMode == TrackingViewMode.graph
                 ? Colors.white // Seçili ikon beyaz
-                : Colors.white
-                    .withOpacity(0.6), // Seçili olmayan ikon biraz saydam beyaz
+                : Colors.white.withValues(
+                    alpha: 0.6), // Seçili olmayan ikon biraz saydam beyaz
           ),
           onPressed: () =>
               setState(() => _selectedViewMode = TrackingViewMode.graph),
@@ -869,8 +871,8 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
       constraints: BoxConstraints(maxHeight: 350), // Yüksekliği artırdık
       width: double.infinity, // Genişliği ekrana uygun şekilde maksimum yap
       decoration: BoxDecoration(
-        border:
-            Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1)),
+        border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: ClipRRect(
@@ -891,7 +893,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
   // Boş veri durumu için placeholder
   Widget _buildEmptyDataPlaceholder(
       [String message = "Seçili tür ve zaman aralığı için veri bulunamadı."]) {
-    return Container(
+    return SizedBox(
       height: 150, // Sabit yükseklik verelim
       child: Center(
           child: Text(
@@ -928,11 +930,11 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
     }
 
     // Günlük bir debug log ekleyelim
-    print(
-        "[GoalTracking] Grafik oluşturuluyor: Tür=${_selectedTrackingType}, Aralık=${_selectedRange}, Günler=$numberOfDays");
-    print(
+    debugPrint(
+        "[GoalTracking] Grafik oluşturuluyor: Tür=$_selectedTrackingType, Aralık=$_selectedRange, Günler=$numberOfDays");
+    debugPrint(
         "[GoalTracking] WeightData: ${_weightLogData.length} kayıt, WaterData: ${_waterLogData.length} kayıt");
-    print(
+    debugPrint(
         "[GoalTracking] CalorieData: ${_calorieData.length} kayıt, ActivityData: ${_activityData.length} kayıt");
 
     // Verileri filtrele ve spotları oluştur
@@ -1083,9 +1085,11 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         break;
 
       case TrackingType.activity:
+        debugPrint("🏃 Aktivite grafik verisi hazırlanıyor...");
         // Günlük aktivite hedefi (varsa) veya haftalık hedefin 7'ye bölümü
         double dailyTarget = (user.weeklyActivityGoal ?? 0) / 7.0;
         targetLineY = dailyTarget > 0 ? dailyTarget : null;
+        debugPrint("   - Günlük hedef: $dailyTarget dk");
 
         maxY = (user.weeklyActivityGoal == null || user.weeklyActivityGoal == 0
             ? 180
@@ -1095,23 +1099,70 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         if (maxY < 60) maxY = 60; // Minimum 60 dk olsun
         minY = 0;
 
-        // _activityData zaten _loadTrackingData içinde doğru tarih aralığı için yüklenmiş günlük özetleri içerir.
-        // Bu yüzden activityProvider.getAllActivities() ve haftalık yeniden hesaplama yerine doğrudan _activityData kullanılmalı.
+        // Mevcut _activityData'dan önce provider'dan güncel veriyi al
+        final activityProvider =
+            Provider.of<ActivityProvider>(context, listen: false);
+        Map<DateTime, int> enhancedActivityData = Map.from(_activityData);
 
-        // spots = _generateSpotsForGraph(dateMap, _activityData, (data, date) => data[date]?.toDouble() ?? 0);
-        // _generateSpotsForGraph metodu Map<DateTime, T> bekliyor.
-        // _activityData zaten Map<DateTime, int> formatında.
+        debugPrint(
+            "   - Mevcut _activityData kayıt sayısı: ${_activityData.length}");
+
+        // ActivityProvider'dan güncel veriyi al ve entegre et
+        try {
+          final todayActivities =
+              activityProvider.getAllActivities().where((activity) {
+            final activityDate = DateTime(
+                activity.date.year, activity.date.month, activity.date.day);
+            final today = DateTime(
+                DateTime.now().year, DateTime.now().month, DateTime.now().day);
+            return activityDate.isAtSameMomentAs(today);
+          }).toList();
+
+          if (todayActivities.isNotEmpty) {
+            final todayTotal = todayActivities.fold<int>(
+                0, (sum, activity) => sum + activity.durationMinutes);
+            final today = DateTime(
+                DateTime.now().year, DateTime.now().month, DateTime.now().day);
+            enhancedActivityData[today] = todayTotal;
+            debugPrint("   - Bugünün toplam aktivitesi: $todayTotal dk");
+          }
+        } catch (e) {
+          debugPrint("   - ActivityProvider'dan veri alınırken hata: $e");
+        }
+
+        debugPrint(
+            "   - Geliştirilmiş activityData kayıt sayısı: ${enhancedActivityData.length}");
 
         List<FlSpot> activitySpots = [];
+
+        // dateMap sistemi yerine daha geniş tarih aralığı kullanalım
+        final startDate =
+            DateTime.now().subtract(Duration(days: numberOfDays ~/ 2));
+        final endDate = DateTime.now().add(Duration(days: numberOfDays ~/ 2));
+
+        debugPrint("🗓️ Grafik tarih aralığı: $startDate - $endDate");
+
         for (int i = 0; i < numberOfDays; i++) {
-          final date = dateMap[i]!;
+          final date = startDate.add(Duration(days: i));
           final dateKey = DateTime(date.year, date.month, date.day);
-          final value = _activityData[dateKey]?.toDouble();
-          if (value != null) {
+
+          // Hem mevcut verileri hem de gelecek verileri kontrol et
+          double value = 0.0;
+
+          // Activity data'dan kontrol et
+          if (enhancedActivityData.containsKey(dateKey)) {
+            value = enhancedActivityData[dateKey]!.toDouble();
+          }
+
+          if (value > 0) {
             activitySpots.add(FlSpot(i.toDouble(), value));
+            debugPrint(
+                "   - Gün $i (${dateKey.toString().split(' ')[0]}): $value dk");
           }
         }
         spots = activitySpots;
+
+        debugPrint("   - Toplam grafik noktası: ${spots.length}");
 
         maxY = _calculateMaxYForGraph(spots, targetLineY, maxY);
         break;
@@ -1132,7 +1183,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
       isCurved: true,
       gradient: LinearGradient(
         colors: [
-          _getChartColor(_selectedTrackingType).withOpacity(0.5),
+          _getChartColor(_selectedTrackingType).withValues(alpha: 0.5),
           _getChartColor(_selectedTrackingType),
         ],
       ),
@@ -1144,8 +1195,8 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         show: true,
         gradient: LinearGradient(
           colors: [
-            _getChartColor(_selectedTrackingType).withOpacity(0.3),
-            _getChartColor(_selectedTrackingType).withOpacity(0.0),
+            _getChartColor(_selectedTrackingType).withValues(alpha: 0.3),
+            _getChartColor(_selectedTrackingType).withValues(alpha: 0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -1171,11 +1222,11 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                 .ceilToDouble(), // Dikey çizgi aralığını dinamik yap
             getDrawingHorizontalLine: (value) {
               return FlLine(
-                  color: Colors.grey.withOpacity(0.1), strokeWidth: 1);
+                  color: Colors.grey.withValues(alpha: 0.1), strokeWidth: 1);
             },
             getDrawingVerticalLine: (value) {
               return FlLine(
-                  color: Colors.grey.withOpacity(0.1), strokeWidth: 1);
+                  color: Colors.grey.withValues(alpha: 0.1), strokeWidth: 1);
             },
           ),
           titlesData: FlTitlesData(
@@ -1202,7 +1253,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           ),
           borderData: FlBorderData(
             show: true,
-            border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
           ),
           lineBarsData: [lineChartBarData],
           // Hedef çizgisi
@@ -1213,7 +1264,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                     HorizontalLine(
                       y: targetLineY,
                       color: _getChartColor(_selectedTrackingType)
-                          .withOpacity(0.8),
+                          .withValues(alpha: 0.8),
                       strokeWidth: 2,
                       dashArray: [5, 5], // Kesikli çizgi
                       label: HorizontalLineLabel(
@@ -1275,7 +1326,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                           TextSpan(
                             text: '\n$dateStr',
                             style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 12),
                           ),
                         ],
@@ -1351,7 +1402,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           .textTheme
           .bodySmall
           ?.color
-          ?.withOpacity(0.7), // Tema rengi
+          ?.withValues(alpha: 0.7), // Tema rengi
       fontWeight: FontWeight.normal, // Normal yaptık
       fontSize: 10,
     );
@@ -1404,7 +1455,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           .textTheme
           .bodySmall
           ?.color
-          ?.withOpacity(0.7), // Tema rengi
+          ?.withValues(alpha: 0.7), // Tema rengi
       fontWeight: FontWeight.normal,
       fontSize: 10,
     );
@@ -1573,7 +1624,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Hafif gölge
+            color: Colors.black.withValues(alpha: 0.05), // Hafif gölge
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -1585,7 +1636,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           colors: isDarkMode
               ? [
                   AppTheme.darkCardBackgroundColor,
-                  AppTheme.darkCardBackgroundColor.withOpacity(0.8),
+                  AppTheme.darkCardBackgroundColor.withValues(alpha: 0.8),
                 ]
               : [Colors.white, Colors.white],
         ),
@@ -1654,7 +1705,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           : Colors.redAccent; // Örnek renkler
     } else if (!isReverse && progress < 0.5) {
       // Normal hedef ve yarının altındaysa
-      // progressColor = iconColor.withOpacity(0.7); // Daha soluk
+      // progressColor = iconColor.withValues(alpha:0.7); // Daha soluk
     }
     // Hedefe ulaşıldıysa veya geçildiyse
     if (progress >= 1.0) {
@@ -1689,7 +1740,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress.isNaN ? 0 : progress, // NaN kontrolü
-          backgroundColor: iconColor.withOpacity(0.2),
+          backgroundColor: iconColor.withValues(alpha: 0.2),
           color: progressColor, // Dinamik renk
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
@@ -1725,7 +1776,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
               Container(
                 padding: const EdgeInsets.all(6), // Padding'i azalttık
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15), // Biraz daha belirgin
+                  color: color.withValues(alpha: 0.15), // Biraz daha belirgin
                   borderRadius: BorderRadius.circular(8), // Daha az yuvarlak
                 ),
                 child: Icon(icon, color: color, size: 16), // İkonu küçülttük
@@ -1791,9 +1842,9 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           // İlerleme Çubuğu
           LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0), // Gösterge 1.0'ı geçmesin
-            backgroundColor: color.withOpacity(0.2),
+            backgroundColor: color.withValues(alpha: 0.2),
             color: exceeded
-                ? Colors.redAccent.withOpacity(0.8)
+                ? Colors.redAccent.withValues(alpha: 0.8)
                 : color, // Aşım varsa kırmızı
             minHeight: 6,
             borderRadius: BorderRadius.circular(3),

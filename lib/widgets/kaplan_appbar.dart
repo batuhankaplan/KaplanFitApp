@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../theme.dart';
 
 class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -15,7 +16,7 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.showBackButton = true,
     this.isRequiredPage = false, // Varsayılan olarak false
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +32,7 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
       return PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: SafeArea(
-          child: Container(
-            height: 0,
-          ),
+          child: SizedBox(height: 0),
         ),
       );
     }
@@ -59,7 +58,7 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
           ? IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
               onPressed: () {
-                print("KaplanAppBar: Geri butonu tıklandı");
+                debugPrint("KaplanAppBar: Geri butonu tıklandı");
                 Navigator.of(context).pop();
               },
             )

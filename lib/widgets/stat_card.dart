@@ -12,7 +12,7 @@ class StatCard extends StatelessWidget {
     required this.color,
     required this.title,
     required this.value,
-  }) : super(key: key);
+  }) ;
 
   @override
   Widget build(BuildContext context) {
@@ -23,14 +23,12 @@ class StatCard extends StatelessWidget {
       elevation: 2,
       margin: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12.0),
+      child: Container(width: double.infinity, padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
-          color: isLightMode ? Colors.white : color.withOpacity(0.2),
+          color: isLightMode ? Colors.white : color.withValues(alpha:0.2),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: color.withOpacity(0.5),
+            color: color.withValues(alpha:0.5),
             width: 1.5,
           ),
         ),
@@ -74,3 +72,5 @@ class StatCard extends StatelessWidget {
     );
   }
 } 
+
+

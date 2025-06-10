@@ -12,7 +12,7 @@ class ProgramCard extends StatelessWidget {
     required this.activities,
     required this.meals,
     this.additionalNote,
-  }) : super(key: key);
+  }) ;
 
   @override
   Widget build(BuildContext context) {

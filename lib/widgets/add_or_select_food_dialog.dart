@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // DateFormat için eklendi
 import '../models/food_item.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart'; // FitMealType için
@@ -22,7 +23,7 @@ class AddOrSelectFoodDialog extends StatefulWidget {
     required this.mealType,
     this.existingMeal,
     required this.selectedDate,
-  }) : super(key: key);
+  });
 
   @override
   State<AddOrSelectFoodDialog> createState() => _AddOrSelectFoodDialogState();
@@ -45,7 +46,8 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
       // TODO: existingMeal.foods listesindeki string'leri parse edip
       //       ilgili FoodItem'ları Firestore'dan çekip _currentSelections'a ekle.
       //       Bu kısım şimdilik atlanıyor, düzenleme tam desteklenmiyor.
-      print("UYARI: Öğün düzenleme için mevcut besinler henüz yüklenmiyor.");
+      debugPrint(
+          "UYARI: Öğün düzenleme için mevcut besinler henüz yüklenmiyor.");
     }
   }
 
@@ -72,6 +74,9 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
 
   // Listeden besin seçme dialogunu açar
   Future<void> _showFoodSearchAndSelectDialog() async {
+    debugPrint(
+        "🔥 LISTEDEN SEÇ butonuna basıldı - FoodSearchAndSelectDialog açılıyor");
+
     // TODO: food_search_select_dialog.dart oluşturulduktan sonra implement edilecek
     final selectedFoodsFromList =
         await showDialog<Map<String, ({FoodItem food, double grams})>>(
@@ -90,7 +95,7 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
       showAnimatedSnackBar(context: context, message: 'Liste güncellendi.');
     }
 
-    // print("Listeden Besin Seç henüz implemente edilmedi.");
+    // debugPrint("Listeden Besin Seç henüz implemente edilmedi.");
     // showAnimatedSnackBar(context: context, message: 'Bu özellik yakında!', backgroundColor: Colors.blue);
   }
 
@@ -160,7 +165,7 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
       }
       Navigator.of(context).pop(); // Dialogu kapat
     } catch (e) {
-      print("Öğün kaydedilirken hata: $e");
+      debugPrint("Öğün kaydedilirken hata: $e");
       if (mounted) {
         showAnimatedSnackBar(
             context: context,
@@ -205,7 +210,8 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -276,7 +282,7 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -508,7 +514,7 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
                 });
               }
             } catch (e) {
-              print("Gram güncelleme hatası: $e");
+              debugPrint("Gram güncelleme hatası: $e");
             }
           }
 
@@ -550,7 +556,7 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
                     return Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
@@ -600,7 +606,7 @@ class _AddOrSelectFoodDialogState extends State<AddOrSelectFoodDialog> {
                       );
                     }
                   } catch (e) {
-                    print("Gramaj kaydetme hatası: $e");
+                    debugPrint("Gramaj kaydetme hatası: $e");
                     ScaffoldMessenger.of(dialogContext).showSnackBar(
                       SnackBar(
                         content: Text('Hata oluştu: Geçerli bir değer girin'),

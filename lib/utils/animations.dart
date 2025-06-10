@@ -19,7 +19,7 @@ class KFAnimatedItem extends StatefulWidget {
     this.duration = const Duration(milliseconds: 500),
     this.delay = const Duration(milliseconds: 100),
     this.curve = Curves.easeOutQuint,
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFAnimatedItem> createState() => _KFAnimatedItemState();
@@ -100,7 +100,7 @@ class KFAnimatedSlide extends StatefulWidget {
     this.offsetEnd = Offset.zero,
     this.curve = Curves.easeOutCubic,
     this.delay = const Duration(milliseconds: 100),
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFAnimatedSlide> createState() => _KFAnimatedSlideState();
@@ -181,7 +181,7 @@ class KFAnimatedTip extends StatelessWidget {
     this.curve = Curves.easeOutCubic,
     this.leading,
     this.textStyle,
-  }) : super(key: key);
+  }) ;
   
   @override
   Widget build(BuildContext context) {
@@ -243,7 +243,7 @@ class KFAnimatedList extends StatelessWidget {
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.crossAxisAlignment = CrossAxisAlignment.center,
     this.mainAxisSize = MainAxisSize.max,
-  }) : super(key: key);
+  }) ;
   
   @override
   Widget build(BuildContext context) {
@@ -289,7 +289,7 @@ class KFWaveAnimation extends StatefulWidget {
     this.height = 100.0,
     this.waveCount = 3,
     this.duration = const Duration(seconds: 3),
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFWaveAnimation> createState() => _KFWaveAnimationState();
@@ -315,9 +315,7 @@ class _KFWaveAnimationState extends State<KFWaveAnimation> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: widget.height,
-      width: double.infinity,
+    return Container(height: widget.height, width: double.infinity,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -429,7 +427,7 @@ class KFSlideAnimation extends StatefulWidget {
     this.duration = const Duration(milliseconds: 800),
     this.delay = const Duration(milliseconds: 0),
     this.curve = Curves.easeOutCubic,
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFSlideAnimation> createState() => _KFSlideAnimationState();
@@ -509,7 +507,7 @@ class KFPulseAnimation extends StatefulWidget {
     this.maxScale = 1.1,
     this.curve = Curves.easeInOut,
     this.infinite = true,
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFPulseAnimation> createState() => _KFPulseAnimationState();
@@ -576,7 +574,7 @@ class KFShimmerEffect extends StatefulWidget {
     required this.baseColor,
     required this.highlightColor,
     this.duration = const Duration(milliseconds: 1500),
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFShimmerEffect> createState() => _KFShimmerEffectState();
@@ -658,7 +656,7 @@ class KFFlipAnimation extends StatefulWidget {
     this.duration = const Duration(milliseconds: 500),
     this.direction = Axis.horizontal,
     this.curve = Curves.easeInOut,
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFFlipAnimation> createState() => _KFFlipAnimationState();
@@ -786,7 +784,7 @@ class KFCircularProgressIndicator extends StatefulWidget {
     this.labelStyle,
     this.animate = true,
     this.animationDuration = const Duration(milliseconds: 1000),
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFCircularProgressIndicator> createState() => _KFCircularProgressIndicatorState();
@@ -951,7 +949,7 @@ class KFCounterAnimation extends StatefulWidget {
     this.style,
     this.prefix = '',
     this.suffix = '',
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KFCounterAnimation> createState() => _KFCounterAnimationState();
@@ -1018,3 +1016,5 @@ class _KFCounterAnimationState extends State<KFCounterAnimation> with SingleTick
     );
   }
 } 
+
+

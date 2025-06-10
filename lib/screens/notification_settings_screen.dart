@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:math' show min;
 import '../theme.dart';
 import '../widgets/kaplan_appbar.dart';
@@ -8,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
-  const NotificationSettingsScreen({Key? key}) : super(key: key);
+  const NotificationSettingsScreen({super.key});
 
   @override
   State<NotificationSettingsScreen> createState() =>
@@ -140,27 +141,33 @@ class _NotificationSettingsScreenState
                                     // Bildirimleri otomatik olarak planla
                                     await _rescheduleNotifications();
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Bildirimler etkinleştirildi.'),
-                                        duration: Duration(seconds: 3),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Bildirimler etkinleştirildi.'),
+                                          duration: Duration(seconds: 3),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
                                   } else {
                                     // Bildirimleri devre dışı bırak (mevcut bildirimleri iptal et)
                                     await NotificationService.instance
                                         .cancelAllNotifications();
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Bildirimler devre dışı bırakıldı.'),
-                                        duration: Duration(seconds: 3),
-                                        backgroundColor: Colors.blue,
-                                      ),
-                                    );
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                              'Bildirimler devre dışı bırakıldı.'),
+                                          duration: Duration(seconds: 3),
+                                          backgroundColor: Colors.blue,
+                                        ),
+                                      );
+                                    }
                                   }
                                   setState(() {
                                     _notificationsEnabled = value;
@@ -338,7 +345,7 @@ class _NotificationSettingsScreenState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -375,7 +382,7 @@ class _NotificationSettingsScreenState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

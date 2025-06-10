@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/exercise_service.dart';
 import '../models/exercise_model.dart';
@@ -12,7 +13,7 @@ class ExerciseLibraryScreen extends StatefulWidget {
   final bool isSelectionMode;
 
   const ExerciseLibraryScreen({Key? key, this.isSelectionMode = false})
-      : super(key: key);
+      ;
 
   @override
   State<ExerciseLibraryScreen> createState() => _ExerciseLibraryScreenState();
@@ -29,7 +30,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   @override
   void initState() {
     super.initState();
-    print("ExerciseLibraryScreen: initState çağrıldı");
+    debugPrint("ExerciseLibraryScreen: initState çağrıldı");
     // Asenkron olarak egzersizleri yükle
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadExercises();
@@ -37,7 +38,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   }
 
   void _loadExercises() {
-    print("ExerciseLibraryScreen: egzersizler yükleniyor...");
+    debugPrint("ExerciseLibraryScreen: egzersizler yükleniyor...");
     try {
       final exerciseService =
           Provider.of<ExerciseService>(context, listen: false);
@@ -46,12 +47,12 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
       _exercisesFuture = exerciseService.getExercises(query: _searchQuery);
       if (mounted) {
         setState(() {
-          print(
+          debugPrint(
               "ExerciseLibraryScreen: egzersizler yüklendi, UI güncelleniyor");
         });
       }
     } catch (e) {
-      print("ExerciseLibraryScreen: egzersizler yüklenirken hata: $e");
+      debugPrint("ExerciseLibraryScreen: egzersizler yüklenirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Egzersizler yüklenirken hata oluştu: $e")),
@@ -202,12 +203,12 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                                 ? AppTheme.darkSurfaceColor
                                 : AppTheme.darkCardBackgroundColor)
                             : (isSelected
-                                ? AppTheme.primaryColor.withOpacity(0.05)
+                                ? AppTheme.primaryColor.withValues(alpha:0.05)
                                 : Colors.white),
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: AppTheme.primaryColor
-                                .withOpacity(isSelected ? 0.25 : 0.1),
+                                .withValues(alpha:isSelected ? 0.25 : 0.1),
                             child: Icon(
                               _getMuscleGroupIcon(exercise.targetMuscleGroup),
                               color: AppTheme.primaryColor,

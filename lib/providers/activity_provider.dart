@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/task_model.dart';
 import '../services/database_service.dart';
 import '../models/activity_record.dart';
 import '../models/task_type.dart';
-import 'package:flutter/foundation.dart';
+
 import '../providers/gamification_provider.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart'; // UserProvider importu
@@ -60,7 +61,7 @@ class ActivityProvider with ChangeNotifier {
       _allActivities = [];
       _isLoading = false;
       notifyListeners();
-      print(
+      debugPrint(
           'ActivityProvider: Kullanıcı ID bulunamadığı için aktiviteler yüklenemedi.');
       return;
     }
@@ -74,7 +75,7 @@ class ActivityProvider with ChangeNotifier {
       notifyListeners();
       await _loadAllActivities(); // userId parametresi kaldırıldı
     } catch (e) {
-      print('Aktiviteleri yenilerken hata: $e');
+      debugPrint('Aktiviteleri yenilerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -86,7 +87,7 @@ class ActivityProvider with ChangeNotifier {
     final userId = _userProvider.user?.id;
     if (userId == null) {
       _allActivities = [];
-      print(
+      debugPrint(
           'ActivityProvider: Kullanıcı ID bulunamadığı için tüm aktiviteler yüklenemedi.');
       return;
     }
@@ -106,7 +107,7 @@ class ActivityProvider with ChangeNotifier {
           effectiveStartDate, effectiveEndDate, userId);
       _allActivities.sort((a, b) => b.date.compareTo(a.date));
     } catch (e) {
-      print('Tüm aktiviteleri yüklerken hata: $e');
+      debugPrint('Tüm aktiviteleri yüklerken hata: $e');
       _allActivities = [];
     }
   }
@@ -141,7 +142,7 @@ class ActivityProvider with ChangeNotifier {
       _dailyTasks = await _dbService.getTasksForDay(DateTime.now());
       _dailyTasksDate = todayString;
     } catch (e) {
-      print("Günlük görevler yüklenirken hata: $e");
+      debugPrint("Günlük görevler yüklenirken hata: $e");
       _dailyTasks = []; // Hata durumunda boşalt
     }
 
@@ -156,7 +157,7 @@ class ActivityProvider with ChangeNotifier {
   //   try {
   //     _dailyTasks = await _dbService.getTasksForDay(_selectedDate);
   //   } catch (e) {
-  //     print("Seçili gün görevleri yüklenirken hata: $e");
+  //     debugPrint("Seçili gün görevleri yüklenirken hata: $e");
   //     _dailyTasks = [];
   //   }
   //   _isLoading = false;
@@ -168,7 +169,8 @@ class ActivityProvider with ChangeNotifier {
     // userId parametresi kaldırıldı
     final userId = _userProvider.user?.id;
     if (userId == null) {
-      print('ActivityProvider: Aktivite eklenemedi, kullanıcı ID bulunamadı.');
+      debugPrint(
+          'ActivityProvider: Aktivite eklenemedi, kullanıcı ID bulunamadı.');
       return null;
     }
     _isLoading = true;
@@ -204,13 +206,13 @@ class ActivityProvider with ChangeNotifier {
         final gamificationProvider =
             Provider.of<GamificationProvider>(context, listen: false);
         await gamificationProvider.recordProgramWorkoutCompleted(userId, id!);
-        print(
+        debugPrint(
             "ActivityProvider: Called recordProgramWorkoutCompleted for activity ID $id");
       }
 
       notifyListeners();
     } catch (e) {
-      print('Aktivite eklerken hata: $e');
+      debugPrint('Aktivite eklerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -227,7 +229,7 @@ class ActivityProvider with ChangeNotifier {
       _allActivities.removeWhere((activity) => activity.id == id);
       notifyListeners();
     } catch (e) {
-      print('Aktivite silerken hata: $e');
+      debugPrint('Aktivite silerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -238,7 +240,7 @@ class ActivityProvider with ChangeNotifier {
     // userId parametresi kaldırıldı
     final userId = _userProvider.user?.id;
     if (userId == null) {
-      print(
+      debugPrint(
           'ActivityProvider: Task ID ile aktivite silinemedi, kullanıcı ID bulunamadı.');
       return;
     }
@@ -248,7 +250,7 @@ class ActivityProvider with ChangeNotifier {
       // Silme işleminden sonra aktiviteleri yenilemek için userId gerekir.
       refreshActivities();
     } catch (e) {
-      print('Error deleting activity by taskId ' +
+      debugPrint('Error deleting activity by taskId ' +
           taskId.toString() +
           ': ' +
           e.toString());
@@ -264,7 +266,7 @@ class ActivityProvider with ChangeNotifier {
       final newTask = task.copyWith(id: id);
       _dailyTasks.add(newTask);
     } catch (e) {
-      print("Görev eklerken hata: $e");
+      debugPrint("Görev eklerken hata: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -282,7 +284,7 @@ class ActivityProvider with ChangeNotifier {
         _dailyTasks[index] = task;
       }
     } catch (e) {
-      print("Görev güncellerken hata: $e");
+      debugPrint("Görev güncellerken hata: $e");
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -313,7 +315,7 @@ class ActivityProvider with ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print('Aktivite güncellerken hata: $e');
+      debugPrint('Aktivite güncellerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -102,13 +102,11 @@ class AppTheme {
       secondary: secondaryColor,
       tertiary: accentColor,
       surface: darkSurfaceColor,
-      background: darkBackgroundColor,
       error: Color(0xFFFF5252),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onTertiary: Colors.white,
       onSurface: darkTextColor,
-      onBackground: darkTextColor,
       onError: Colors.white,
       brightness: Brightness.dark,
     ),
@@ -238,7 +236,7 @@ class AppTheme {
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
-            color: darkSecondaryTextColor.withOpacity(0.6), width: 1.5),
+            color: darkSecondaryTextColor.withValues(alpha: 0.6), width: 1.5),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -253,7 +251,7 @@ class AppTheme {
       contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       labelStyle: TextStyle(color: darkSecondaryTextColor, fontSize: 16),
       hintStyle: TextStyle(
-          color: darkSecondaryTextColor.withOpacity(0.7), fontSize: 16),
+          color: darkSecondaryTextColor.withValues(alpha: 0.7), fontSize: 16),
     ),
     dividerTheme: DividerThemeData(
       thickness: 1,
@@ -261,7 +259,7 @@ class AppTheme {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: cardBackgroundColor,
-      disabledColor: cardBackgroundColor.withOpacity(0.6),
+      disabledColor: cardBackgroundColor.withValues(alpha: 0.6),
       selectedColor: primaryColor,
       secondarySelectedColor: secondaryColor,
       labelStyle: TextStyle(fontSize: 14),
@@ -285,7 +283,7 @@ class AppTheme {
       unselectedLabelStyle:
           TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
     ),
-    hintColor: darkSecondaryTextColor.withOpacity(0.8),
+    disabledColor: darkSecondaryTextColor.withValues(alpha: 0.8),
   );
 
   // Açık tema
@@ -300,13 +298,11 @@ class AppTheme {
       secondary: secondaryColor,
       tertiary: accentColor,
       surface: surfaceColor,
-      background: backgroundColor,
       error: Color(0xFFD32F2F),
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onTertiary: Colors.white,
       onSurface: textColor,
-      onBackground: textColor,
       onError: Colors.white,
       brightness: Brightness.light,
     ),
@@ -436,8 +432,8 @@ class AppTheme {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide:
-            BorderSide(color: secondaryTextColor.withOpacity(0.5), width: 1),
+        borderSide: BorderSide(
+            color: secondaryTextColor.withValues(alpha: 0.5), width: 1),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -448,11 +444,12 @@ class AppTheme {
         borderSide: BorderSide(color: Color(0xFFD32F2F), width: 1.5),
       ),
       labelStyle: TextStyle(color: secondaryTextColor),
-      hintStyle: TextStyle(color: secondaryTextColor.withOpacity(0.7)),
+      hintStyle: TextStyle(color: secondaryTextColor.withValues(alpha: 0.7)),
       prefixIconColor: secondaryTextColor,
       suffixIconColor: secondaryTextColor,
     ),
-    dividerColor: secondaryTextColor.withOpacity(0.3),
-    hintColor: secondaryTextColor.withOpacity(0.8),
+    dividerColor: secondaryTextColor.withValues(alpha: 0.3),
+    disabledColor: secondaryTextColor.withValues(alpha: 0.8),
   );
 }
+

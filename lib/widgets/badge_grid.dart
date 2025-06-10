@@ -18,7 +18,7 @@ class BadgeGrid extends StatelessWidget {
     this.spacing = 12.0,
     this.crossAxisCount = 4,
     this.showInfo = true,
-  }) : super(key: key);
+  }) ;
 
   @override
   Widget build(BuildContext context) {

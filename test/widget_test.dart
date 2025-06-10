@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kaplanfit_app/main.dart';
 import 'package:kaplanfit_app/services/database_service.dart';
 import 'package:kaplanfit_app/services/exercise_service.dart';
+import 'package:kaplanfit_app/services/food_service.dart';
 import 'package:kaplanfit_app/services/program_service.dart';
 import 'package:kaplanfit_app/providers/user_provider.dart';
 import 'package:kaplanfit_app/providers/gamification_provider.dart';
@@ -47,6 +48,7 @@ void main() {
         DatabaseService(); // Basit bir instance veya mock
     final mockUserProvider = UserProvider(mockDatabaseService);
     final mockExerciseService = ExerciseService();
+    final mockFoodService = FoodService();
     final mockProgramService = ProgramService(mockDatabaseService);
     final mockGamificationProvider =
         GamificationProvider(mockDatabaseService, mockUserProvider);
@@ -59,6 +61,7 @@ void main() {
       userProvider: mockUserProvider,
       databaseService: mockDatabaseService,
       exerciseService: mockExerciseService,
+      foodService: mockFoodService,
       programService: mockProgramService,
       gamificationProvider: mockGamificationProvider,
       themeProvider: mockThemeProvider,

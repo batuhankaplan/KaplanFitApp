@@ -9,7 +9,7 @@ class SplashScreen extends StatefulWidget {
   const SplashScreen({
     Key? key,
     this.nextScreen,
-  }) : super(key: key);
+  }) ;
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -123,11 +123,9 @@ class _SplashScreenState extends State<SplashScreen>
                       opacity: _fadeInAnimation.value * 0.3,
                       child: Transform.scale(
                         scale: _scaleAnimation.value,
-                        child: Container(
-                          width: 160,
-                          height: 160,
+                        child: Container(width: 160, height: 160,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha:0.1),
                             borderRadius: BorderRadius.circular(100),
                           ),
                         ),
@@ -147,11 +145,9 @@ class _SplashScreenState extends State<SplashScreen>
                       opacity: _fadeInAnimation.value * 0.2,
                       child: Transform.scale(
                         scale: _scaleAnimation.value,
-                        child: Container(
-                          width: 200,
-                          height: 200,
+                        child: Container(width: 200, height: 200,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha:0.1),
                             borderRadius: BorderRadius.circular(100),
                           ),
                         ),
@@ -177,22 +173,20 @@ class _SplashScreenState extends State<SplashScreen>
                             Container(
                               padding: EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
+                                color: Colors.white.withValues(alpha:0.1),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
                                     color:
-                                        AppTheme.primaryColor.withOpacity(0.3),
+                                        AppTheme.primaryColor.withValues(alpha:0.3),
                                     blurRadius: 30,
                                     spreadRadius: 5,
                                   ),
                                 ],
                               ),
-                              child: Container(
-                                width: 100,
-                                height: 100,
+                              child: Container(width: 100, height: 100,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor.withOpacity(0.3),
+                                  color: AppTheme.primaryColor.withValues(alpha:0.3),
                                   shape: BoxShape.circle,
                                 ),
                                 alignment: Alignment.center,
@@ -240,7 +234,7 @@ class _SplashScreenState extends State<SplashScreen>
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w400,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha:0.9),
                               ),
                             ),
                             SizedBox(height: 50),
@@ -272,7 +266,7 @@ class _SplashScreenState extends State<SplashScreen>
                         'Sürüm 1.0.0',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha:0.7),
                           fontSize: 14,
                         ),
                       ),
@@ -287,3 +281,5 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
+
+

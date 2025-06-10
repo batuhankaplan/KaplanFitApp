@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../theme.dart';
 import '../models/task_type.dart';
 import '../models/meal_record.dart';
 import '../models/food_item.dart';
-import 'package:intl/intl.dart';
 import '../utils/animations.dart';
 import '../utils/show_dialogs.dart';
 import '../widgets/kaplan_loading.dart';
@@ -18,7 +19,7 @@ import '../widgets/add_or_select_food_dialog.dart'; // YENİ Import
 // import '../widgets/add_edit_meal_dialog.dart'; // Kaldırıldı
 
 class NutritionScreen extends StatefulWidget {
-  const NutritionScreen({Key? key}) : super(key: key);
+  const NutritionScreen({super.key});
 
   @override
   State<NutritionScreen> createState() => _NutritionScreenState();
@@ -54,9 +55,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
           KFSlideAnimation(
             offsetBegin: const Offset(0, -0.2),
             duration: const Duration(milliseconds: 500),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -64,7 +63,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                   colors: [
                     isDarkMode
                         ? const Color(0xFF2C2C2C)
-                        : AppTheme.primaryColor.withOpacity(0.7),
+                        : AppTheme.primaryColor.withValues(alpha: 0.7),
                     isDarkMode
                         ? const Color(0xFF1F1F1F)
                         : AppTheme.primaryColor,
@@ -76,7 +75,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -135,7 +134,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             KFWaveAnimation(
-                              color: AppTheme.lunchColor.withOpacity(0.3),
+                              color: AppTheme.lunchColor.withValues(alpha: 0.3),
                               height: 100,
                             ),
                             const SizedBox(height: 16),
@@ -225,7 +224,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
         return Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.amber.withOpacity(0.2),
+            color: Colors.amber.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.free_breakfast, color: Colors.amber),
@@ -234,7 +233,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
         return Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.lunchColor.withOpacity(0.2),
+            color: AppTheme.lunchColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.lunch_dining, color: AppTheme.lunchColor),
@@ -243,7 +242,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
         return Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.dinnerColor.withOpacity(0.2),
+            color: AppTheme.dinnerColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.dinner_dining, color: AppTheme.dinnerColor),
@@ -252,7 +251,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
         return Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.lightGreen.withOpacity(0.2),
+            color: Colors.lightGreen.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.apple, color: Colors.lightGreen),
@@ -261,7 +260,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
         return Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Icon(Icons.restaurant, color: Colors.grey),
@@ -333,8 +332,8 @@ class _NutritionScreenState extends State<NutritionScreen> {
               borderRadius: BorderRadius.circular(16),
               gradient: LinearGradient(
                 colors: [
-                  mealColor.withOpacity(0.2),
-                  mealColor.withOpacity(0.05),
+                  mealColor.withValues(alpha: 0.2),
+                  mealColor.withValues(alpha: 0.05),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -351,7 +350,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: mealColor.withOpacity(0.2),
+                            color: mealColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -390,7 +389,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.15),
+                        color: Colors.orange.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
@@ -430,9 +429,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
 
   // Öğün ekle butonunu özelleştirilmiş tasarımla oluştur
   Widget _buildAddMealButton(BuildContext context) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.symmetric(vertical: 16),
+    return Container(width: 200, margin: const EdgeInsets.symmetric(vertical: 16),
       child: ElevatedButton(
         onPressed: () => _showMealTypeSelectionDialog(),
         style: ElevatedButton.styleFrom(
@@ -554,7 +551,7 @@ class _NutritionScreenState extends State<NutritionScreen> {
       {FitMealType? mealType, MealRecord? existingMeal}) {
     // TODO: Bu fonksiyon AddOrSelectFoodDialog'u çağıracak
     // Şimdilik mevcut FoodSelectionDialog'u çağıralım (geçici)
-    // print("Besin ekleme/seçme akışı başlatılıyor. MealType: $mealType, ExistingMeal: ${existingMeal?.id}");
+    // debugPrint("Besin ekleme/seçme akışı başlatılıyor. MealType: $mealType, ExistingMeal: ${existingMeal?.id}");
     // _showFoodSelectionDialog(context, mealType: mealType, existingMeal: existingMeal);
 
     // YENİ: AddOrSelectFoodDialog'u göster
@@ -596,7 +593,7 @@ class FoodSelectionDialog extends StatefulWidget {
     Key? key,
     // required this.nutritionProvider,
     required this.onSelectionConfirmed,
-  }) : super(key: key);
+  });
 
   @override
   _FoodSelectionDialogState createState() => _FoodSelectionDialogState();
@@ -630,7 +627,9 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
   }
 
   void _disposeControllers() {
-    _gramControllers.values.forEach((controller) => controller.dispose());
+    for (final controller in _gramControllers.values) {
+      controller.dispose();
+    }
     _gramControllers.clear();
   }
 
@@ -674,7 +673,7 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
         });
       }
     } catch (e) {
-      print("Besin arama hatası (Dialog): $e");
+      debugPrint("Besin arama hatası (Dialog): $e");
       if (mounted) {
         // Hata mesajı gösterilebilir
         ScaffoldMessenger.of(context).showSnackBar(
@@ -710,9 +709,7 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Besin Listesi"),
-      content: Container(
-        width: double.maxFinite,
-        height: MediaQuery.of(context).size.height * 0.6,
+      content: Container(width: double.maxFinite, height: MediaQuery.of(context).size.height * 0.6,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -843,9 +840,7 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
                                       });
                                     },
                                     secondary: isSelected
-                                        ? Container(
-                                            width: 70,
-                                            child: TextField(
+                                        ? Container(width: 70, child: TextField(
                                               controller:
                                                   _gramControllers[food.id!],
                                               keyboardType: TextInputType
@@ -921,3 +916,6 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
     );
   }
 }
+
+
+

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/activity_provider.dart';
 import '../models/task_model.dart';
 import '../models/task_type.dart';
-import 'package:intl/intl.dart';
 
 class TasksScreen extends StatelessWidget {
-  const TasksScreen({Key? key}) : super(key: key);
+  const TasksScreen({super.key}) ;
 
   @override
   Widget build(BuildContext context) {
@@ -210,3 +210,4 @@ class TasksScreen extends StatelessWidget {
     }
   }
 }
+

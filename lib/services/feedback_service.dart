@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 
@@ -13,16 +14,17 @@ class FeedbackService {
       // Alternatif 1: Standart EmailJS API kullanımı
       return await _sendWithStandardApi(name, email, message);
     } catch (e, stackTrace) {
-      print('EmailJS entegrasyonu hatası: $e');
-      print('Hata ayrıntıları: $stackTrace');
+      debugPrint('EmailJS entegrasyonu hatası: $e');
+      debugPrint('Hata ayrıntıları: $stackTrace');
       return false;
     }
   }
 
   // Standart EmailJS API kullanımı
-  Future<bool> _sendWithStandardApi(String name, String email, String message) async {
+  Future<bool> _sendWithStandardApi(
+      String name, String email, String message) async {
     final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
-    
+
     // EmailJS'nin resmi dokümantasyonundaki format
     final Map<String, dynamic> requestBody = {
       'service_id': serviceId,
@@ -39,9 +41,9 @@ class FeedbackService {
         'message': message,
       }
     };
-    
-    print('EmailJS isteği (Standart): ${json.encode(requestBody)}');
-    
+
+    debugPrint('EmailJS isteği (Standart): ${json.encode(requestBody)}');
+
     final response = await http.post(
       url,
       headers: {
@@ -50,25 +52,26 @@ class FeedbackService {
       },
       body: json.encode(requestBody),
     );
-    
-    print('EmailJS yanıt kodu: ${response.statusCode}');
-    print('EmailJS yanıt içeriği: ${response.body}');
-    
+
+    debugPrint('EmailJS yanıt kodu: ${response.statusCode}');
+    debugPrint('EmailJS yanıt içeriği: ${response.body}');
+
     if (response.statusCode != 200) {
-      print('EmailJS hata detayları: ${response.body}');
-      
+      debugPrint('EmailJS hata detayları: ${response.body}');
+
       // Alternatif yöntemi deneyelim
-      print('Alternatif EmailJS yöntemi deneniyor...');
+      debugPrint('Alternatif EmailJS yöntemi deneniyor...');
       return await _sendWithAlternativeApi(name, email, message);
     }
-    
+
     return true;
   }
-  
+
   // Alternatif EmailJS API kullanımı (yeni sürüm)
-  Future<bool> _sendWithAlternativeApi(String name, String email, String message) async {
+  Future<bool> _sendWithAlternativeApi(
+      String name, String email, String message) async {
     final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
-    
+
     // Alternatif format (yeni API'de kullanılan)
     final Map<String, dynamic> requestBody = {
       'service_id': serviceId,
@@ -76,7 +79,7 @@ class FeedbackService {
       'accessToken': publicKey, // accessToken olarak deneyelim
       'template_params': {
         'from_name': name,
-        'reply_to': email, 
+        'reply_to': email,
         'user_email': email, // Şablonda kullanılan değişken adı değiştirildi
         'from_email': email,
         'email': email, // Her olasılığı deniyoruz
@@ -85,9 +88,9 @@ class FeedbackService {
         'message': message,
       }
     };
-    
-    print('EmailJS isteği (Alternatif): ${json.encode(requestBody)}');
-    
+
+    debugPrint('EmailJS isteği (Alternatif): ${json.encode(requestBody)}');
+
     final response = await http.post(
       url,
       headers: {
@@ -96,10 +99,10 @@ class FeedbackService {
       },
       body: json.encode(requestBody),
     );
-    
-    print('Alternatif EmailJS yanıt kodu: ${response.statusCode}');
-    print('Alternatif EmailJS yanıt içeriği: ${response.body}');
-    
+
+    debugPrint('Alternatif EmailJS yanıt kodu: ${response.statusCode}');
+    debugPrint('Alternatif EmailJS yanıt içeriği: ${response.body}');
+
     return response.statusCode == 200;
   }
-} 
+}

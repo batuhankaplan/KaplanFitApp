@@ -12,7 +12,7 @@ class KaplanLoading extends StatefulWidget {
     this.size = 70.0,
     this.color,
     this.showLogo = true,
-  }) : super(key: key);
+  }) ;
 
   @override
   State<KaplanLoading> createState() => _KaplanLoadingState();
@@ -82,14 +82,12 @@ class _KaplanLoadingState extends State<KaplanLoading> with TickerProviderStateM
             alignment: Alignment.center,
             children: [
               // Parıltı efekti
-              Container(
-                width: widget.size * 1.4 * _pulseAnimation.value,
-                height: widget.size * 1.4 * _pulseAnimation.value,
+              Container(width: widget.size * 1.4 * _pulseAnimation.value, height: widget.size * 1.4 * _pulseAnimation.value,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: mainColor.withOpacity(_glowAnimation.value * 0.4),
+                      color: mainColor.withValues(alpha:_glowAnimation.value * 0.4),
                       blurRadius: 24,
                       spreadRadius: 2,
                     ),
@@ -177,7 +175,7 @@ class _ProgressArcPainter extends CustomPainter {
     
     // İkinci kısmi çember farklı renkte
     final secondPaint = Paint()
-      ..color = color.withOpacity(0.4)
+      ..color = color.withValues(alpha:0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
@@ -213,3 +211,5 @@ class _ProgressArcPainter extends CustomPainter {
            oldDelegate.strokeWidth != strokeWidth;
   }
 } 
+
+

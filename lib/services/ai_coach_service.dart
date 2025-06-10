@@ -1,4 +1,5 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import '../models/user_model.dart';
 import '../models/activity_record.dart';
@@ -35,12 +36,12 @@ class AICoachService {
       final savedKey = prefs.getString('ai_coach_api_key');
       if (savedKey != null && savedKey.isNotEmpty) {
         _apiKey = savedKey;
-        print("API key başarıyla yüklendi");
+        debugPrint("API key başarıyla yüklendi");
       } else {
-        print("Kaydedilmiş API key bulunamadı");
+        debugPrint("Kaydedilmiş API key bulunamadı");
       }
     } catch (e) {
-      print("API key yüklenirken hata oluştu: $e");
+      debugPrint("API key yüklenirken hata oluştu: $e");
     }
   }
 
@@ -50,9 +51,9 @@ class AICoachService {
       await prefs.setString('ai_coach_api_key', key);
       _apiKey = key;
       _initModel();
-      print("API key başarıyla kaydedildi");
+      debugPrint("API key başarıyla kaydedildi");
     } catch (e) {
-      print("API key kaydedilirken hata oluştu: $e");
+      debugPrint("API key kaydedilirken hata oluştu: $e");
     }
   }
 
@@ -60,7 +61,7 @@ class AICoachService {
     // Model başlatılıyor - API anahtarı geçerli olmadığında çalışmayacaktır
     try {
       if (_apiKey.isNotEmpty) {
-        print(
+        debugPrint(
             "API key mevcut (${_apiKey.length} karakter). Model başlatılıyor: $_activeModel");
 
         _model = GenerativeModel(
@@ -68,12 +69,12 @@ class AICoachService {
           apiKey: _apiKey,
         );
 
-        print("Gemini model başarıyla başlatıldı: $_activeModel");
+        debugPrint("Gemini model başarıyla başlatıldı: $_activeModel");
       } else {
-        print("API key boş olduğu için model başlatılamadı");
+        debugPrint("API key boş olduğu için model başlatılamadı");
       }
     } catch (e) {
-      print("Model ($_activeModel) başlatılırken hata oluştu: $e");
+      debugPrint("Model ($_activeModel) başlatılırken hata oluştu: $e");
     }
   }
 
@@ -84,7 +85,7 @@ class AICoachService {
     } else {
       _activeModel = 'gemini-1.5-flash-latest';
     }
-    print("Alternatif model deneniyor: $_activeModel");
+    debugPrint("Alternatif model deneniyor: $_activeModel");
     _initModel();
   }
 
@@ -116,13 +117,13 @@ class AICoachService {
   Future<String> _buildUserContext(
       UserModel? user, GamificationProvider gamificationProvider) async {
     if (user == null || user.id == null) {
-      print(
+      debugPrint(
           "AICoachService: Kullanıcı modeli null veya ID'si yok, bağlam oluşturulamıyor.");
       return "Kullanıcı bilgileri alınamadı.";
     }
 
     final userId = user.id!;
-    print(
+    debugPrint(
         "AICoachService: Bağlam oluşturuluyor - Kullanıcı ID: $userId, Ad: ${user.name}");
 
     final activities = await _dbService.getActivitiesInRange(
@@ -296,32 +297,32 @@ class AICoachService {
     try {
       // API keyin doğru formatta olup olmadığını kontrol et
       if (!_isValidApiKeyFormat()) {
-        print("API Key formatı geçersiz: $_apiKey");
+        debugPrint("API Key formatı geçersiz: $_apiKey");
         return "Üzgünüm, API anahtarı geçersiz görünüyor. Lütfen Google AI Studio'dan (https://aistudio.google.com) geçerli bir API anahtarı alın ve kod içerisinde güncelleyin.";
       }
 
-      print("API Key kontrolü başarılı, kullanılan model: $_activeModel");
+      debugPrint("API Key kontrolü başarılı, kullanılan model: $_activeModel");
 
       final context =
           await _buildUserContext(currentUser, _gamificationProvider);
       final prompt = "$context\n\nKullanıcı: $userMessage";
 
-      print("Gemini API'sine istek gönderiliyor...");
+      debugPrint("Gemini API'sine istek gönderiliyor...");
       final content = [Content.text(prompt)];
 
       try {
         final response = await _model.generateContent(content);
-        print(
+        debugPrint(
             "Gemini API yanıt verdi: ${response.text != null ? "Başarılı" : "Boş yanıt"}");
         return response.text ?? "Üzgünüm, yanıt oluşturulamadı.";
       } catch (apiError) {
-        print("Gemini API hatası: $apiError");
+        debugPrint("Gemini API hatası: $apiError");
 
         // Eğer API key hatası varsa, kullanıcıya yardımcı olacak bir mesaj göster
         if (apiError.toString().toLowerCase().contains("api key not valid") ||
             apiError.toString().toLowerCase().contains("invalid api key") ||
             apiError.toString().toLowerCase().contains("permission denied")) {
-          print(
+          debugPrint(
               "API key ile ilgili bir sorun oluştu. Alternatif model denenecek.");
           tryAlternativeModel(); // Ana modelde sorun olursa alternatifi dene
 
@@ -331,7 +332,7 @@ class AICoachService {
         return "Gemini API hatası ($_activeModel): $apiError. Lütfen API anahtarınızı ve internet bağlantınızı kontrol edin.";
       }
     } catch (e) {
-      print("getCoachResponse genel hatası: $e");
+      debugPrint("getCoachResponse genel hatası: $e");
       return "Üzgünüm, bir hata oluştu: $e";
     }
   }

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../models/user_model.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../utils/animations.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -121,7 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       // Hata ayıklama: Kullanıcı verilerini görelim
-      print("Kaydedilecek kullanıcı: ${updatedUser.toMap()}");
+      debugPrint("Kaydedilecek kullanıcı: ${updatedUser.toMap()}");
 
       // Kullanıcıyı kaydet ve tam olarak tamamlanmasını bekle
       await userProvider.saveUser(updatedUser);
@@ -139,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } catch (e) {
-      print("Profil kaydetme hatası: $e");
+      debugPrint("Profil kaydetme hatası: $e");
       if (mounted) {
         // Daha detaylı hata mesajını göstermeyelim, basit bir mesaj verelim
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,5 +1,5 @@
-import 'package:intl/intl.dart';
 import 'task_type.dart';
+import 'package:intl/intl.dart';
 
 class DailyTask {
   final int? id;

@@ -47,7 +47,7 @@ class NutritionProvider with ChangeNotifier {
   Future<void> refreshMeals() async {
     final userId = _userProvider.user?.id;
     if (userId == null) {
-      print(
+      debugPrint(
           "NutritionProvider refreshMeals: Kullanıcı ID'si henüz ayarlanmadı.");
       _meals = [];
       _allMeals = [];
@@ -62,7 +62,7 @@ class NutritionProvider with ChangeNotifier {
       notifyListeners();
       await _loadAllMeals();
     } catch (e) {
-      print('Öğünleri yenilerken hata: $e');
+      debugPrint('Öğünleri yenilerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -72,7 +72,7 @@ class NutritionProvider with ChangeNotifier {
   Future<void> _loadAllMeals() async {
     final userId = _userProvider.user?.id;
     if (userId == null) {
-      print(
+      debugPrint(
           "NutritionProvider _loadAllMeals: Kullanıcı ID'si henüz ayarlanmadı.");
       _allMeals = [];
       notifyListeners();
@@ -91,7 +91,7 @@ class NutritionProvider with ChangeNotifier {
             await _dbService.getMealsInRange(startDate, endDate, userId);
       }
     } catch (e) {
-      print('Tüm öğünleri yüklerken hata: $e');
+      debugPrint('Tüm öğünleri yüklerken hata: $e');
     }
   }
 
@@ -113,7 +113,7 @@ class NutritionProvider with ChangeNotifier {
   Future<int?> addMeal(MealRecord meal) async {
     final userId = _userProvider.user?.id;
     if (userId == null) {
-      print(
+      debugPrint(
           "NutritionProvider addMeal: Kullanıcı ID'si ayarlanamadığı için öğün eklenemiyor.");
       return null;
     }
@@ -147,7 +147,7 @@ class NutritionProvider with ChangeNotifier {
       notifyListeners();
       return id;
     } catch (e) {
-      print('Öğün eklerken hata: $e');
+      debugPrint('Öğün eklerken hata: $e');
       return null;
     } finally {
       _isLoading = false;
@@ -159,7 +159,7 @@ class NutritionProvider with ChangeNotifier {
     final userId = _userProvider.user?.id;
     if (meal.id == null) return;
     if (userId == null) {
-      print(
+      debugPrint(
           "NutritionProvider updateMeal: Kullanıcı ID'si ayarlanamadığı için öğün güncellenemiyor.");
       return;
     }
@@ -185,7 +185,7 @@ class NutritionProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      print('Öğün güncellerken hata: $e');
+      debugPrint('Öğün güncellerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -202,7 +202,7 @@ class NutritionProvider with ChangeNotifier {
       _allMeals.removeWhere((meal) => meal.id == id);
       notifyListeners();
     } catch (e) {
-      print('Öğün silerken hata: $e');
+      debugPrint('Öğün silerken hata: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -231,7 +231,7 @@ class NutritionProvider with ChangeNotifier {
   Future<int> getTotalCaloriesForDay(DateTime date) async {
     final userId = _userProvider.user?.id;
     if (userId == null) {
-      print(
+      debugPrint(
           "NutritionProvider getTotalCaloriesForDay: Kullanıcı ID'si ayarlanamadı.");
       return 0;
     }
@@ -246,7 +246,7 @@ class NutritionProvider with ChangeNotifier {
       return await _dbService.getFoodItems(
           query: query, isCustom: isCustom, limit: limit);
     } catch (e) {
-      print("getAvailableFoodItems hata: $e");
+      debugPrint("getAvailableFoodItems hata: $e");
       return []; // Hata durumunda boş liste döndür
     }
   }

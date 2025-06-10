@@ -137,11 +137,16 @@ class ExerciseService {
   /// Varsayılan egzersizleri Firestore'a ekler (eğer koleksiyon boşsa).
   Future<void> _addDefaultExercisesIfNeeded() async {
     try {
+      debugPrint("🔥 Firebase exercises koleksiyonu kontrol ediliyor...");
+
+      // İlk önce Firebase bağlantısını test et
+      await _testFirebaseConnection();
+
       // Koleksiyon boş mu diye kontrol et
       final snapshot =
           await _firestore.collection(_collectionPath).limit(1).get();
       if (snapshot.docs.isEmpty) {
-        print(
+        debugPrint(
             "'$_collectionPath' koleksiyonu boş, varsayılan egzersizler ekleniyor...");
         final batch = _firestore.batch();
         int count = 0;
@@ -155,11 +160,113 @@ class ExerciseService {
         await batch.commit();
         debugPrint('$count adet varsayılan egzersiz Firestore\'a eklendi.');
       } else {
-        // debugPrint("'$_collectionPath' koleksiyonu zaten egzersiz içeriyor.");
+        debugPrint(
+            "'$_collectionPath' koleksiyonu zaten ${snapshot.docs.length} egzersiz içeriyor.");
       }
     } catch (e) {
-      debugPrint("Varsayılan egzersizler eklenirken hata: $e");
+      debugPrint("❌ Varsayılan egzersizler eklenirken hata: $e");
+      debugPrint("   - Hata türü: ${e.runtimeType}");
+      if (e.toString().contains('permission-denied')) {
+        debugPrint(
+            "🚫 Firebase izin hatası! Firestore kuralları kontrol edilmeli.");
+        debugPrint(
+            "   Geçici çözüm: Offline modda varsayılan egzersizler kullanılacak.");
+      }
+      debugPrint("Stack trace: ${StackTrace.current}");
     }
+  }
+
+  /// Firebase bağlantısını test eder
+  Future<void> _testFirebaseConnection() async {
+    try {
+      debugPrint("🧪 Firebase bağlantısı test ediliyor...");
+      await _firestore.enableNetwork();
+      debugPrint("✅ Firebase network bağlantısı aktif");
+    } catch (e) {
+      debugPrint("❌ Firebase bağlantı testi başarısız: $e");
+      throw e;
+    }
+  }
+
+  /// Offline modda varsayılan egzersizleri filtreli şekilde döndürür
+  List<Exercise> _getDefaultExercisesAsOffline({
+    String? query,
+    String? targetMuscleGroup,
+    String? equipment,
+    int? limit,
+  }) {
+    debugPrint("📱 Offline modda egzersizler filtreleniyor...");
+
+    List<Exercise> filteredExercises = List.from(_defaultExercises);
+
+    // Query filtresi
+    if (query != null && query.isNotEmpty) {
+      final lowercaseQuery = query.toLowerCase();
+      filteredExercises = filteredExercises
+          .where((exercise) =>
+              exercise.name.toLowerCase().contains(lowercaseQuery))
+          .toList();
+    }
+
+    // Kas grubu filtresi
+    if (targetMuscleGroup != null && targetMuscleGroup.isNotEmpty) {
+      filteredExercises = filteredExercises
+          .where((exercise) => exercise.targetMuscleGroup == targetMuscleGroup)
+          .toList();
+    }
+
+    // Ekipman filtresi
+    if (equipment != null && equipment.isNotEmpty) {
+      filteredExercises = filteredExercises
+          .where((exercise) => exercise.equipment == equipment)
+          .toList();
+    }
+
+    // Sıralama
+    filteredExercises.sort((a, b) => a.name.compareTo(b.name));
+
+    // Limit uygula
+    if (limit != null && filteredExercises.length > limit) {
+      filteredExercises = filteredExercises.take(limit).toList();
+    }
+
+    debugPrint(
+        "📱 Offline modda ${filteredExercises.length} egzersiz döndürülüyor");
+    return filteredExercises;
+  }
+
+  /// Offline modda varsayılan egzersizlerden ID'lere göre eşleştirme yapar
+  List<Exercise> _getDefaultExercisesByIdsOffline(List<String> exerciseIds) {
+    debugPrint("📱 Offline modda ID eşleştirmesi: ${exerciseIds.length} ID");
+
+    // Demo amaçlı: ID'lere göre varsayılan egzersizlerden döndür
+    // Gerçek uygulamada, ID mapping'i farklı olabilir
+    List<Exercise> foundExercises = [];
+
+    for (String id in exerciseIds) {
+      // ID'nin hash'ine göre default exercise'lardan birini seç
+      final index = id.hashCode.abs() % _defaultExercises.length;
+      final exercise = _defaultExercises[index];
+
+      // ID'yi setle (demo amaçlı)
+      final exerciseWithId = Exercise(
+        id: id,
+        name: exercise.name,
+        targetMuscleGroup: exercise.targetMuscleGroup,
+        description: exercise.description,
+        equipment: exercise.equipment,
+        videoUrl: exercise.videoUrl,
+        metValue: exercise.metValue,
+        fixedCaloriesPerActivity: exercise.fixedCaloriesPerActivity,
+        createdAt: exercise.createdAt,
+      );
+
+      foundExercises.add(exerciseWithId);
+    }
+
+    debugPrint(
+        "📱 Offline modda ${foundExercises.length} egzersiz ID ile eşleştirildi");
+    return foundExercises;
   }
 
   /// Filtrelenmiş egzersiz listesini Firestore'dan getirir.
@@ -170,28 +277,43 @@ class ExerciseService {
     int? limit,
   }) async {
     try {
+      debugPrint("📋 ExerciseService.getExercises çağrıldı");
+      debugPrint("   - query: $query");
+      debugPrint("   - targetMuscleGroup: $targetMuscleGroup");
+      debugPrint("   - equipment: $equipment");
+      debugPrint("   - limit: $limit");
+
       Query collectionRef = _firestore.collection(_collectionPath);
+      debugPrint("🔥 Firebase koleksiyonu: $_collectionPath");
 
       // Filtreleme koşulları
       if (query != null && query.isNotEmpty) {
+        debugPrint("🔍 Query ile arama yapılıyor: $query");
         // Name alanına göre basit arama yapalım
         // Firebase'de tam metin araması yerine basit bir filtreleme kullanıyoruz
         final lowercaseQuery = query.toLowerCase();
 
         // Doğrudan tüm belgeleri çekelim ve client tarafında filtreleme yapalım
         final snapshot = await collectionRef.get();
+        debugPrint("📊 Toplam belge sayısı: ${snapshot.docs.length}");
+
         final allExercises =
             snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)).toList();
+        debugPrint(
+            "✅ Exercise nesnelerine dönüştürüldü: ${allExercises.length} adet");
 
         // İsme göre client-side filtreleme
-        return allExercises
+        final filteredExercises = allExercises
             .where((exercise) =>
                 exercise.name.toLowerCase().contains(lowercaseQuery))
             .toList();
+        debugPrint("🎯 Filtrelenmiş sonuç: ${filteredExercises.length} adet");
+        return filteredExercises;
       }
 
       // Diğer filtrelemelere devam
       if (targetMuscleGroup != null && targetMuscleGroup.isNotEmpty) {
+        debugPrint("💪 Kas grubuna göre filtreleme: $targetMuscleGroup");
         collectionRef = collectionRef.where('targetMuscleGroup',
             isEqualTo: targetMuscleGroup);
       }
@@ -206,9 +328,22 @@ class ExerciseService {
       }
 
       final snapshot = await collectionRef.get();
-      return snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)).toList();
+      final exercises =
+          snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)).toList();
+      debugPrint("✅ ${exercises.length} adet egzersiz getirildi");
+      return exercises;
     } catch (e) {
-      print("Firestore'dan egzersizler alınırken hata: $e");
+      debugPrint("❌ Firestore'dan egzersizler alınırken hata: $e");
+      if (e.toString().contains('permission-denied')) {
+        debugPrint(
+            "🔄 Firebase izin sorunu - Offline modda varsayılan egzersizler döndürülüyor");
+        return _getDefaultExercisesAsOffline(
+            query: query,
+            targetMuscleGroup: targetMuscleGroup,
+            equipment: equipment,
+            limit: limit);
+      }
+      debugPrint("Stack trace: ${StackTrace.current}");
       return [];
     }
   }
@@ -222,10 +357,10 @@ class ExerciseService {
       // toMapForFirestore -> toMap
       DocumentReference docRef =
           await _firestore.collection(_collectionPath).add(exercise.toMap());
-      print("Özel egzersiz eklendi: ${docRef.id}");
+      debugPrint("Özel egzersiz eklendi: ${docRef.id}");
       return docRef.id;
     } catch (e) {
-      print("Özel egzersiz eklenirken hata: $e");
+      debugPrint("Özel egzersiz eklenirken hata: $e");
       return null;
     }
   }
@@ -233,7 +368,7 @@ class ExerciseService {
   /// Bir egzersizi Firestore'da günceller.
   Future<bool> updateExercise(Exercise exercise) async {
     if (exercise.id == null) {
-      print("Güncellenecek egzersizin ID'si yok.");
+      debugPrint("Güncellenecek egzersizin ID'si yok.");
       return false;
     }
     try {
@@ -242,10 +377,10 @@ class ExerciseService {
           .collection(_collectionPath)
           .doc(exercise.id)
           .update(exercise.toMap());
-      print("Egzersiz güncellendi: ${exercise.id}");
+      debugPrint("Egzersiz güncellendi: ${exercise.id}");
       return true;
     } catch (e) {
-      print("Egzersiz güncellenirken hata (${exercise.id}): $e");
+      debugPrint("Egzersiz güncellenirken hata (${exercise.id}): $e");
       return false;
     }
   }
@@ -258,11 +393,11 @@ class ExerciseService {
       if (doc.exists) {
         return Exercise.fromSnapshot(doc);
       } else {
-        print("Egzersiz bulunamadı: $id");
+        debugPrint("Egzersiz bulunamadı: $id");
         return null;
       }
     } catch (e) {
-      print("ID ile egzersiz alınırken hata ($id): $e");
+      debugPrint("ID ile egzersiz alınırken hata ($id): $e");
       return null;
     }
   }
@@ -271,10 +406,10 @@ class ExerciseService {
   Future<bool> deleteExercise(String id) async {
     try {
       await _firestore.collection(_collectionPath).doc(id).delete();
-      print("Egzersiz silindi: $id");
+      debugPrint("Egzersiz silindi: $id");
       return true;
     } catch (e) {
-      print("Egzersiz silinirken hata ($id): $e");
+      debugPrint("Egzersiz silinirken hata ($id): $e");
       return false;
     }
   }
@@ -282,7 +417,11 @@ class ExerciseService {
   /// Belirli ID'lere sahip egzersizleri Firestore'dan getirir.
   Future<List<Exercise>?> getExercisesByIds(List<String> exerciseIds) async {
     try {
+      debugPrint("🔍 ExerciseService.getExercisesByIds çağrıldı");
+      debugPrint("   - İstenen ID'ler: $exerciseIds");
+
       if (exerciseIds.isEmpty) {
+        debugPrint("❌ Boş ID listesi, boş liste döndürülüyor");
         return [];
       }
 
@@ -293,18 +432,45 @@ class ExerciseService {
         final chunk = exerciseIds.sublist(
             i, i + 10 > exerciseIds.length ? exerciseIds.length : i + 10);
 
+        debugPrint("📦 Grup ${(i ~/ 10) + 1}: ${chunk.length} ID işleniyor");
+        debugPrint("   - Chunk: $chunk");
+
         final snapshot = await _firestore
             .collection(_collectionPath)
             .where(FieldPath.documentId, whereIn: chunk)
             .get();
 
-        results.addAll(snapshot.docs.map((doc) => Exercise.fromSnapshot(doc)));
+        debugPrint("📊 Bu grupta ${snapshot.docs.length} belge bulundu");
+
+        final chunkResults = snapshot.docs.map((doc) {
+          debugPrint("   - Belge ID: ${doc.id}");
+          return Exercise.fromSnapshot(doc);
+        }).toList();
+
+        results.addAll(chunkResults);
+        debugPrint(
+            "✅ ${chunkResults.length} egzersiz eklendi, toplam: ${results.length}");
       }
 
-      print("${results.length} adet egzersiz ID'ye göre alındı.");
+      debugPrint("🎯 Toplam ${results.length} adet egzersiz ID'ye göre alındı");
+
+      // Hangi ID'lerin bulunamadığını logla
+      final foundIds = results.map((e) => e.id).toSet();
+      final missingIds =
+          exerciseIds.where((id) => !foundIds.contains(id)).toList();
+      if (missingIds.isNotEmpty) {
+        debugPrint("⚠️ Bulunamayan ID'ler: $missingIds");
+      }
+
       return results;
     } catch (e) {
-      print("ID'lere göre egzersizler alınırken hata: $e");
+      debugPrint("❌ ID'lere göre egzersizler alınırken hata: $e");
+      if (e.toString().contains('permission-denied')) {
+        debugPrint(
+            "🔄 Firebase izin sorunu - Offline modda ID eşleştirmesi yapılıyor");
+        return _getDefaultExercisesByIdsOffline(exerciseIds);
+      }
+      debugPrint("Stack trace: ${StackTrace.current}");
       return null;
     }
   }

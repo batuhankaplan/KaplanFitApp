@@ -1,8 +1,11 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/activity_screen.dart';
@@ -18,6 +21,7 @@ import 'providers/gamification_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/program_service.dart';
 import 'services/exercise_service.dart';
+import 'services/food_service.dart';
 import 'services/database_service.dart';
 import 'widgets/kaplan_appbar.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
@@ -34,7 +38,7 @@ import 'services/ai_coach_service.dart';
 
 // Ana ekran
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -60,9 +64,19 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    debugPrint("🔄 Tab tıklandı: $index (${_titles[index]})");
+    try {
+      if (mounted && index >= 0 && index < _widgetOptions.length) {
+        setState(() {
+          _selectedIndex = index;
+        });
+        debugPrint("✅ Tab değişimi başarılı: ${_titles[index]}");
+      } else {
+        debugPrint("❌ Geçersiz tab index: $index");
+      }
+    } catch (e) {
+      debugPrint("❌ Tab değişimi hatası: $e");
+    }
   }
 
   @override
@@ -99,7 +113,7 @@ class _MainScreenState extends State<MainScreen> {
           boxShadow: [
             BoxShadow(
               blurRadius: 20,
-              color: Colors.black.withOpacity(.1),
+              color: Colors.black.withValues(alpha: .1),
             )
           ],
         ),
@@ -108,10 +122,10 @@ class _MainScreenState extends State<MainScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: GNav(
               rippleColor: isDarkMode
-                  ? AppTheme.primaryColor.withOpacity(0.1)
+                  ? AppTheme.primaryColor.withValues(alpha: 0.1)
                   : Colors.grey.shade300,
               hoverColor: isDarkMode
-                  ? AppTheme.primaryColor.withOpacity(0.15)
+                  ? AppTheme.primaryColor.withValues(alpha: 0.15)
                   : Colors.grey.shade200,
               gap: 4,
               activeColor: isDarkMode ? Colors.white : Colors.white,
@@ -164,28 +178,29 @@ void initPlatformSpecificFeatures() {
 }
 
 class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
         if (userProvider.isLoading) {
-          print(
+          debugPrint(
               "[AuthWrapper build] Kullanıcı yükleniyor (Consumer isLoading).");
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
 
         final bool userExists = userProvider.user != null;
-        print(
+        debugPrint(
             "[AuthWrapper build] Kullanıcı var mı (Provider kontrolü)? $userExists");
 
         if (userExists) {
-          print("[AuthWrapper build] Kullanıcı var, MainScreen gösteriliyor.");
+          debugPrint(
+              "[AuthWrapper build] Kullanıcı var, MainScreen gösteriliyor.");
           return const MainScreen();
         } else {
-          print(
+          debugPrint(
               "[AuthWrapper build] Kullanıcı yok, ProfileScreen gösteriliyor.");
           return const ProfileScreen();
         }
@@ -200,12 +215,13 @@ Future<void> main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    print("Firebase başlatma hatası: $e");
+    debugPrint("Firebase başlatma hatası: $e");
   }
   await NotificationService.instance.init();
 
   final databaseService = DatabaseService();
   final exerciseService = ExerciseService();
+  final foodService = FoodService();
   final programService = ProgramService(databaseService);
   final userProvider = UserProvider(databaseService);
   final gamificationProvider =
@@ -218,7 +234,7 @@ Future<void> main() async {
     await userProvider.loadUser();
     await gamificationProvider.initialize();
   } catch (e) {
-    print("Servisler başlatılırken genel bir hata oluştu: $e");
+    debugPrint("Servisler başlatılırken genel bir hata oluştu: $e");
   }
 
   runApp(
@@ -226,6 +242,7 @@ Future<void> main() async {
       userProvider: userProvider,
       databaseService: databaseService,
       exerciseService: exerciseService,
+      foodService: foodService,
       programService: programService,
       gamificationProvider: gamificationProvider,
       themeProvider: themeProvider,
@@ -238,21 +255,23 @@ class MyApp extends StatelessWidget {
   final UserProvider userProvider;
   final DatabaseService databaseService;
   final ExerciseService exerciseService;
+  final FoodService foodService;
   final ProgramService programService;
   final GamificationProvider gamificationProvider;
   final ThemeProvider themeProvider;
   final WorkoutProvider workoutProvider;
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.userProvider,
     required this.databaseService,
     required this.exerciseService,
+    required this.foodService,
     required this.programService,
     required this.gamificationProvider,
     required this.themeProvider,
     required this.workoutProvider,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +280,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: userProvider),
         Provider<DatabaseService>.value(value: databaseService),
         Provider<ExerciseService>.value(value: exerciseService),
+        Provider<FoodService>.value(value: foodService),
         ChangeNotifierProvider<ProgramService>.value(value: programService),
         Provider<AICoachService>(
           create: (context) => AICoachService(
@@ -292,6 +312,17 @@ class MyApp extends StatelessWidget {
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProviderInstance.themeMode,
             debugShowCheckedModeBanner: false,
+            // Localization eklendi
+            locale: const Locale('tr', 'TR'),
+            supportedLocales: const [
+              Locale('tr', 'TR'),
+              Locale('en', 'US'),
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
             home: const AuthWrapper(),
             routes: {
               '/home': (context) => const MainScreen(),
@@ -316,7 +347,7 @@ class MyApp extends StatelessWidget {
 }
 
 class KaplanSplashScreen extends StatefulWidget {
-  const KaplanSplashScreen({Key? key}) : super(key: key);
+  const KaplanSplashScreen({super.key});
 
   @override
   State<KaplanSplashScreen> createState() => _KaplanSplashScreenState();
@@ -354,7 +385,7 @@ class _KaplanSplashScreenState extends State<KaplanSplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
         child: ScaleTransition(
           scale: _animation,
@@ -403,7 +434,7 @@ class _KaplanSplashScreenState extends State<KaplanSplashScreen>
 }
 
 class PermissionHandlerScreen extends StatefulWidget {
-  const PermissionHandlerScreen({Key? key}) : super(key: key);
+  const PermissionHandlerScreen({super.key});
 
   @override
   State<PermissionHandlerScreen> createState() =>
@@ -439,7 +470,7 @@ class _PermissionHandlerScreenState extends State<PermissionHandlerScreen> {
 
 // Kullanıcı profil oluşturma ekranı (Placeholder)
 class ProfileCreationScreen extends StatelessWidget {
-  const ProfileCreationScreen({Key? key}) : super(key: key);
+  const ProfileCreationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

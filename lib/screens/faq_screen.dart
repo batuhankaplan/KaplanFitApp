@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import '../services/feedback_service.dart';
 
 class FAQScreen extends StatefulWidget {
-  const FAQScreen({Key? key}) : super(key: key);
+  const FAQScreen({super.key}) ;
 
   @override
   State<FAQScreen> createState() => _FAQScreenState();

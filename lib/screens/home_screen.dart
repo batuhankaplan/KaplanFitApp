@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/user_provider.dart';
@@ -11,12 +13,10 @@ import '../models/task_model.dart';
 import '../models/activity_record.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart';
-import 'package:intl/intl.dart';
 import '../utils/animations.dart';
 import '../providers/database_provider.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
-import 'dart:io';
 import 'program_screen.dart';
 import 'stats_screen.dart';
 import '../models/program_model.dart';
@@ -36,7 +36,7 @@ import '../widgets/badge_widget.dart';
 import '../models/badge_model.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -90,22 +90,22 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    print("[HomeScreen] initState started."); // LOG
+    debugPrint("[HomeScreen] initState started."); // LOG
     _pageController = PageController();
     _animationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 800),
     )..forward();
 
-    print("[HomeScreen] initState calling _loadData()."); // LOG
+    debugPrint("[HomeScreen] initState calling _loadData()."); // LOG
     _loadData();
     _loadMotivationalMessage(); // Motivasyon sözünü yükle
-    print("[HomeScreen] initState finished."); // LOG
+    debugPrint("[HomeScreen] initState finished."); // LOG
   }
 
   @override
   void dispose() {
-    print("[HomeScreen] dispose called."); // LOG
+    debugPrint("[HomeScreen] dispose called."); // LOG
     // Listener'ı temizleme kısmını güncelliyoruz
     _pageController.dispose();
     _animationController.dispose();
@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Görev durumlarını kaydet
   Future<void> _savingTaskStates() async {
-    print("[HomeScreen] _savingTaskStates called."); // LOG
+    debugPrint("[HomeScreen] _savingTaskStates called."); // LOG
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
@@ -219,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen>
       await prefs.setString('lastMotivationalMessageDate', today);
       await prefs.setInt('lastMotivationalMessageIndex', randomIndex);
     }
-    print(
+    debugPrint(
         "[HomeScreen] Motivational message loaded: $_selectedMotivationalMessage");
   }
 
@@ -248,8 +248,9 @@ class _HomeScreenState extends State<HomeScreen>
       cardColor = color;
     }
 
-    final backgroundColor =
-        isDarkMode ? cardColor.withOpacity(0.2) : cardColor.withOpacity(0.1);
+    final backgroundColor = isDarkMode
+        ? cardColor.withValues(alpha: 0.2)
+        : cardColor.withValues(alpha: 0.1);
     final iconColor = isDone ? Colors.grey : cardColor;
     final textColor = isDarkMode ? Colors.white : Colors.black87;
 
@@ -259,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen>
       color: isDone
           ? (isDarkMode
               ? AppTheme.completedTaskColor
-              : Colors.grey.withOpacity(0.1))
+              : Colors.grey.withValues(alpha:0.1))
           : backgroundColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
@@ -270,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: iconColor.withOpacity(0.8),
+                backgroundColor: iconColor.withValues(alpha:0.8),
                 radius: 24,
                 child: Icon(icon, color: Colors.white, size: 24),
               ),
@@ -300,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen>
                       style: TextStyle(
                         fontSize: 14,
                         color:
-                            isDone ? Colors.grey : textColor.withOpacity(0.7),
+                            isDone ? Colors.grey : textColor.withValues(alpha:0.7),
                         decoration: isDone ? TextDecoration.lineThrough : null,
                       ),
                       maxLines: 2,
@@ -317,13 +318,11 @@ class _HomeScreenState extends State<HomeScreen>
                     time,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDone ? Colors.grey : textColor.withOpacity(0.7),
+                      color: isDone ? Colors.grey : textColor.withValues(alpha:0.7),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    width: 24,
-                    height: 24,
+                  Container(width: 24, height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -347,17 +346,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    print("[HomeScreen] build started. isLoading: $isLoading"); // LOG
+    debugPrint("[HomeScreen] build started. isLoading: $isLoading"); // LOG
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // Kullanıcıyı al (null olabilir, güvenli erişim önemli)
     final userProvider = Provider.of<UserProvider>(context);
     final UserModel? user = userProvider.user;
-    print(
+    debugPrint(
         "[HomeScreen] build: User fetched from provider. User is ${user == null ? 'null' : 'not null'}."); // LOG
 
     if (isLoading) {
-      print("[HomeScreen] build: Showing loading indicator."); // LOG
+      debugPrint("[HomeScreen] build: Showing loading indicator."); // LOG
       return Center(
         child: CircularProgressIndicator(
           color: AppTheme.primaryColor,
@@ -504,10 +503,10 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildWelcomeHeader(BuildContext context, UserModel? user) {
-    print("[HomeScreen] _buildWelcomeHeader called."); // LOG
+    debugPrint("[HomeScreen] _buildWelcomeHeader called."); // LOG
     final userName =
         user?.name ?? 'Kullanıcı'; // Eğer user null ise 'Kullanıcı' yaz
-    print("[HomeScreen] _buildWelcomeHeader: User name is '$userName'."); // LOG
+    debugPrint("[HomeScreen] _buildWelcomeHeader: User name is '$userName'."); // LOG
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -545,8 +544,8 @@ class _HomeScreenState extends State<HomeScreen>
                           fontSize: 15,
                           fontStyle: FontStyle.italic,
                           color: isDarkMode
-                              ? Colors.white.withOpacity(0.85)
-                              : Colors.black.withOpacity(0.7),
+                              ? Colors.white.withValues(alpha:0.85)
+                              : Colors.black.withValues(alpha:0.7),
                         ),
                         textAlign: TextAlign.start,
                       ),
@@ -589,8 +588,8 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withOpacity(0.3)
-                        : AppTheme.primaryColor.withOpacity(0.1),
+                        ? AppTheme.primaryColor.withValues(alpha:0.3)
+                        : AppTheme.primaryColor.withValues(alpha:0.1),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: AppTheme.primaryColor,
@@ -632,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen>
             width: 40,
             height: 5,
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha:0.3),
               borderRadius: BorderRadius.circular(10),
             ),
           ),
@@ -707,7 +706,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withOpacity(0.1),
+        color: AppTheme.primaryColor.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -718,7 +717,7 @@ class _HomeScreenState extends State<HomeScreen>
             strokeWidth: 3,
             value: completion,
             color: AppTheme.primaryColor,
-            backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+            backgroundColor: AppTheme.primaryColor.withValues(alpha:0.2),
           ),
           SizedBox(width: 8),
           Text(
@@ -756,14 +755,12 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildMotivationalBox() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+    return Container(width: double.infinity, padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
+          color: Colors.grey.withValues(alpha:0.2),
           width: 1,
         ),
       ),
@@ -772,7 +769,7 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             Icons.lightbulb_outline,
             color:
-                Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
+                Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha:0.7),
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -793,35 +790,35 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Tüm verileri yükle
   Future<void> _loadData() async {
-    print("[HomeScreen] _loadData started."); // LOG
+    debugPrint("[HomeScreen] _loadData started."); // LOG
     if (!mounted) {
-      print("[HomeScreen] _loadData: Not mounted, returning."); // LOG
+      debugPrint("[HomeScreen] _loadData: Not mounted, returning."); // LOG
       return;
     }
     setState(() {
       isLoading = true;
-      print("[HomeScreen] _loadData: isLoading set to true."); // LOG
+      debugPrint("[HomeScreen] _loadData: isLoading set to true."); // LOG
     });
 
     try {
-      print("[HomeScreen] _loadData: Loading saved task states..."); // LOG
+      debugPrint("[HomeScreen] _loadData: Loading saved task states..."); // LOG
       await _loadSavedTaskStates();
-      print("[HomeScreen] _loadData: Loading daily tasks..."); // LOG
+      debugPrint("[HomeScreen] _loadData: Loading daily tasks..."); // LOG
       await _loadDailyTasks();
-      print("[HomeScreen] _loadData: Loading water intake..."); // LOG
+      debugPrint("[HomeScreen] _loadData: Loading water intake..."); // LOG
       await _loadWaterIntake();
-      print("[HomeScreen] _loadData: Loading activity summary..."); // LOG
+      debugPrint("[HomeScreen] _loadData: Loading activity summary..."); // LOG
       await _loadActivitySummary();
     } catch (e, stacktrace) {
-      print("[HomeScreen] _loadData Error: $e"); // LOG
-      print("[HomeScreen] _loadData Stacktrace: $stacktrace"); // LOG
+      debugPrint("[HomeScreen] _loadData Error: $e"); // LOG
+      debugPrint("[HomeScreen] _loadData Stacktrace: $stacktrace"); // LOG
       // Hata durumunda kullanıcıya bilgi verilebilir
       // ScaffoldMessenger.of(context).showSnackBar(...);
     } finally {
       if (mounted) {
         setState(() {
           isLoading = false;
-          print(
+          debugPrint(
               "[HomeScreen] _loadData: isLoading set to false (finally)."); // LOG
         });
       }
@@ -830,7 +827,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Günlük görevleri ve programı yükle
   Future<void> _loadDailyTasks() async {
-    print("[HomeScreen] _loadDailyTasks started."); // LOG
+    debugPrint("[HomeScreen] _loadDailyTasks started."); // LOG
     if (!mounted) return;
 
     final programService = Provider.of<ProgramService>(context, listen: false);
@@ -839,7 +836,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     try {
       // ProgramService'den haftalık programı al
-      print(
+      debugPrint(
           "[HomeScreen] _loadDailyTasks: Getting weekly program from ProgramService"); // LOG
       final weeklyProgram =
           await programService.getWeeklyProgram(); // Haftalık programı al
@@ -849,7 +846,7 @@ class _HomeScreenState extends State<HomeScreen>
         final todayIndex = todayWeekday - 1;
         if (todayIndex >= 0 && todayIndex < weeklyProgram.length) {
           final dailyProgram = weeklyProgram[todayIndex];
-          print(
+          debugPrint(
               "[HomeScreen] _loadDailyTasks: Daily program found for index $todayIndex. Updating state."); // LOG
           setState(() {
             morningProgram = dailyProgram.morningExercise.title;
@@ -857,10 +854,10 @@ class _HomeScreenState extends State<HomeScreen>
             eveningProgram = dailyProgram.eveningExercise.title;
             dinnerMenu = dailyProgram.dinner.description ?? 'Belirtilmedi';
           });
-          print(
+          debugPrint(
               "Yüklenen görevler: Sabah: $morningProgram, Öğle: $lunchMenu, Akşam: $eveningProgram, Akşam Yemeği: $dinnerMenu"); // LOG
         } else {
-          print(
+          debugPrint(
               "[HomeScreen] _loadDailyTasks: Invalid todayIndex: $todayIndex"); // LOG
           // Hata durumu veya varsayılanları ayarla
           setState(() {
@@ -871,7 +868,7 @@ class _HomeScreenState extends State<HomeScreen>
           });
         }
       } else {
-        print(
+        debugPrint(
             "[HomeScreen] _loadDailyTasks: Weekly program is empty or widget not mounted."); // LOG
         if (mounted) {
           setState(() {
@@ -883,8 +880,8 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
     } catch (e, stacktrace) {
-      print("[HomeScreen] _loadDailyTasks Error: $e"); // LOG
-      print("[HomeScreen] _loadDailyTasks Stacktrace: $stacktrace"); // LOG
+      debugPrint("[HomeScreen] _loadDailyTasks Error: $e"); // LOG
+      debugPrint("[HomeScreen] _loadDailyTasks Stacktrace: $stacktrace"); // LOG
       if (mounted) {
         setState(() {
           morningProgram = 'Hata oluştu';
@@ -898,11 +895,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Bugün içilen suyu yükle
   Future<void> _loadWaterIntake() async {
-    print("[HomeScreen] _loadWaterIntake started."); // LOG
+    debugPrint("[HomeScreen] _loadWaterIntake started."); // LOG
     if (!mounted) return;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     if (userProvider.user?.id == null) {
-      print(
+      debugPrint(
           "[HomeScreen] _loadWaterIntake: User ID is null, cannot load water intake."); // LOG
       return;
     }
@@ -911,7 +908,7 @@ class _HomeScreenState extends State<HomeScreen>
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
-      print(
+      debugPrint(
           "[HomeScreen] _loadWaterIntake: Getting water log for user ${userProvider.user!.id}"); // LOG
       final waterData = await dbService.getWaterLogInRange(
           startOfDay, endOfDay, userProvider.user!.id!);
@@ -919,23 +916,23 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _waterIntake =
               waterData[startOfDay] ?? 0; // Sadece bugünün değerini al
-          print(
+          debugPrint(
               "[HomeScreen] _loadWaterIntake: Water intake loaded: $_waterIntake ml."); // LOG
         });
       }
     } catch (e, stacktrace) {
-      print("[HomeScreen] _loadWaterIntake Error: $e"); // LOG
-      print("[HomeScreen] _loadWaterIntake Stacktrace: $stacktrace"); // LOG
+      debugPrint("[HomeScreen] _loadWaterIntake Error: $e"); // LOG
+      debugPrint("[HomeScreen] _loadWaterIntake Stacktrace: $stacktrace"); // LOG
     }
   }
 
   // Bugünkü aktivite özetini yükle (adım sayısı vb.)
   Future<void> _loadActivitySummary() async {
-    print("[HomeScreen] _loadActivitySummary started."); // LOG
+    debugPrint("[HomeScreen] _loadActivitySummary started."); // LOG
     if (!mounted) return;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     if (userProvider.user?.id == null) {
-      print(
+      debugPrint(
           "[HomeScreen] _loadActivitySummary: User ID is null, cannot load summary."); // LOG
       return;
     }
@@ -944,7 +941,7 @@ class _HomeScreenState extends State<HomeScreen>
     //    final today = DateTime.now();
     //   final startOfDay = DateTime(today.year, today.month, today.day);
     //   final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
-    //   print("[HomeScreen] _loadActivitySummary: Getting activity summary for user ${userProvider.user!.id}"); // LOG
+    //   debugPrint("[HomeScreen] _loadActivitySummary: Getting activity summary for user ${userProvider.user!.id}"); // LOG
     //   // Bu kısım DatabaseService'e bağlı, varsayılan bir fonksiyon olduğunu varsayalım
     //   // final summary = await dbService.getTodayActivitySummary(userProvider.user!.id!); // Varsayımsal fonksiyon
     //   // if (mounted && summary != null) {
@@ -952,19 +949,19 @@ class _HomeScreenState extends State<HomeScreen>
     //   //     // Adım sayısı veya aktif dakika gibi değerleri burada state'e atayın
     //   //     // _todaySteps = summary['steps'] ?? 0;
     //   //     // _todayActiveMinutes = summary['activeMinutes'] ?? 0;
-    //   //     print("[HomeScreen] _loadActivitySummary: Activity summary loaded."); // LOG - Gerçek değerleri loglayın
+    //   //     debugPrint("[HomeScreen] _loadActivitySummary: Activity summary loaded."); // LOG - Gerçek değerleri loglayın
     //   //   });
     //   // } else {
-    //   //   print("[HomeScreen] _loadActivitySummary: No activity summary found for today."); // LOG
+    //   //   debugPrint("[HomeScreen] _loadActivitySummary: No activity summary found for today."); // LOG
     //   // }
-    print("[HomeScreen] _loadActivitySummary: Temporarily disabled."); // LOG
+    debugPrint("[HomeScreen] _loadActivitySummary: Temporarily disabled."); // LOG
   }
 
   // Görev tamamlama durumunu değiştir
   Future<void> _toggleTaskCompletion(TaskType taskType) async {
     final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user == null || user.id == null) {
-      print("Görev tamamlama işlemi için kullanıcı bulunamadı.");
+      debugPrint("Görev tamamlama işlemi için kullanıcı bulunamadı.");
       return;
     }
 
@@ -1041,7 +1038,7 @@ class _HomeScreenState extends State<HomeScreen>
     // Görev tamamlama durumuna göre GamificationProvider'ı güncelle
     _updateGameProgressForTask(taskType, newState);
 
-    print("Görev durumu güncellendi: $taskType -> $newState"); // Loglama
+    debugPrint("Görev durumu güncellendi: $taskType -> $newState"); // Loglama
   }
 
   // Oyunlaştırma sistemini güncelleyen yardımcı metot
@@ -1125,7 +1122,7 @@ class _HomeScreenState extends State<HomeScreen>
           break;
       }
     } catch (e) {
-      print("Oyunlaştırma güncellemesi sırasında hata: $e");
+      debugPrint("Oyunlaştırma güncellemesi sırasında hata: $e");
     }
   }
 
@@ -1164,7 +1161,7 @@ class _HomeScreenState extends State<HomeScreen>
       content = Row(
         children: [
           CircleAvatar(
-            backgroundColor: unlockedBadge.color.withOpacity(0.8),
+            backgroundColor: unlockedBadge.color.withValues(alpha:0.8),
             radius: 20,
             child: Icon(
               _getBadgeIconForNotification(unlockedBadge),
@@ -1211,8 +1208,8 @@ class _HomeScreenState extends State<HomeScreen>
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         backgroundColor: unlockedBadge != null
-            ? unlockedBadge.color.withOpacity(0.9)
-            : AppTheme.primaryColor.withOpacity(0.9),
+            ? unlockedBadge.color.withValues(alpha:0.9)
+            : AppTheme.primaryColor.withValues(alpha:0.9),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -1376,7 +1373,7 @@ class _HomeScreenState extends State<HomeScreen>
 
 // Tüm rozetleri gösteren ekran
 class AllBadgesScreen extends StatelessWidget {
-  const AllBadgesScreen({Key? key}) : super(key: key);
+  const AllBadgesScreen({super.key}) ;
 
   @override
   Widget build(BuildContext context) {
@@ -1545,15 +1542,13 @@ class AllBadgesScreen extends StatelessWidget {
             Row(
               children: [
                 // Puan dairesi
-                Container(
-                  width: 100,
-                  height: 100,
+                Container(width: 100, height: 100,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       CircularProgressIndicator(
                         value: progress,
-                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        backgroundColor: AppTheme.primaryColor.withValues(alpha:0.1),
                         valueColor: AlwaysStoppedAnimation<Color>(
                             AppTheme.primaryColor),
                         strokeWidth: 10,
@@ -1597,7 +1592,7 @@ class AllBadgesScreen extends StatelessWidget {
                       const SizedBox(height: 8),
                       LinearProgressIndicator(
                         value: progress,
-                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                        backgroundColor: AppTheme.primaryColor.withValues(alpha:0.1),
                         valueColor: AlwaysStoppedAnimation<Color>(
                             AppTheme.primaryColor),
                         minHeight: 8,
@@ -1615,7 +1610,7 @@ class AllBadgesScreen extends StatelessWidget {
                       LinearProgressIndicator(
                         value: badgeProgress,
                         backgroundColor:
-                            AppTheme.secondaryColor.withOpacity(0.1),
+                            AppTheme.secondaryColor.withValues(alpha:0.1),
                         valueColor: AlwaysStoppedAnimation<Color>(
                             AppTheme.secondaryColor),
                         minHeight: 8,
@@ -1691,3 +1686,6 @@ class AllBadgesScreen extends StatelessWidget {
     );
   }
 }
+
+
+

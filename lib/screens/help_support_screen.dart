@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/kaplan_appbar.dart';
 import '../utils/animations.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class HelpSupportScreen extends StatelessWidget {
-  const HelpSupportScreen({Key? key}) : super(key: key);
+  const HelpSupportScreen({super.key});
 
   Future<void> _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
@@ -17,13 +17,14 @@ class HelpSupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: KaplanAppBar(
         title: 'Yardım ve Destek',
         isDarkMode: isDarkMode,
       ),
-      backgroundColor: isDarkMode ? AppTheme.backgroundColor : const Color(0xFFF8F8FC),
+      backgroundColor:
+          isDarkMode ? AppTheme.backgroundColor : const Color(0xFFF8F8FC),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -33,9 +34,7 @@ class HelpSupportScreen extends StatelessWidget {
               KFSlideAnimation(
                 offsetBegin: const Offset(0.0, 0.1),
                 child: Card(
-                  color: isDarkMode 
-                      ? const Color(0xFF243355)
-                      : Colors.white,
+                  color: isDarkMode ? const Color(0xFF243355) : Colors.white,
                   elevation: 2,
                   shadowColor: Colors.black26,
                   shape: RoundedRectangleBorder(
@@ -59,8 +58,8 @@ class HelpSupportScreen extends StatelessWidget {
                           context,
                           'Bildirimler çalışmıyor, ne yapmalıyım?',
                           'Öncelikle ayarlar menüsünden bildirimlerin açık olduğundan emin olun. '
-                          'Daha sonra cihazınızın bildirim ayarlarından KaplanFit uygulamasına izin '
-                          'verildiğinden emin olun.',
+                              'Daha sonra cihazınızın bildirim ayarlarından KaplanFit uygulamasına izin '
+                              'verildiğinden emin olun.',
                           isDarkMode: isDarkMode,
                         ),
                         const SizedBox(height: 16),
@@ -68,8 +67,8 @@ class HelpSupportScreen extends StatelessWidget {
                           context,
                           'Uygulamayı nasıl güncelleyebilirim?',
                           'Uygulamanın en son sürümüne sahip olduğunuzdan emin olmak için '
-                          'mobil cihazınızdaki uygulama mağazasını kontrol edin ve '
-                          'mevcut bir güncelleme varsa yükleyin.',
+                              'mobil cihazınızdaki uygulama mağazasını kontrol edin ve '
+                              'mevcut bir güncelleme varsa yükleyin.',
                           isDarkMode: isDarkMode,
                         ),
                         const SizedBox(height: 16),
@@ -77,8 +76,8 @@ class HelpSupportScreen extends StatelessWidget {
                           context,
                           'Verilerim ne kadar süreyle depolanır?',
                           'Uygulama verileri, siz hesabınızı silene kadar güvenli bir şekilde '
-                          'depolanır. İlerleme ve aktivite verileri, size daha iyi hizmet '
-                          'verebilmemiz için saklanmaktadır.',
+                              'depolanır. İlerleme ve aktivite verileri, size daha iyi hizmet '
+                              'verebilmemiz için saklanmaktadır.',
                           isDarkMode: isDarkMode,
                         ),
                         const SizedBox(height: 16),
@@ -86,8 +85,8 @@ class HelpSupportScreen extends StatelessWidget {
                           context,
                           'AI Koç nasıl çalışır?',
                           'AI Koç, fitness ve beslenme alanında eğitilmiş yapay zeka ile '
-                          'antrenman ve beslenme konularında size özel tavsiyeler sunar. '
-                          'Verileriniz ve hedeflerinize göre kişiselleştirilmiş öneriler alabilirsiniz.',
+                              'antrenman ve beslenme konularında size özel tavsiyeler sunar. '
+                              'Verileriniz ve hedeflerinize göre kişiselleştirilmiş öneriler alabilirsiniz.',
                           isDarkMode: isDarkMode,
                         ),
                       ],
@@ -95,15 +94,11 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
               const SizedBox(height: 24),
-              
               KFSlideAnimation(
                 offsetBegin: const Offset(0.0, 0.1),
                 child: Card(
-                  color: isDarkMode 
-                      ? const Color(0xFF243355)
-                      : Colors.white,
+                  color: isDarkMode ? const Color(0xFF243355) : Colors.white,
                   elevation: 2,
                   shadowColor: Colors.black26,
                   shape: RoundedRectangleBorder(
@@ -137,11 +132,13 @@ class HelpSupportScreen extends StatelessWidget {
                           subtitle: Text(
                             'destek@kaplanfit.com',
                             style: TextStyle(
-                              color: isDarkMode ? Colors.white70 : Colors.black54,
+                              color:
+                                  isDarkMode ? Colors.white70 : Colors.black54,
                             ),
                           ),
                           onTap: () {
-                            _launchUrl('mailto:destek@kaplanfit.com?subject=KaplanFit%20Destek');
+                            _launchUrl(
+                                'mailto:destek@kaplanfit.com?subject=KaplanFit%20Destek');
                           },
                         ),
                         const Divider(),
@@ -159,7 +156,8 @@ class HelpSupportScreen extends StatelessWidget {
                           subtitle: Text(
                             '+90 555 123 4567',
                             style: TextStyle(
-                              color: isDarkMode ? Colors.white70 : Colors.black54,
+                              color:
+                                  isDarkMode ? Colors.white70 : Colors.black54,
                             ),
                           ),
                           onTap: () {
@@ -181,7 +179,8 @@ class HelpSupportScreen extends StatelessWidget {
                           subtitle: Text(
                             'www.kaplanfit.com',
                             style: TextStyle(
-                              color: isDarkMode ? Colors.white70 : Colors.black54,
+                              color:
+                                  isDarkMode ? Colors.white70 : Colors.black54,
                             ),
                           ),
                           onTap: () {
@@ -193,15 +192,11 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
               const SizedBox(height: 24),
-              
               KFSlideAnimation(
                 offsetBegin: const Offset(0.0, 0.1),
                 child: Card(
-                  color: isDarkMode 
-                      ? const Color(0xFF243355)
-                      : Colors.white,
+                  color: isDarkMode ? const Color(0xFF243355) : Colors.white,
                   elevation: 2,
                   shadowColor: Colors.black26,
                   shape: RoundedRectangleBorder(
@@ -237,7 +232,9 @@ class HelpSupportScreen extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: isDarkMode ? Colors.white : Colors.black87,
+                                    color: isDarkMode
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -245,7 +242,9 @@ class HelpSupportScreen extends StatelessWidget {
                                   'Sürüm 1.0.1',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: isDarkMode ? Colors.white70 : Colors.black54,
+                                    color: isDarkMode
+                                        ? Colors.white70
+                                        : Colors.black54,
                                   ),
                                 ),
                               ],
@@ -269,7 +268,6 @@ class HelpSupportScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
               const SizedBox(height: 24),
             ],
           ),
@@ -277,8 +275,9 @@ class HelpSupportScreen extends StatelessWidget {
       ),
     );
   }
-  
-  Widget _buildFaqItem(BuildContext context, String question, String answer, {required bool isDarkMode}) {
+
+  Widget _buildFaqItem(BuildContext context, String question, String answer,
+      {required bool isDarkMode}) {
     return ExpansionTile(
       title: Text(
         question,
@@ -302,4 +301,4 @@ class HelpSupportScreen extends StatelessWidget {
       ],
     );
   }
-} 
+}

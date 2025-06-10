@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
-import 'package:geolocator/geolocator.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import '../providers/activity_provider.dart';
 import '../providers/workout_provider.dart';
 import '../providers/user_provider.dart';
@@ -13,7 +15,6 @@ import '../utils/animations.dart';
 import '../widgets/kaplan_loading.dart';
 import '../models/exercise_model.dart';
 import 'exercise_library_screen.dart';
-import 'dart:io';
 
 // Servisleri import et
 import '../services/program_service.dart';
@@ -22,14 +23,14 @@ import '../models/program_model.dart';
 import '../models/program_set.dart';
 
 class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({Key? key}) : super(key: key);
+  const ActivityScreen({super.key});
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
 class _ActivityScreenState extends State<ActivityScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final TextEditingController _durationController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
@@ -69,8 +70,12 @@ class _ActivityScreenState extends State<ActivityScreen>
   static const _contentPadding = EdgeInsets.all(16.0);
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
+    debugPrint("🔧 ActivityScreen initState başlatıldı");
 
     if (!Platform.isWindows) {
       _location = Location();
@@ -79,11 +84,67 @@ class _ActivityScreenState extends State<ActivityScreen>
       debugPrint('Windows platformunda konum servisleri devre dışı bırakıldı');
     }
 
+    // Güvenli initialization
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ActivityProvider>(context, listen: false)
-          .setSelectedDate(_selectedDate);
-      _loadInitialData();
+      if (mounted) {
+        _safeInitialization();
+      }
     });
+  }
+
+  Future<void> _safeInitialization() async {
+    try {
+      debugPrint("🔧 Safe initialization başlatıldı");
+      if (!mounted) return;
+
+      // İlk olarak loading'i false yaparak UI'ı serbest bırak
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
+      // Provider interaction'ları minimize et
+      // Sadece gerekli olan işlemleri yap
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (!mounted) return;
+
+      // Veri yükleme işlemini background'da yap
+      _loadDataInBackground();
+
+      debugPrint("✅ Safe initialization tamamlandı");
+    } catch (e) {
+      debugPrint("❌ Safe initialization hatası: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadDataInBackground() async {
+    try {
+      if (!mounted) return;
+
+      // Önce user provider'ı kontrol et
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (userProvider.user == null) {
+        await userProvider.loadUser();
+      }
+
+      if (!mounted) return;
+
+      // Activity provider'ı güvenli şekilde al ve tarih set et
+      final activityProvider =
+          Provider.of<ActivityProvider>(context, listen: false);
+
+      // Sadece tarih set et, refresh tetikleme
+      activityProvider.setSelectedDate(_selectedDate);
+
+      debugPrint("✅ Background data loading tamamlandı");
+    } catch (e) {
+      debugPrint("❌ Background data loading hatası: $e");
+    }
   }
 
   Future<void> _checkLocationPermission() async {
@@ -109,7 +170,7 @@ class _ActivityScreenState extends State<ActivityScreen>
         });
       }
     } catch (e) {
-      print('Konum izni hatası: $e');
+      debugPrint('Konum izni hatası: $e');
     }
   }
 
@@ -122,6 +183,15 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // AutomaticKeepAliveClientMixin için gerekli
+
+    debugPrint("🔄 ActivityScreen build çağrıldı");
+
+    if (!mounted) {
+      debugPrint("❌ ActivityScreen mounted değil");
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final activityProvider = Provider.of<ActivityProvider>(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -159,7 +229,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                 colors: [
                   isDarkMode
                       ? const Color(0xFF2C2C2C)
-                      : AppTheme.primaryColor.withOpacity(0.7),
+                      : AppTheme.primaryColor.withValues(alpha: 0.7),
                   isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
                 ],
               ),
@@ -169,7 +239,7 @@ class _ActivityScreenState extends State<ActivityScreen>
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -225,7 +295,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                             KFWaveAnimation(
                               color: Theme.of(context)
                                   .primaryColor
-                                  .withOpacity(0.3),
+                                  .withValues(alpha: 0.3),
                               height: 100,
                             ),
                             const SizedBox(height: 20),
@@ -343,7 +413,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: activityColor.withOpacity(0.2),
+                            color: activityColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -371,7 +441,7 @@ class _ActivityScreenState extends State<ActivityScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.teal.withOpacity(0.2),
+                        color: Colors.teal.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
@@ -429,35 +499,131 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   void _changeDate(int days) {
-    if (mounted) {
-      setState(() {
-        _selectedDate = _selectedDate.add(Duration(days: days));
-        _isLoading = true;
-      });
+    debugPrint("🗓️ Tarih değiştiriliyor: $days gün");
+    if (!mounted) {
+      debugPrint("❌ Widget mounted değil, işlem iptal ediliyor");
+      return;
     }
-    Provider.of<ActivityProvider>(context, listen: false)
-        .setSelectedDate(_selectedDate);
-    _loadInitialData();
+
+    try {
+      final newDate = _selectedDate.add(Duration(days: days));
+      debugPrint("📅 Yeni tarih: $newDate");
+
+      // Önce state'i güvenli şekilde değiştir
+      if (mounted) {
+        setState(() {
+          _selectedDate = newDate;
+          _isLoading = true;
+        });
+      } else {
+        return;
+      }
+
+      // Provider işlemini güvenli ve basit şekilde yap
+      _handleDateChangeAsync();
+
+      debugPrint("✅ Tarih değişimi başlatıldı");
+    } catch (e) {
+      debugPrint("❌ Tarih değiştirme hatası: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleDateChangeAsync() async {
+    try {
+      if (!mounted) return;
+
+      debugPrint("🔄 Async date change işlemi başlatıldı");
+
+      // Provider'ı güvenli şekilde al ve tarih set et
+      final activityProvider =
+          Provider.of<ActivityProvider>(context, listen: false);
+      activityProvider.setSelectedDate(_selectedDate);
+
+      // Kısa bir delay ekle (UI responsive kalması için)
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      if (!mounted) return;
+
+      // Aktiviteleri yenile (data loading yapmak yerine sadece filter et)
+      await activityProvider.refreshActivities();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _filterActivities();
+      }
+
+      debugPrint("✅ Async date change tamamlandı");
+    } catch (e) {
+      debugPrint("❌ Async date change hatası: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-      locale: const Locale('tr', 'TR'),
-    );
-    if (picked != null && picked != _selectedDate) {
-      if (mounted) {
-        setState(() {
-          _selectedDate = picked;
-          _isLoading = true;
-        });
+    try {
+      debugPrint("📅 Date picker açılıyor...");
+      if (!mounted) {
+        debugPrint("❌ Widget mounted değil, date picker iptal");
+        return;
       }
-      Provider.of<ActivityProvider>(context, listen: false)
-          .setSelectedDate(_selectedDate);
-      _loadInitialData();
+
+      // Context kontrolü
+      if (!context.mounted) {
+        debugPrint("❌ Context mounted değil, date picker iptal");
+        return;
+      }
+
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: _selectedDate,
+        firstDate: DateTime(2000),
+        lastDate: DateTime(2101),
+        locale: const Locale('tr', 'TR'),
+        builder: (BuildContext context, Widget? child) {
+          return Localizations(
+            locale: const Locale('tr', 'TR'),
+            delegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: Theme.of(context).colorScheme.copyWith(
+                      primary: AppTheme.primaryColor,
+                    ),
+              ),
+              child: child!,
+            ),
+          );
+        },
+      );
+
+      if (picked != null && picked != _selectedDate) {
+        debugPrint("📅 Yeni tarih seçildi: $picked");
+        if (mounted) {
+          setState(() {
+            _selectedDate = picked;
+            _isLoading = true;
+          });
+
+          // Async işlemi güvenli şekilde handle et
+          _handleDateChangeAsync();
+        }
+      }
+    } catch (e) {
+      debugPrint("❌ Date picker hatası: $e");
+      if (mounted) {
+        // Kullanıcıya sadece console'da hata göster, UI'ı bozma
+        debugPrint("Date picker hatası gösterilmeyecek");
+      }
     }
   }
 
@@ -775,9 +941,9 @@ class _ActivityScreenState extends State<ActivityScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: BorderSide(
-              color: Theme.of(context).primaryColor.withOpacity(0.5)),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.5)),
         ),
-        foregroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+        foregroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
       ),
       onPressed: () async {
         try {
@@ -835,10 +1001,13 @@ class _ActivityScreenState extends State<ActivityScreen>
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: BorderSide(
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+              color: Theme.of(context)
+                  .colorScheme
+                  .secondary
+                  .withValues(alpha: 0.5)),
         ),
         foregroundColor:
-            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
       ),
       onPressed: () async {
         final selectedProgramExercises =
@@ -932,45 +1101,63 @@ class _ActivityScreenState extends State<ActivityScreen>
   }
 
   Future<void> _loadInitialData() async {
-    if (!mounted) return;
+    debugPrint("📊 _loadInitialData başlatıldı");
+    if (!mounted) {
+      debugPrint("❌ Widget mounted değil, data loading iptal");
+      return;
+    }
+
+    // Loading state'i güvenli şekilde set et
     if (mounted) {
       setState(() {
         _isLoading = true;
       });
     }
 
-    final activityProvider =
-        Provider.of<ActivityProvider>(context, listen: false);
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-
     try {
+      // Provider'ları güvenli şekilde al
+      if (!mounted) return;
+
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final activityProvider =
+          Provider.of<ActivityProvider>(context, listen: false);
+
+      debugPrint("👤 User yükleniyor...");
       await userProvider.loadUser();
+
+      if (!mounted) return;
+
       if (userProvider.user == null) {
         debugPrint(
             "[ActivityScreen] Kullanıcı bulunamadı, veri yükleme durduruldu.");
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+          setState(() => _isLoading = false);
         }
         return;
       }
-      await activityProvider.refreshActivities();
-      activityProvider.setSelectedDate(_selectedDate);
 
+      debugPrint("📊 Activities refresh ediliyor...");
+      // Refresh activities BUT DON'T call setSelectedDate again to avoid loops
+      await activityProvider.refreshActivities();
+
+      if (!mounted) return;
+
+      debugPrint("✅ Data loading tamamlandı");
       _filterActivities();
     } catch (e) {
-      debugPrint('Veri yüklenirken hata: $e');
+      debugPrint('❌ Veri yüklenirken hata: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Veriler yüklenirken bir hata oluştu: $e')),
-        );
+        // Kullanıcıya hata göstermek yerine sessizce handle et
+        debugPrint("Hata mesajı gösterilmeyecek, session devam edecek");
       }
     } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
+        debugPrint("🏁 _loadInitialData finally bloğu tamamlandı");
       }
     }
   }
@@ -1059,7 +1246,7 @@ class _ProgramSelectionScreenState extends State<ProgramSelectionScreen> {
         }
       }
     } catch (e, stackTrace) {
-      print("Programlar ve egzersizler yüklenirken hata: $e\n$stackTrace");
+      debugPrint("Programlar ve egzersizler yüklenirken hata: $e\n$stackTrace");
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

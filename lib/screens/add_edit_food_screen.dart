@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/food_item.dart';
 import '../services/database_service.dart';
 import '../utils/show_dialogs.dart'; // SnackBar için
@@ -6,7 +7,7 @@ import '../utils/show_dialogs.dart'; // SnackBar için
 class AddEditFoodScreen extends StatefulWidget {
   final FoodItem? foodItem; // Düzenleme için (opsiyonel)
 
-  const AddEditFoodScreen({Key? key, this.foodItem}) : super(key: key);
+  const AddEditFoodScreen({Key? key, this.foodItem}) ;
 
   @override
   _AddEditFoodScreenState createState() => _AddEditFoodScreenState();
@@ -102,7 +103,7 @@ class _AddEditFoodScreenState extends State<AddEditFoodScreen> {
           // Düzenleme (henüz desteklenmiyor ama altyapı hazır)
           // await _dbService.updateFoodItem(newFood);
           // showAnimatedSnackBar(context: context, message: 'Besin güncellendi: $name');
-          print("Düzenleme henüz implemente edilmedi.");
+          debugPrint("Düzenleme henüz implemente edilmedi.");
           showAnimatedSnackBar(
               context: context,
               message: 'Düzenleme henüz aktif değil',
@@ -111,7 +112,7 @@ class _AddEditFoodScreenState extends State<AddEditFoodScreen> {
           return;
         }
       } catch (e) {
-        print("Besin kaydederken hata: $e");
+        debugPrint("Besin kaydederken hata: $e");
         showAnimatedSnackBar(
             context: context,
             message: 'Besin kaydedilemedi.',

@@ -8,7 +8,7 @@ import '../widgets/kaplan_appbar.dart';
 class AddEditExerciseScreen extends StatefulWidget {
   final Exercise? exercise; // Düzenlenecek egzersiz (null ise yeni ekleme modu)
 
-  const AddEditExerciseScreen({Key? key, this.exercise}) : super(key: key);
+  const AddEditExerciseScreen({Key? key, this.exercise}) ;
 
   @override
   State<AddEditExerciseScreen> createState() => _AddEditExerciseScreenState();
@@ -229,7 +229,7 @@ class _AddEditExerciseScreenState extends State<AddEditExerciseScreen> {
                           style: TextStyle(color: Colors.red)),
                       onPressed: _isLoading ? null : _deleteExercise,
                       style: TextButton.styleFrom(
-                        foregroundColor: Colors.red.withOpacity(0.1),
+                        foregroundColor: Colors.red.withValues(alpha:0.1),
                       )),
                 ),
             ],

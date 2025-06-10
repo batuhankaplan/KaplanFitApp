@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../models/program_model.dart';
 import '../models/program_set.dart';
@@ -16,7 +17,7 @@ class ProgramDetailDialog extends StatefulWidget {
     Key? key,
     required this.programItem,
     required this.type,
-  }) : super(key: key);
+  });
 
   @override
   State<ProgramDetailDialog> createState() => _ProgramDetailDialogState();
@@ -97,7 +98,7 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
                 .where((ex) => ex.id != null)
                 .map((ex) => MapEntry(ex.id!, ex)));
             _detailsLoading = false;
-            print(
+            debugPrint(
                 "Egzersiz detayları yüklendi: ${_exerciseDetails.length} adet");
           });
         } else {
@@ -107,7 +108,7 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
         setState(() => _detailsLoading = false);
       }
     } catch (e) {
-      print("Egzersiz detayları yüklenirken hata: $e");
+      debugPrint("Egzersiz detayları yüklenirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Egzersiz detayları yüklenemedi.')),
@@ -167,9 +168,7 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
           ),
         ],
       ),
-      content: Container(
-        width: double.maxFinite,
-        height:
+      content: Container(width: double.maxFinite, height:
             350, // Sabit bir yükseklik ekleyerek ScrollView sorununu çözüyoruz
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -316,10 +315,10 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
       setState(() {
         _currentProgramSets.addAll(newSets);
       });
-      print(
+      debugPrint(
           "Seçilen egzersizler eklendi: ${selectedExercises.map((e) => e.name)}");
     } else {
-      print("Egzersiz seçilmedi veya iptal edildi.");
+      debugPrint("Egzersiz seçilmedi veya iptal edildi.");
     }
   }
 
@@ -375,9 +374,7 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Antrenman Kategorisi Seç'),
-          content: Container(
-            width: double.maxFinite,
-            height: 300, // Sabit yükseklik
+          content: Container(width: double.maxFinite, height: 300, // Sabit yükseklik
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: sortedCategories.length,
@@ -393,7 +390,7 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
                   leading: Icon(_getCategoryIcon(category),
                       color: Theme.of(context).primaryColor),
                   title: Text(category),
-                  subtitle: Text('${exerciseCount} egzersiz'),
+                  subtitle: Text('$exerciseCount egzersiz'),
                   onTap: () {
                     Navigator.pop(dialogContext, category);
                   },
@@ -500,7 +497,7 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
         setState(() => _detailsLoading = false);
       }
     } catch (e) {
-      print("Egzersiz detayları yüklenirken hata: $e");
+      debugPrint("Egzersiz detayları yüklenirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Egzersiz detayları yüklenemedi.')),
@@ -510,3 +507,5 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
     }
   }
 }
+
+

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 
 class CustomSplashScreen extends StatefulWidget {
-  const CustomSplashScreen({Key? key}) : super(key: key);
+  const CustomSplashScreen({super.key}) ;
 
   @override
   State<CustomSplashScreen> createState() => _CustomSplashScreenState();
@@ -87,7 +87,7 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
             end: Alignment.bottomCenter,
             colors: isDarkMode
                 ? [AppTheme.darkBackgroundColor, Color(0xFF1C1C2E)]
-                : [primaryColor, primaryColor.withOpacity(0.8)],
+                : [primaryColor, primaryColor.withValues(alpha:0.8)],
           ),
         ),
         child: Center(
@@ -102,14 +102,12 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
                     opacity: _fadeAnimation.value,
                     child: Transform.scale(
                       scale: _scaleAnimation.value * _pulseAnimation.value,
-                      child: Container(
-                        width: 200,
-                        height: 200,
+                      child: Container(width: 200, height: 200,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
+                              color: Colors.black.withValues(alpha:0.25),
                               blurRadius: 25,
                               spreadRadius: 2,
                             ),
@@ -157,7 +155,7 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha:0.9),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -173,11 +171,9 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
                 builder: (context, child) {
                   return Opacity(
                     opacity: _opacityAnimation.value,
-                    child: Container(
-                      width: 50,
-                      height: 50,
+                    child: Container(width: 50, height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha:0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Padding(
@@ -199,3 +195,5 @@ class _CustomSplashScreenState extends State<CustomSplashScreen>
     );
   }
 }
+
+

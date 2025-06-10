@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import '../models/user_model.dart';
 import '../models/task_model.dart';
@@ -11,12 +12,11 @@ import '../models/food_item.dart';
 import '../models/workout_log.dart';
 import '../models/exercise_log.dart';
 import '../models/workout_set.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart'; // groupBy için eklendi
-import 'dart:io'; // Dosya işlemleri için eklendi
 import 'package:flutter/services.dart'
     show rootBundle; // Asset okumak için eklendi
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Basit beslenme özeti modeli (isteğe bağlı, Map de kullanılabilir)
 class NutritionSummary {
@@ -31,7 +31,7 @@ class NutritionSummary {
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
   static Database? _database;
-  // final FirebaseFirestore _db = FirebaseFirestore.instance; // Şimdilik kapatıldı
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   factory DatabaseService() => _instance;
 
@@ -51,7 +51,7 @@ class DatabaseService {
 
   Future<Database> _initDB() async {
     String path = join(await getDatabasesPath(), 'kaplanfit.db');
-    print("Veritabanı yolu: $path");
+    debugPrint("Veritabanı yolu: $path");
     return await openDatabase(
       path,
       version: _dbVersion,
@@ -59,13 +59,13 @@ class DatabaseService {
       onUpgrade: _onUpgrade,
       onOpen: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
-        print("Veritabanı açıldı, sürüm: ${await db.getVersion()}");
+        debugPrint("Veritabanı açıldı, sürüm: ${await db.getVersion()}");
       },
     );
   }
 
   Future<void> _createDB(Database db, int version) async {
-    print("Veritabanı oluşturuluyor (ilk kez), sürüm: $version");
+    debugPrint("Veritabanı oluşturuluyor (ilk kez), sürüm: $version");
     await db.execute('''
       CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -92,7 +92,7 @@ class DatabaseService {
         currentDailyWaterIntake REAL DEFAULT 0.0 -- YENİ: EKLENDİ
       )
     ''');
-    print("Users tablosu oluşturuldu.");
+    debugPrint("Users tablosu oluşturuldu.");
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS weight_records(
@@ -103,7 +103,7 @@ class DatabaseService {
         FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
-    print("Weight Records tablosu oluşturuldu.");
+    debugPrint("Weight Records tablosu oluşturuldu.");
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS activities(
@@ -119,7 +119,7 @@ class DatabaseService {
         FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE -- YENİ: Foreign key eklendi
       )
     ''');
-    print("Activities tablosu oluşturuldu.");
+    debugPrint("Activities tablosu oluşturuldu.");
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS meals(
@@ -137,7 +137,7 @@ class DatabaseService {
         FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
-    print("Meals tablosu oluşturuldu.");
+    debugPrint("Meals tablosu oluşturuldu.");
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS tasks(
@@ -153,7 +153,7 @@ class DatabaseService {
         estimatedFat REAL
       )
     ''');
-    print("Tasks tablosu oluşturuldu.");
+    debugPrint("Tasks tablosu oluşturuldu.");
 
     await _createExercisesTable(db);
     await _createFoodsTable(db);
@@ -170,9 +170,9 @@ class DatabaseService {
         FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
-    print("Water Log tablosu oluşturuldu.");
+    debugPrint("Water Log tablosu oluşturuldu.");
 
-    print("Tüm tablolar oluşturuldu.");
+    debugPrint("Tüm tablolar oluşturuldu.");
   }
 
   Future<void> _createExercisesTable(Database db) async {
@@ -188,7 +188,7 @@ class DatabaseService {
         createdAt TEXT NOT NULL
       )
     ''');
-    print("Exercises tablosu oluşturuldu.");
+    debugPrint("Exercises tablosu oluşturuldu.");
   }
 
   Future<void> _createFoodsTable(Database db) async {
@@ -208,12 +208,13 @@ class DatabaseService {
         createdAt TEXT -- NOT NULL kaldırıldı, import sırasında ayarlanmayabilir
       )
     ''');
-    print("Foods tablosu oluşturuldu.");
-    await _prepopulateFoods(db); // YORUM SATIRI KALDIRILDI
+    debugPrint("Foods tablosu oluşturuldu.");
+    // ESKİ KARMAŞIK METOD KALDIRILDI - YENİ BASİT METOD KULLANILACAK
+    // await _prepopulateFoods(db);
   }
 
   Future<void> _prepopulateFoods(Database db) async {
-    print("Başlangıç besinleri (_prepopulateFoods) ekleniyor...");
+    debugPrint("Başlangıç besinleri (_prepopulateFoods) ekleniyor...");
     const String foodDataTsv = """
 Besin Adı	Kategori	Porsiyon (g)	Kalori (kcal)	Karbonhidrat (g)	Protein (g)	Yağ (g)
 Salatalık	Sebzeler	91	13.7	3.3	0.6	0.1
@@ -675,7 +676,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     try {
       final lines = foodDataTsv.trim().split('\n');
       if (lines.length < 2) {
-        print("_prepopulateFoods: Yeterli veri satırı bulunamadı.");
+        debugPrint("_prepopulateFoods: Yeterli veri satırı bulunamadı.");
         return;
       }
 
@@ -698,7 +699,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         fatIndex,
         categoryIndex // Kategori index'ini de kontrol et
       ].contains(-1)) {
-        print(
+        debugPrint(
             "_prepopulateFoods: Gerekli sütun başlıkları bulunamadı. Başlıklar: $header");
         return;
       }
@@ -735,7 +736,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
               isCustom: false, // Ön tanımlı besinler custom değil
             ));
           } else {
-            // print("Zaten var: $name");
+            // debugPrint("Zaten var: $name");
           }
         }
       }
@@ -748,14 +749,14 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
               conflictAlgorithm: ConflictAlgorithm.ignore);
         }
         await batch.commit(noResult: true);
-        print(
+        debugPrint(
             "${foodsToInsert.length} adet başlangıç besini başarıyla eklendi.");
       } else {
-        print(
+        debugPrint(
             "Eklenecek yeni başlangıç besini bulunamadı veya hepsi zaten mevcut.");
       }
     } catch (e) {
-      print("_prepopulateFoods sırasında hata: $e");
+      debugPrint("_prepopulateFoods sırasında hata: $e");
     }
   }
 
@@ -770,7 +771,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE -- YENİ EKLENDİ
       )
     ''');
-    print("Chat Conversations tablosu oluşturuldu/güncellendi.");
+    debugPrint("Chat Conversations tablosu oluşturuldu/güncellendi.");
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS chat_messages(
@@ -782,7 +783,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         FOREIGN KEY (conversationId) REFERENCES chat_conversations (id) ON DELETE CASCADE
       )
     ''');
-    print("Chat Messages tablosu oluşturuldu.");
+    debugPrint("Chat Messages tablosu oluşturuldu.");
   }
 
   Future<int> insertUser(UserModel user) async {
@@ -853,7 +854,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     map.remove('weightHistory');
     // YENİ: autoCalculateNutrition için varsayılan değer ekle
     map['autoCalculateNutrition'] ??= 0;
-    print("[DB] Kullanıcı güncelleniyor, ID: ${user.id}, Veri: $map");
+    debugPrint("[DB] Kullanıcı güncelleniyor, ID: ${user.id}, Veri: $map");
 
     await db.update(
       'users',
@@ -861,7 +862,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       where: 'id = ?',
       whereArgs: [user.id],
     );
-    print("[DB] Kullanıcı güncellendi, ID: ${user.id}");
+    debugPrint("[DB] Kullanıcı güncellendi, ID: ${user.id}");
   }
 
   Future<int> addWeightRecord(WeightRecord record, int userId) async {
@@ -872,9 +873,9 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       'userId': userId,
     };
 
-    print("[DB] Yeni kilo kaydı ekleniyor: $map");
+    debugPrint("[DB] Yeni kilo kaydı ekleniyor: $map");
     final id = await db.insert('weight_records', map);
-    print("[DB] Kilo kaydı eklendi, ID: $id");
+    debugPrint("[DB] Kilo kaydı eklendi, ID: $id");
     return id;
   }
 
@@ -1142,7 +1143,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       where: 'conversationId = ?',
       whereArgs: [id],
     );
-    print("Konuşma ve ilişkili mesajlar silindi: ID $id");
+    debugPrint("Konuşma ve ilişkili mesajlar silindi: ID $id");
   }
 
   Future<int> createChatMessage(ChatMessage message) async {
@@ -1180,7 +1181,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
     } catch (e) {
-      print("FoodItem eklenirken hata: $e");
+      debugPrint("FoodItem eklenirken hata: $e");
       return -1;
     }
   }
@@ -1223,14 +1224,15 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     );
 
     if (maps.isEmpty && (query == null || query.isEmpty)) {
-      print("Veritabanında hiç besin yok, _prepopulateFoods çağrılıyor...");
+      debugPrint(
+          "Veritabanında hiç besin yok, _prepopulateFoods çağrılıyor...");
       // await _prepopulateFoods(db); // Başlangıç besinlerini yükle (dikkat, tekrar tekrar çağrılabilir)
       // Tekrar sorgula (bu kısmı dikkatli yönetmek lazım, sonsuz döngüye girebilir)
       // final List<Map<String, dynamic>> newMaps = await db.query('foods', orderBy: 'name ASC', limit: limit);
       // return List.generate(newMaps.length, (i) => FoodItem.fromDbMap(newMaps[i]));
     }
 
-    print(
+    debugPrint(
         "[DB Service] getFoodItems: ${maps.length} adet besin bulundu. Sorgu: $query");
     return List.generate(maps.length, (i) => FoodItem.fromDbMap(maps[i]));
   }
@@ -1243,10 +1245,10 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       whereArgs: [id],
     );
     if (maps.isNotEmpty) {
-      print("[DB Service] getFoodItemById: ID $id için besin bulundu.");
+      debugPrint("[DB Service] getFoodItemById: ID $id için besin bulundu.");
       return FoodItem.fromDbMap(maps.first);
     }
-    print("[DB Service] getFoodItemById: ID $id için besin bulunamadı.");
+    debugPrint("[DB Service] getFoodItemById: ID $id için besin bulunamadı.");
     return null;
   }
 
@@ -1262,7 +1264,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
     } catch (e) {
-      print("FoodItem güncellenirken hata: $e");
+      debugPrint("FoodItem güncellenirken hata: $e");
       return -1;
     }
   }
@@ -1276,7 +1278,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         whereArgs: [id],
       );
     } catch (e) {
-      print("FoodItem silinirken hata: $e");
+      debugPrint("FoodItem silinirken hata: $e");
       return -1;
     }
   }
@@ -1292,7 +1294,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       logMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print("WorkoutLog eklendi: ID $workoutLogId");
+    debugPrint("WorkoutLog eklendi: ID $workoutLogId");
     return workoutLogId;
   }
 
@@ -1306,7 +1308,8 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       logMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print("ExerciseLog eklendi: ID $exerciseLogId (Workout ID: $workoutLogId)");
+    debugPrint(
+        "ExerciseLog eklendi: ID $exerciseLogId (Workout ID: $workoutLogId)");
     return exerciseLogId;
   }
 
@@ -1320,7 +1323,8 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       setMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print("WorkoutSet eklendi: ID $setId (ExerciseLog ID: $exerciseLogId)");
+    debugPrint(
+        "WorkoutSet eklendi: ID $setId (ExerciseLog ID: $exerciseLogId)");
     return setId;
   }
 
@@ -1391,14 +1395,14 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   // Placeholder for Update/Delete methods later
   Future<void> updateWorkoutLog(WorkoutLog log) async {
     // TODO: Implement update logic for log and potentially its children
-    print("updateWorkoutLog henüz implemente edilmedi.");
+    debugPrint("updateWorkoutLog henüz implemente edilmedi.");
   }
 
   Future<void> deleteWorkoutLog(int id) async {
     final db = await database;
     // Deleting a workout log should cascade delete exercise logs and workout sets
     await db.delete('workout_logs', where: 'id = ?', whereArgs: [id]);
-    print("WorkoutLog silindi (ve ilişkili kayıtlar): ID $id");
+    debugPrint("WorkoutLog silindi (ve ilişkili kayıtlar): ID $id");
   }
 
   // --- End Workout Logging Methods ---
@@ -1443,7 +1447,8 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       conflictAlgorithm:
           ConflictAlgorithm.replace, // Eğer aynı gün varsa üzerine yaz
     );
-    print("Su kaydı eklendi/güncellendi: Tarih $startOfDay, Miktar $amountMl");
+    debugPrint(
+        "Su kaydı eklendi/güncellendi: Tarih $startOfDay, Miktar $amountMl");
   }
 
   // Belirli bir tarih aralığındaki su kayıtlarını getirir
@@ -1523,7 +1528,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         );
       }
     }
-    print("Beslenme özeti getirildi: ${results.length} gün");
+    debugPrint("Beslenme özeti getirildi: ${results.length} gün");
     return results;
   }
 
@@ -1536,7 +1541,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
-    print("Workout Logs tablosu oluşturuldu.");
+    debugPrint("Workout Logs tablosu oluşturuldu.");
 
     await db.execute("""
       CREATE TABLE IF NOT EXISTS exercise_logs(
@@ -1548,7 +1553,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         FOREIGN KEY (exerciseId) REFERENCES exercises (id) ON DELETE CASCADE
       )
     """);
-    print("Exercise Logs tablosu oluşturuldu.");
+    debugPrint("Exercise Logs tablosu oluşturuldu.");
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS workout_sets(
@@ -1560,11 +1565,11 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         FOREIGN KEY (exerciseLogId) REFERENCES exercise_logs (id) ON DELETE CASCADE
       )
     ''');
-    print("Workout Sets tablosu oluşturuldu.");
+    debugPrint("Workout Sets tablosu oluşturuldu.");
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print("Veritabanı yükseltiliyor: $oldVersion -> $newVersion");
+    debugPrint("Veritabanı yükseltiliyor: $oldVersion -> $newVersion");
     var batch = db.batch();
 
     // Önceki versiyonlardan gelen yükseltmeleri burada yönetebilirsiniz.
@@ -1576,26 +1581,26 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       try {
         batch.execute(
             'ALTER TABLE meals ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
-        print("Meals tablosuna userId sütunu eklendi.");
+        debugPrint("Meals tablosuna userId sütunu eklendi.");
       } catch (e) {
-        print(
+        debugPrint(
             "Meals tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
       try {
         batch.execute(
             'ALTER TABLE water_log ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
-        print("Water Log tablosuna userId sütunu eklendi.");
+        debugPrint("Water Log tablosuna userId sütunu eklendi.");
       } catch (e) {
-        print(
+        debugPrint(
             "Water Log tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
     if (oldVersion < 18) {
       try {
         batch.execute('ALTER TABLE users ADD COLUMN gender TEXT');
-        print("Users tablosuna gender sütunu eklendi.");
+        debugPrint("Users tablosuna gender sütunu eklendi.");
       } catch (e) {
-        print(
+        debugPrint(
             "Users tablosuna gender sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
@@ -1604,9 +1609,9 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       try {
         batch.execute(
             'ALTER TABLE users ADD COLUMN autoCalculateNutrition INTEGER DEFAULT 0');
-        print("Users tablosuna autoCalculateNutrition sütunu eklendi.");
+        debugPrint("Users tablosuna autoCalculateNutrition sütunu eklendi.");
       } catch (e) {
-        print(
+        debugPrint(
             "Users tablosuna autoCalculateNutrition sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
@@ -1615,12 +1620,13 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       try {
         batch.execute(
             'ALTER TABLE chat_conversations ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
-        print("chat_conversations tablosuna userId sütunu eklendi (upgrade).");
+        debugPrint(
+            "chat_conversations tablosuna userId sütunu eklendi (upgrade).");
         // Opsiyonel: Mevcut sahipsiz konuşmaları ilk kullanıcıya ata
         // batch.execute('UPDATE chat_conversations SET userId = (SELECT id FROM users ORDER BY id ASC LIMIT 1) WHERE userId IS NULL');
-        // print("Sahipsiz konuşmalar ilk kullanıcıya atandı (upgrade).");
+        // debugPrint("Sahipsiz konuşmalar ilk kullanıcıya atandı (upgrade).");
       } catch (e) {
-        print(
+        debugPrint(
             "chat_conversations tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
@@ -1629,10 +1635,10 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       try {
         batch.execute(
             'ALTER TABLE users ADD COLUMN currentDailyWaterIntake REAL DEFAULT 0.0');
-        print(
+        debugPrint(
             "Users tablosuna currentDailyWaterIntake sütunu eklendi (upgrade v21).");
       } catch (e) {
-        print(
+        debugPrint(
             "Users tablosuna currentDailyWaterIntake sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
@@ -1640,9 +1646,9 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     if (oldVersion < 22) {
       try {
         batch.execute('ALTER TABLE foods ADD COLUMN keywords TEXT');
-        print("Foods tablosuna keywords sütunu eklendi (upgrade v22).");
+        debugPrint("Foods tablosuna keywords sütunu eklendi (upgrade v22).");
       } catch (e) {
-        print(
+        debugPrint(
             "Foods tablosuna keywords sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
@@ -1651,9 +1657,9 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       try {
         batch.execute(
             'ALTER TABLE activities ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
-        print("Activities tablosuna userId sütunu eklendi (upgrade v23).");
+        debugPrint("Activities tablosuna userId sütunu eklendi (upgrade v23).");
       } catch (e) {
-        print(
+        debugPrint(
             "Activities tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
@@ -1662,16 +1668,16 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       try {
         batch.execute(
             'ALTER TABLE activities ADD COLUMN isFromProgram INTEGER DEFAULT 0');
-        print(
+        debugPrint(
             "Activities tablosuna isFromProgram sütunu eklendi (upgrade v24).");
       } catch (e) {
-        print(
+        debugPrint(
             "Activities tablosuna isFromProgram sütunu eklenirken hata (zaten olabilir): $e");
       }
     }
 
     await batch.commit();
-    print("Veritabanı yükseltme tamamlandı.");
+    debugPrint("Veritabanı yükseltme tamamlandı.");
   }
 
   Future<void> deleteChatMessage(int id) async {
@@ -1692,7 +1698,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       where: 'id = ?',
       whereArgs: [id],
     );
-    print("[DatabaseService] Conversation title updated for id: $id");
+    debugPrint("[DatabaseService] Conversation title updated for id: $id");
   }
 
   // YENİ: Veritabanındaki ilk kullanıcıyı ID'ye göre getirir
@@ -1706,7 +1712,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       );
 
       if (maps.isNotEmpty) {
-        print(
+        debugPrint(
             "[DB] İlk kullanıcı getirildi, ID: ${maps.first['id']}, Veri: ${maps.first}");
         final userMap = Map<String, dynamic>.from(maps.first);
         // YENİ: DB'den null gelebilen autoCalculateNutrition için kontrol
@@ -1717,11 +1723,11 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         user.weightHistory = weightHistory;
         return user;
       } else {
-        print("[DB] Veritabanında kullanıcı bulunamadı.");
+        debugPrint("[DB] Veritabanında kullanıcı bulunamadı.");
         return null;
       }
     } catch (e) {
-      print("[DB] getFirstUser hatası (muhtemelen tablo yok): $e");
+      debugPrint("[DB] getFirstUser hatası (muhtemelen tablo yok): $e");
       // Genellikle uygulama ilk kez çalıştığında veya veritabanı silindiğinde bu hata alınabilir.
       return null;
     }
@@ -1761,16 +1767,393 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
         results[date] = (map['totalDuration'] as num?)?.toInt() ?? 0;
       }
     }
-    print("Günlük aktivite özeti getirildi: ${results.length} gün");
+    debugPrint("Günlük aktivite özeti getirildi: ${results.length} gün");
     return results;
   }
 
-  // Besin arama fonksiyonu - Firebase devre dışıyken de çalışacak
+  // Besin arama fonksiyonu - Firebase'i dener, başarısızsa SQLite kullanır
   Future<List<FoodItem>> searchFoodItems(String query, {int? limit}) async {
-    // Firebase devre dışı olduğunda SQLite'dan arama yap
-    print("Firebase devre dışı, SQLite'dan besin aranıyor: $query");
+    debugPrint("🔍 Food search başlatıldı: '$query'");
+    debugPrint("📋 DatabaseService.searchFoodItems çağrılıyor...");
+
+    try {
+      // Önce Firebase'den denemeyi dene
+      debugPrint("🔥 Firebase'den besin aranıyor...");
+
+      // Eğer query boşsa tüm besinleri getir, değilse ara
+      late QuerySnapshot<Map<String, dynamic>> firebaseFoods;
+      if (query.isEmpty) {
+        debugPrint("📋 Tüm besinler getiriliyor (query boş)...");
+        firebaseFoods = await _firestore
+            .collection('foods')
+            .limit(limit ?? 500) // Daha yüksek limit
+            .get();
+      } else {
+        debugPrint("🔍 Besin aranıyor: '$query'");
+        // name field'ına göre arama yap (name_lowercase olmayabilir)
+        firebaseFoods = await _firestore
+            .collection('foods')
+            .where('name', isGreaterThanOrEqualTo: query)
+            .where('name', isLessThan: query + '\uf8ff')
+            .limit(limit ?? 200)
+            .get();
+      }
+
+      if (firebaseFoods.docs.isNotEmpty) {
+        debugPrint(
+            "🎉 Firebase'den ${firebaseFoods.docs.length} besin bulundu!");
+
+        List<FoodItem> foods = [];
+        Set<String> seenNames = {}; // Duplicate kontrolü için
+
+        for (var doc in firebaseFoods.docs) {
+          try {
+            final data = doc.data();
+            final name = (data['name'] ?? '').toString().trim();
+
+            // Boş isimli besinleri atla
+            if (name.isEmpty) {
+              debugPrint("⚠️ Boş isimli besin atlandı (ID: ${doc.id})");
+              continue;
+            }
+
+            // Duplicate kontrolü (case insensitive)
+            final normalizedName = name.toLowerCase();
+            if (seenNames.contains(normalizedName)) {
+              debugPrint("⚠️ Duplicate besin atlandı: '$name' (ID: ${doc.id})");
+              continue;
+            }
+
+            seenNames.add(normalizedName);
+
+            final food = FoodItem(
+              id: doc.id,
+              name: name,
+              category: data['category'] ?? '',
+              servingSizeG: (data['servingSizeG'] ?? 0).toDouble(),
+              caloriesKcal: (data['caloriesKcal'] ?? 0).toDouble(),
+              proteinG: (data['proteinG'] ?? 0).toDouble(),
+              carbsG: (data['carbsG'] ?? 0).toDouble(),
+              fatG: (data['fatG'] ?? 0).toDouble(),
+              isCustom: false, // Firebase'den geliyorsa özel değil
+            );
+            foods.add(food);
+          } catch (e) {
+            debugPrint("⚠️ Firebase besin parse hatası: $e");
+          }
+        }
+
+        debugPrint(
+            "✅ Firebase search sonucu: ${foods.length} besin döndürülüyor");
+        return foods;
+      } else {
+        debugPrint("⚡ Firebase'de besin bulunamadı, SQLite'a geçiliyor...");
+      }
+    } catch (e) {
+      debugPrint("❌ Firebase besin arama hatası: $e");
+      debugPrint("🔄 SQLite'a geçiliyor...");
+    }
+
+    // Firebase başarısız olursa SQLite kullan
+    debugPrint("💾 SQLite'dan besin aranıyor...");
+
+    // Önce duplicate'leri temizle
+    await cleanDuplicateFoods();
+
+    // Sonra SQLite'da besin var mı kontrol et, yoksa varsayılanları ekle
+    await _ensureDefaultFoodsExist();
+
     return getFoodItems(
         query: query, limit: limit); // getFoodItems zaten SQLite kullanıyor
+  }
+
+  // YENİ: GÜÇLÜ Duplicate besinleri temizle
+  Future<void> cleanDuplicateFoods() async {
+    try {
+      debugPrint("🧹 GÜÇLÜ Duplicate besinler temizleniyor...");
+      final db = await database;
+
+      // Önce toplam besin sayısını göster
+      final beforeCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM foods');
+      final beforeTotal = beforeCount.first['count'] as int;
+      debugPrint("📊 Temizlik öncesi toplam besin: $beforeTotal");
+
+      // 1. Tam aynı isime sahip besinleri bul
+      final duplicates = await db.rawQuery('''
+        SELECT name, COUNT(*) as count 
+        FROM foods 
+        GROUP BY name 
+        HAVING COUNT(*) > 1
+        ORDER BY COUNT(*) DESC
+      ''');
+
+      debugPrint("📊 ${duplicates.length} adet duplicate besin grubu bulundu:");
+
+      int totalDeleted = 0;
+      for (var duplicate in duplicates) {
+        final name = duplicate['name'] as String;
+        final count = duplicate['count'] as int;
+
+        debugPrint(
+            "🔍 '$name' besininden $count adet var, duplicateler siliniyor...");
+
+        // Bu besinle ilgili tüm kayıtları göster
+        final allRecords =
+            await db.query('foods', where: 'name = ?', whereArgs: [name]);
+        debugPrint("   📋 Mevcut kayıtlar:");
+        for (var record in allRecords) {
+          debugPrint(
+              "   - ID: ${record['id']}, Kategori: ${record['category']}, Kalori: ${record['caloriesKcal']}");
+        }
+
+        // En son eklenen (en büyük ID) hariç hepsini sil
+        final deletedCount = await db.rawDelete('''
+          DELETE FROM foods 
+          WHERE name = ? AND id NOT IN (
+            SELECT id FROM foods 
+            WHERE name = ? 
+            ORDER BY id DESC 
+            LIMIT 1
+          )
+        ''', [name, name]);
+
+        totalDeleted += deletedCount;
+        debugPrint("   ✅ $deletedCount adet duplicate silindi");
+      }
+
+      // 2. Benzer isimleri kontrol et (trim, case insensitive)
+      debugPrint("🔍 Benzer isimli besinler kontrol ediliyor...");
+      final allFoods = await db.query('foods', orderBy: 'name');
+
+      Map<String, List<Map<String, dynamic>>> groupedFoods = {};
+      for (var food in allFoods) {
+        String normalizedName = (food['name'] as String).trim().toLowerCase();
+        if (!groupedFoods.containsKey(normalizedName)) {
+          groupedFoods[normalizedName] = [];
+        }
+        groupedFoods[normalizedName]!.add(food);
+      }
+
+      // Benzer isimlerde duplicate olanları temizle
+      for (var entry in groupedFoods.entries) {
+        if (entry.value.length > 1) {
+          debugPrint(
+              "⚠️  Benzer isim grubu '${entry.key}': ${entry.value.length} adet");
+          for (var food in entry.value) {
+            debugPrint("   - '${food['name']}' (ID: ${food['id']})");
+          }
+
+          // En yüksek ID'li olanı koru, diğerlerini sil
+          entry.value
+              .sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+          for (int i = 1; i < entry.value.length; i++) {
+            await db.delete('foods',
+                where: 'id = ?', whereArgs: [entry.value[i]['id']]);
+            totalDeleted++;
+            debugPrint(
+                "   ✅ '${entry.value[i]['name']}' (ID: ${entry.value[i]['id']}) silindi");
+          }
+        }
+      }
+
+      // Son kontrolü
+      final afterCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM foods');
+      final afterTotal = afterCount.first['count'] as int;
+
+      debugPrint("✅ GÜÇLÜ Duplicate temizleme tamamlandı!");
+      debugPrint("📊 Önceki toplam: $beforeTotal besin");
+      debugPrint("📊 Sonraki toplam: $afterTotal besin");
+      debugPrint("🗑️  Toplam silinen: $totalDeleted besin");
+    } catch (e) {
+      debugPrint("❌ Duplicate temizleme hatası: $e");
+    }
+  }
+
+  // YENİ: SQLite'da varsayılan besinlerin var olduğundan emin olur
+  Future<void> _ensureDefaultFoodsExist() async {
+    try {
+      debugPrint("🍎 SQLite foods tablosu kontrol ediliyor...");
+
+      // Sadece empty kontrolü değil, toplam besin sayısını kontrol et
+      final db = await database;
+      final countResult =
+          await db.rawQuery('SELECT COUNT(*) as count FROM foods');
+      final totalFoods = countResult.first['count'] as int;
+
+      debugPrint("📊 SQLite'da toplam $totalFoods besin var");
+
+      if (totalFoods < 8) {
+        debugPrint(
+            "📥 SQLite'da yeterli besin yok ($totalFoods < 8), yeni besinler ekleniyor...");
+        await _addDefaultFoodsToSQLite();
+      } else {
+        debugPrint("✅ SQLite'da yeterli besin var ($totalFoods >= 8)");
+      }
+    } catch (e) {
+      debugPrint("❌ SQLite food tablosu kontrol edilirken hata: $e");
+    }
+  }
+
+  // YENİ: SQLite'a varsayılan besinleri ekler
+  Future<void> _addDefaultFoodsToSQLite() async {
+    try {
+      debugPrint("🔄 SQLite'a varsayılan besinler ekleniyor...");
+      final db = await database;
+
+      // Önce mevcut besin sayısını kontrol et
+      final existingCount =
+          await db.rawQuery('SELECT COUNT(*) as count FROM foods');
+      final count = existingCount.first['count'] as int;
+
+      debugPrint(
+          "📝 SQLite foods tablosuna eksik besinler ekleniyor... (Mevcut: $count)");
+
+      var batch = db.batch();
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      // Eklenecek besinlerin listesi
+      final defaultFoods = [
+        {
+          'name': 'Tavuk Göğsü',
+          'name_lowercase': 'tavuk göğsü',
+          'category': 'Protein',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 165.0,
+          'proteinG': 31.0,
+          'carbsG': 0.0,
+          'fatG': 3.6,
+          'keywords': 'tavuk,protein,et,beyaz et',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Pirinç',
+          'name_lowercase': 'pirinç',
+          'category': 'Karbonhidrat',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 130.0,
+          'proteinG': 2.7,
+          'carbsG': 28.0,
+          'fatG': 0.3,
+          'keywords': 'pirinç,karbonhidrat,tahıl',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Yumurta',
+          'name_lowercase': 'yumurta',
+          'category': 'Protein',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 155.0,
+          'proteinG': 13.0,
+          'carbsG': 1.1,
+          'fatG': 11.0,
+          'keywords': 'yumurta,protein,kahvaltı',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Brokoli',
+          'name_lowercase': 'brokoli',
+          'category': 'Sebze',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 34.0,
+          'proteinG': 2.8,
+          'carbsG': 7.0,
+          'fatG': 0.4,
+          'keywords': 'brokoli,sebze,yeşil',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Elma',
+          'name_lowercase': 'elma',
+          'category': 'Meyve',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 52.0,
+          'proteinG': 0.3,
+          'carbsG': 14.0,
+          'fatG': 0.2,
+          'keywords': 'elma,meyve,tatlı',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Makarna',
+          'name_lowercase': 'makarna',
+          'category': 'Karbonhidrat',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 131.0,
+          'proteinG': 5.0,
+          'carbsG': 25.0,
+          'fatG': 1.1,
+          'keywords': 'makarna,karbonhidrat,spagetti',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Muz',
+          'name_lowercase': 'muz',
+          'category': 'Meyve',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 89.0,
+          'proteinG': 1.1,
+          'carbsG': 23.0,
+          'fatG': 0.3,
+          'keywords': 'muz,meyve,potasyum',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+        {
+          'name': 'Yoğurt',
+          'name_lowercase': 'yoğurt',
+          'category': 'Süt Ürünü',
+          'servingSizeG': 100.0,
+          'caloriesKcal': 59.0,
+          'proteinG': 10.0,
+          'carbsG': 3.6,
+          'fatG': 0.4,
+          'keywords': 'yoğurt,süt ürünü,probiyotik',
+          'isCustom': 0,
+          'createdAt': now,
+        },
+      ];
+
+      int addedCount = 0;
+
+      // Her besin için duplicate check yap
+      for (final food in defaultFoods) {
+        final existingFood = await db.query('foods',
+            where: 'name = ?', whereArgs: [food['name']], limit: 1);
+
+        if (existingFood.isEmpty) {
+          batch.insert('foods', food);
+          addedCount++;
+          debugPrint("➕ ${food['name']} ekleniyor");
+        } else {
+          debugPrint("⏭️ ${food['name']} zaten var, atlanıyor");
+        }
+      }
+
+      await batch.commit(noResult: true);
+
+      // Kontrol et
+      final newCount = await db.rawQuery('SELECT COUNT(*) as count FROM foods');
+      final totalCount = newCount.first['count'] as int;
+
+      debugPrint("📥 SQLite'a $addedCount besin başarıyla eklendi!");
+      debugPrint("📊 Toplam besin sayısı: $totalCount");
+
+      // Test sorgusu
+      final testResults = await db.query('foods', limit: 5);
+      debugPrint(
+          "🧪 Test: İlk 5 besin: ${testResults.map((r) => r['name']).join(', ')}");
+    } catch (e, stackTrace) {
+      debugPrint("❌ SQLite varsayılan besin ekleme hatası: $e");
+      debugPrint("Stack trace: $stackTrace");
+    }
   }
 
   Future<void> updateChatConversationLastActivity(int id) async {
@@ -1782,7 +2165,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       where: 'id = ?',
       whereArgs: [id],
     );
-    print("Konuşmanın son aktivite zamanı güncellendi: $id, $now");
+    debugPrint("Konuşmanın son aktivite zamanı güncellendi: $id, $now");
   }
 
   /// Belirli bir kullanıcıya ait tüm konuşmaları ve ilgili mesajları siler.
@@ -1797,7 +2180,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     );
 
     if (conversationMaps.isEmpty) {
-      print("Kullanıcı ID $userId için silinecek konuşma bulunamadı.");
+      debugPrint("Kullanıcı ID $userId için silinecek konuşma bulunamadı.");
       return;
     }
 
@@ -1822,21 +2205,21 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     );
 
     await batch.commit(noResult: true);
-    print("Kullanıcı ID $userId için tüm konuşmalar ve mesajlar silindi.");
+    debugPrint("Kullanıcı ID $userId için tüm konuşmalar ve mesajlar silindi.");
   }
 
   // Firestore için besin kopyalama metodu - şimdilik kullanılmıyor
   Future<void> cloneFirestoreFood(
       String sourceFoodId, Map<String, dynamic> updatedData) async {
     // Firebase şimdilik kullanılmıyor
-    print("Firebase devre dışı: cloneFirestoreFood çalıştırılmadı");
+    debugPrint("Firebase devre dışı: cloneFirestoreFood çalıştırılmadı");
     return;
   }
 
   // Firestore yeni besin ekleme - şimdilik kullanılmıyor
   Future<String?> addFirestoreFood(FoodItem food) async {
     // Firebase şimdilik kullanılmıyor
-    print("Firebase devre dışı: addFirestoreFood çalıştırılmadı");
+    debugPrint("Firebase devre dışı: addFirestoreFood çalıştırılmadı");
     return null;
   }
 
@@ -1845,14 +2228,15 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   // Besin veritabanını Firestore'a aktarır (ÇOK SAYIDA YAZMA - DİKKAT!)
   Future<void> importFoodDatabaseFromAsset(String assetPath) async {
     // Firebase şimdilik kullanılmıyor
-    print("Firebase devre dışı: importFoodDatabaseFromAsset çalıştırılmadı");
+    debugPrint(
+        "Firebase devre dışı: importFoodDatabaseFromAsset çalıştırılmadı");
     return;
   }
 
   // Toplu besin eklemesi (Batch ile)
   Future<void> addFoodsBatch(List<Map<String, dynamic>> foods) async {
     // Firebase şimdilik kullanılmıyor
-    print("Firebase devre dışı: addFoodsBatch çalıştırılmadı");
+    debugPrint("Firebase devre dışı: addFoodsBatch çalıştırılmadı");
     return;
   }
 
@@ -1860,7 +2244,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   Future<List<FoodItem>> searchFirestoreFoods(String query,
       {int limit = 20}) async {
     // Firebase şimdilik kullanılmıyor
-    print("Firebase devre dışı: searchFirestoreFoods çalıştırılmadı");
+    debugPrint("Firebase devre dışı: searchFirestoreFoods çalıştırılmadı");
     return [];
   }
 
@@ -1872,7 +2256,7 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
   // Firebase ile besin öğesi ekleme/güncelleme - şimdilik devre dışı
   Future<void> addOrUpdateFoodItem(FoodItem food) async {
     // Firebase şimdilik kullanılmıyor
-    print("Firebase devre dışı: addOrUpdateFoodItem çalıştırılmadı");
+    debugPrint("Firebase devre dışı: addOrUpdateFoodItem çalıştırılmadı");
     return;
   }
 } // DatabaseService sınıfının kapanış parantezi

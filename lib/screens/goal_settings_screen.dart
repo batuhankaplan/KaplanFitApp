@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart'; // UserProvider'a erişim için eklendi
 import '../utils/animations.dart'; // Animasyonlar için eklendi (gerekirse)
@@ -9,7 +10,7 @@ import '../services/database_service.dart'; // DatabaseService'e erişim için e
 import '../providers/gamification_provider.dart'; // GamificationProvider importu
 
 class GoalSettingsScreen extends StatefulWidget {
-  const GoalSettingsScreen({Key? key}) : super(key: key);
+  const GoalSettingsScreen({super.key}) ;
 
   @override
   State<GoalSettingsScreen> createState() => _GoalSettingsScreenState();
@@ -160,8 +161,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         // _isLoading = false; // build içinde Consumer yönetiyor
       });
     }
-    print(
-        "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=${_selectedActivityLevel}, Gender=${_selectedGender}, WeeklyGoal=${_selectedWeeklyGoal}, AutoCalc=${_autoCalculateNutrition}");
+    debugPrint(
+        "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=$_selectedActivityLevel, Gender=$_selectedGender, WeeklyGoal=$_selectedWeeklyGoal, AutoCalc=$_autoCalculateNutrition");
   }
 
   // YENİ: BMI Hesaplama ve Gösterme Fonksiyonu (State Güncellemesi ile)
@@ -260,7 +261,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
       }
     }
-    print("[GoalSettings] BMR Hesaplandı: $bmr"); // Debug log
+    debugPrint("[GoalSettings] BMR Hesaplandı: $bmr"); // Debug log
     return bmr;
   }
 
@@ -290,7 +291,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         break;
     }
     double tdee = bmr * activityMultiplier;
-    print(
+    debugPrint(
         "[GoalSettings] TDEE Hesaplandı: $tdee (BMR: $bmr, Multiplier: $activityMultiplier)"); // Debug log
     return tdee;
   }
@@ -310,10 +311,10 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     if ((_selectedGender == 'Erkek' && targetCalories < 1500) ||
         (_selectedGender == 'Kadın' && targetCalories < 1200)) {
       targetCalories = _selectedGender == 'Erkek' ? 1500 : 1200;
-      print(
+      debugPrint(
           "[GoalSettings] Minimum kalori limitine ulaşıldı: $targetCalories"); // Debug log
     }
-    print(
+    debugPrint(
         "[GoalSettings] Hedef Kalori Hesaplandı: $targetCalories (TDEE: $tdee, Adjustment: $dailyCalorieAdjustment)"); // Debug log
     return targetCalories;
   }
@@ -331,7 +332,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                   'Hesaplama için boy, kilo, yaş ve cinsiyet bilgilerinizi kontrol edin')),
         );
       }
-      print("[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0");
+      debugPrint("[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0");
       return;
     }
 
@@ -344,7 +345,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         _proteinController.text = macros['protein']!.round().toString();
         _carbsController.text = macros['carbs']!.round().toString();
         _fatController.text = macros['fat']!.round().toString();
-        print(
+        debugPrint(
             "[GoalSettings] Otomatik hesaplama tamamlandı ve alanlar güncellendi.");
       });
     }
@@ -363,7 +364,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     double weight = double.tryParse(_weightController.text) ?? 0;
 
     if (targetCalories <= 0 || weight <= 0) {
-      print(
+      debugPrint(
           "[GoalSettings] Makro hesaplama için geçersiz girdi (Kalori: $targetCalories, Kilo: $weight)");
       return {'protein': 0, 'carbs': 0, 'fat': 0};
     }
@@ -378,11 +379,11 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     double carbGrams = carbCalories / 4;
 
     if (carbGrams < 0) {
-      print("[GoalSettings] Karbonhidrat negatif çıktı, 0\'a ayarlanıyor.");
+      debugPrint("[GoalSettings] Karbonhidrat negatif çıktı, 0\'a ayarlanıyor.");
       carbGrams = 0;
     }
 
-    print(
+    debugPrint(
         "[GoalSettings] Makrolar Hesaplandı: P: ${proteinGrams.round()}g, C: ${carbGrams.round()}g, F: ${fatGrams.round()}g");
     return {
       'protein': proteinGrams,
@@ -444,11 +445,11 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             // Şimdilik, user null ise veya _isInitialLoad true ise yükleme gösterelim.
             if (_isInitialLoad && user == null) {
               // userProvider.isLoading yerine _isInitialLoad
-              print(
+              debugPrint(
                   "[GoalSettings Build] İlk yükleme veya kullanıcı null, yükleniyor...");
               return const Center(child: CircularProgressIndicator());
             } else if (user == null && !_isInitialLoad) {
-              print(
+              debugPrint(
                   "[GoalSettings Build] Kullanıcı null ve ilk yükleme değil, profil oluşturmaya yönlendirilebilir veya hata mesajı gösterilebilir.");
               // return Center(child: Text("Kullanıcı bulunamadı. Lütfen profil oluşturun."));
               // Bu durumda SplashScreen'e geri dönmek veya bir hata mesajı göstermek daha iyi olabilir.
@@ -456,7 +457,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               return _buildFormContent(
                   isDarkMode, null); // Kullanıcı null olsa da formu göster
             } else {
-              print(
+              debugPrint(
                   "[GoalSettings Build] Kullanıcı yüklendi veya form gösteriliyor.");
               return _buildFormContent(isDarkMode, user);
             }
@@ -646,14 +647,12 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             const SizedBox(height: 16),
             // YENİ BMI GÖSTERİMİ
             if (_currentBmiValue > 0)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
+              Container(width: double.infinity, padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: bmiColor.withOpacity(0.1),
+                  color: bmiColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: bmiColor.withOpacity(0.5), width: 1),
+                      Border.all(color: bmiColor.withValues(alpha:0.5), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -820,7 +819,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withOpacity(0.1),
+                color: AppTheme.infoColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -928,7 +927,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                       _weeklyActivityGoalController.text = '300';
                     _autoCalculateNutritionTargets();
                   }
-                  print("[GoalSettings] Aktivite Seviyesi değişti: $newValue");
+                  debugPrint("[GoalSettings] Aktivite Seviyesi değişti: $newValue");
                 });
               },
               isExpanded: true,
@@ -937,7 +936,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withOpacity(0.1),
+                color: AppTheme.infoColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1028,7 +1027,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color: AppTheme.infoColor.withOpacity(0.1),
+                    color: AppTheme.infoColor.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(8)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1093,11 +1092,11 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDarkMode
-                      ? AppTheme.primaryColor.withOpacity(0.1)
-                      : AppTheme.primaryColor.withOpacity(0.05),
+                      ? AppTheme.primaryColor.withValues(alpha:0.1)
+                      : AppTheme.primaryColor.withValues(alpha:0.05),
                   borderRadius: BorderRadius.circular(12),
                   border:
-                      Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                      Border.all(color: AppTheme.primaryColor.withValues(alpha:0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1151,7 +1150,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         });
       }
     } catch (e) {
-      print("Haftalık hedef hesaplama hatası: $e");
+      debugPrint("Haftalık hedef hesaplama hatası: $e");
     }
   }
 
@@ -1207,15 +1206,15 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         // lastWeightUpdate, updateUser içinde otomatik olarak güncelleniyor
       );
 
-      print("[GoalSettings] Hedefler kaydediliyor...");
-      print(
+      debugPrint("[GoalSettings] Hedefler kaydediliyor...");
+      debugPrint(
           "[GoalSettings] Kaydedilecek Kullanıcı Verisi: ${updatedUser.toMap()}");
 
       await userProvider.saveUser(updatedUser);
 
       // Kilo verme rozetlerini kontrol et
       await gamificationProvider.checkWeightLossBadges(currentUser.id!);
-      print("[GoalSettings] Kilo verme rozetleri kontrol edildi.");
+      debugPrint("[GoalSettings] Kilo verme rozetleri kontrol edildi.");
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1225,7 +1224,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         // Navigator.of(context).pop();
       }
     } catch (e) {
-      print("[GoalSettings] Hedefler kaydedilirken hata: $e");
+      debugPrint("[GoalSettings] Hedefler kaydedilirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Hedefler kaydedilirken bir hata oluştu: $e')),
@@ -1236,7 +1235,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         setState(() {
           _isLoading = false;
         });
-        print("[GoalSettings] Kaydetme işlemi tamamlandı (finally bloğu).");
+        debugPrint("[GoalSettings] Kaydetme işlemi tamamlandı (finally bloğu).");
       }
     }
   }
@@ -1247,3 +1246,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
 // UserModelGender extension KALDIRILDI, UserModel içinde gender zaten var varsayılıyor.
 // Eğer UserModel'de gender yoksa, UserModel tanımına eklenmeli.
 // Varsayılan olarak UserModel'de String? gender; olduğu kabul edildi.
+
+
+

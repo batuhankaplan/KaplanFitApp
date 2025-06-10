@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/program_model.dart';
 import '../models/program_set.dart';
 import '../services/exercise_service.dart';
@@ -36,18 +36,18 @@ class ProgramService extends ChangeNotifier {
   // Programı SharedPreferences'tan yükle
   Future<void> _loadProgram(ExerciseService exerciseService) async {
     try {
-      print("[ProgramService][_loadProgram] Program yükleniyor...");
+      debugPrint("[ProgramService][_loadProgram] Program yükleniyor...");
       final prefs = await SharedPreferences.getInstance();
       final programJson = prefs.getString(_programKey);
 
       // Eğer kayıtlı program yoksa varsayılan programı oluştur
       if (programJson == null) {
-        print(
+        debugPrint(
             "[ProgramService][_loadProgram] Kayıtlı program bulunamadı, varsayılan oluşturuluyor...");
         await _createDefaultProgram(exerciseService);
         await _saveProgram();
       } else {
-        print(
+        debugPrint(
             "[ProgramService][_loadProgram] Kayıtlı program bulundu, yükleniyor...");
         // Kayıtlı programı yükle ve ID'leri kontrol et/ata
         final programMap = json.decode(programJson);
@@ -58,17 +58,17 @@ class ProgramService extends ChangeNotifier {
           DailyProgram dailyProgram = DailyProgram.fromJson(dailyJson);
 
           // ID'leri kontrol et ve gerekirse ata (eski verilerle uyumluluk için)
-          dailyProgram.morningExercise.id ??= '${dayName}_morning';
-          dailyProgram.lunch.id ??= '${dayName}_lunch';
-          dailyProgram.eveningExercise.id ??= '${dayName}_evening';
-          dailyProgram.dinner.id ??= '${dayName}_dinner';
+          dailyProgram.morningExercise.id ??= '${dailyProgram.dayName}_morning';
+          dailyProgram.lunch.id ??= '${dailyProgram.dayName}_lunch';
+          dailyProgram.eveningExercise.id ??= '${dailyProgram.dayName}_evening';
+          dailyProgram.dinner.id ??= '${dailyProgram.dayName}_dinner';
           return dailyProgram;
         }).toList();
-        print(
+        debugPrint(
             "[ProgramService][_loadProgram] Kayıtlı program başarıyla yüklendi. ${_workoutPrograms.length} gün.");
         // Yüklenen ilk günün detayını logla (kontrol için)
         if (_workoutPrograms.isNotEmpty) {
-          print(
+          debugPrint(
               "[ProgramService][_loadProgram] Yüklenen ilk gün (${_workoutPrograms.first.dayName}): ${_workoutPrograms.first.toJson()}");
         }
 
@@ -79,16 +79,16 @@ class ProgramService extends ChangeNotifier {
           _unassignedCategories = categoriesJson
               .map((json) => ProgramItem.fromJson(json as Map<String, dynamic>))
               .toList();
-          print(
+          debugPrint(
               "[ProgramService][_loadProgram] Atanmamış ${_unassignedCategories.length} kategori yüklendi.");
         } else {
           _unassignedCategories = []; // Veri yoksa boş liste
         }
       }
     } catch (e, stackTrace) {
-      print(
+      debugPrint(
           '[ProgramService][_loadProgram] Program yüklenirken HATA: $e\n$stackTrace');
-      print(
+      debugPrint(
           "[ProgramService][_loadProgram] Hata nedeniyle varsayılan program oluşturuluyor...");
       await _createDefaultProgram(exerciseService);
       await _saveProgram(); // Hata durumunda da varsayılanı kaydet
@@ -99,7 +99,7 @@ class ProgramService extends ChangeNotifier {
   // Programı SharedPreferences'a kaydet
   Future<void> _saveProgram() async {
     try {
-      print(
+      debugPrint(
           "[ProgramService][_saveProgram] Program SharedPreferences'a kaydediliyor...");
       final prefs = await SharedPreferences.getInstance();
       final programMap = {
@@ -114,16 +114,17 @@ class ProgramService extends ChangeNotifier {
           .expand((dp) => [dp.morningExercise, dp.eveningExercise])
           .firstWhereOrNull((pi) => pi.type == ProgramItemType.workout);
       if (firstWorkoutItem != null) {
-        print(
+        debugPrint(
             "[ProgramService][_saveProgram] Saving first workout item: ID=${firstWorkoutItem.id}, Title='${firstWorkoutItem.title}', SetsCount=${firstWorkoutItem.programSets?.length}");
       } else {
-        print(
+        debugPrint(
             "[ProgramService][_saveProgram] No workout items found to log details.");
       }
       await prefs.setString(_programKey, json.encode(programMap));
-      print("[ProgramService][_saveProgram] Program başarıyla kaydedildi.");
+      debugPrint(
+          "[ProgramService][_saveProgram] Program başarıyla kaydedildi.");
     } catch (e, stackTrace) {
-      print(
+      debugPrint(
           '[ProgramService][_saveProgram] Program kaydedilirken HATA: $e\n$stackTrace');
     }
     notifyListeners();
@@ -131,7 +132,8 @@ class ProgramService extends ChangeNotifier {
 
   /// Varsayılan haftalık programı oluştur
   Future<void> _createDefaultProgram(ExerciseService exerciseService) async {
-    print("[ProgramService] Varsayılan program oluşturma işlemi başladı...");
+    debugPrint(
+        "[ProgramService] Varsayılan program oluşturma işlemi başladı...");
     final List<String> weekDays = [
       'Pazartesi',
       'Salı',
@@ -142,13 +144,13 @@ class ProgramService extends ChangeNotifier {
       'Pazar'
     ];
 
-    print("[ProgramService] Egzersizler ExerciseService'ten alınıyor...");
+    debugPrint("[ProgramService] Egzersizler ExerciseService'ten alınıyor...");
     final allExercises = await exerciseService.getExercises();
     final Map<String, String?> exerciseIdMap = {
       for (var ex in allExercises)
         if (ex.id != null) ex.name.toLowerCase(): ex.id
     };
-    print(
+    debugPrint(
         "[ProgramService] ${allExercises.length} egzersiz bulundu ve ${exerciseIdMap.length} elemanlı ID map oluşturuldu.");
 
     String? findExerciseId(String name) {
@@ -159,10 +161,10 @@ class ProgramService extends ChangeNotifier {
       return id;
     }
 
-    print("[ProgramService] Haftalık program döngüsü başlıyor...");
+    debugPrint("[ProgramService] Haftalık program döngüsü başlıyor...");
     _workoutPrograms = List.generate(7, (index) {
       final String dayName = weekDays[index];
-      // print("[ProgramService] Gün $index ($dayName) için program oluşturuluyor..."); // Çok fazla log olabilir
+      // debugPrint("[ProgramService] Gün $index ($dayName) için program oluşturuluyor..."); // Çok fazla log olabilir
 
       // Sabit ID'leri oluştur
       final String morningId = '${dayName}_morning';
@@ -711,7 +713,7 @@ class ProgramService extends ChangeNotifier {
   /// Tüm haftalık programı al (Egzersiz detayları ile birlikte)
   Future<List<DailyProgram>> getWeeklyProgram() async {
     if (_workoutPrograms.isEmpty) {
-      print(
+      debugPrint(
           'UYARI: getWeeklyProgram çağrıldığında _workoutPrograms boştu. Initialize doğru çağrıldı mı?');
       // await initialize(_exerciseService); // Gerekirse tekrar başlat (dikkatli ol)
     }
@@ -748,7 +750,7 @@ class ProgramService extends ChangeNotifier {
     if (validExerciseIds.isEmpty) return;
 
     if (_exerciseService == null) {
-      print(
+      debugPrint(
           "HATA: _populateExerciseDetails çağrıldığında _exerciseService null.");
       return;
     }
@@ -804,7 +806,7 @@ class ProgramService extends ChangeNotifier {
   // Programı sıfırla
   Future<void> resetProgram() async {
     if (_exerciseService == null) {
-      print("Hata: ExerciseService başlatılmadan program sıfırlanamaz.");
+      debugPrint("Hata: ExerciseService başlatılmadan program sıfırlanamaz.");
       return;
     }
     await _createDefaultProgram(_exerciseService!);
@@ -823,7 +825,7 @@ class ProgramService extends ChangeNotifier {
       allItems.add(dailyProgram.eveningExercise);
       allItems.add(dailyProgram.dinner);
     }
-    print(
+    debugPrint(
         "[ProgramService][getAllProgramItems] Returning ${allItems.length} items. First item title (if exists): ${allItems.isNotEmpty ? allItems.first.title : 'N/A'}");
     return allItems;
   }
@@ -832,14 +834,14 @@ class ProgramService extends ChangeNotifier {
   /// ID'nin formatı '{dayName}_{type}' şeklinde olmalıdır (örn: 'Pazartesi_morning').
   Future<void> updateProgramItem(ProgramItem updatedItem) async {
     if (updatedItem.id == null) {
-      print("[ProgramService] Hata: Güncellenecek item ID'si null.");
+      debugPrint("[ProgramService] Hata: Güncellenecek item ID'si null.");
       return;
     }
 
     // ID'den gün adını ve tipi çıkar (örn: "Pazartesi_morning")
     final idParts = updatedItem.id!.split('_');
     if (idParts.length != 2) {
-      print(
+      debugPrint(
           "[ProgramService] Hata: Güncelleme için geçersiz item ID formatı: ${updatedItem.id}. Beklenen format: 'GünAdı_tip'");
       return;
     }
@@ -849,7 +851,7 @@ class ProgramService extends ChangeNotifier {
     // İlgili günü bul
     final dayIndex = _workoutPrograms.indexWhere((dp) => dp.dayName == dayName);
     if (dayIndex == -1) {
-      print(
+      debugPrint(
           "[ProgramService] Hata: Güncellenecek gün bulunamadı (ID: ${updatedItem.id})");
       return;
     }
@@ -876,18 +878,18 @@ class ProgramService extends ChangeNotifier {
         itemFoundAndUpdated = true;
         break;
       default:
-        print(
+        debugPrint(
             "[ProgramService] Hata: Geçersiz item tipi (ID: ${updatedItem.id})");
     }
 
     if (itemFoundAndUpdated) {
       _workoutPrograms[dayIndex] =
           daily; // Güncellenmiş DailyProgram'ı listeye geri koy
-      print("[ProgramService] ProgramItem güncellendi: ${updatedItem.id}");
+      debugPrint("[ProgramService] ProgramItem güncellendi: ${updatedItem.id}");
       await _saveProgram(); // Değişiklikleri kaydet
     } else {
       // Bu noktaya gelinmemesi lazım ama hata logu kalsın
-      print(
+      debugPrint(
           "[ProgramService] Güncellenecek item bulunamadı veya tip eşleşmedi: ${updatedItem.id}");
     }
   }
@@ -897,7 +899,7 @@ class ProgramService extends ChangeNotifier {
   Future<void> deleteProgramItem(String itemId) async {
     final idParts = itemId.split('_');
     if (idParts.length != 2) {
-      print(
+      debugPrint(
           "[ProgramService] Hata: Silme için geçersiz item ID formatı: $itemId. Beklenen format: 'GünAdı_tip'");
       return;
     }
@@ -906,7 +908,8 @@ class ProgramService extends ChangeNotifier {
 
     final dayIndex = _workoutPrograms.indexWhere((dp) => dp.dayName == dayName);
     if (dayIndex == -1) {
-      print("[ProgramService] Hata: Silinecek gün bulunamadı (ID: $itemId)");
+      debugPrint(
+          "[ProgramService] Hata: Silinecek gün bulunamadı (ID: $itemId)");
       return;
     }
 
@@ -959,18 +962,18 @@ class ProgramService extends ChangeNotifier {
         daily.dinner = replacementItem;
         break;
       default:
-        print(
+        debugPrint(
             "[ProgramService] Hata: Silme için geçersiz item tipi (ID: $itemId)");
     }
 
     if (itemFoundAndReplaced) {
       _workoutPrograms[dayIndex] = daily;
-      print(
+      debugPrint(
           "[ProgramService] ProgramItem silindi (yerine varsayılan kondu): $itemId");
       await _saveProgram();
     } else {
       // Bu noktaya gelinmemesi lazım
-      print(
+      debugPrint(
           "[ProgramService] Silinecek item bulunamadı veya tip eşleşmedi: $itemId");
     }
   }
@@ -983,13 +986,13 @@ class ProgramService extends ChangeNotifier {
     final dayIndex =
         _workoutPrograms.indexWhere((dp) => dp.dayName == targetDayName);
     if (dayIndex == -1) {
-      print(
+      debugPrint(
           "[ProgramService] Hata: Yeni item eklenecek gün bulunamadı: $targetDayName");
       return;
     }
 
     DailyProgram daily = _workoutPrograms[dayIndex];
-    String newId = "${targetDayName}_${targetSlotType}";
+    String newId = "${targetDayName}_$targetSlotType";
     ProgramItem itemToAdd = newItem.copyWith(id: newId); // ID'yi ata
     bool added = false;
 
@@ -1018,13 +1021,13 @@ class ProgramService extends ChangeNotifier {
         added = true;
         break;
       default:
-        print(
+        debugPrint(
             "[ProgramService] Hata: Yeni item eklemek için geçersiz slot tipi: $targetSlotType");
     }
 
     if (added) {
       _workoutPrograms[dayIndex] = daily;
-      print("[ProgramService] Yeni ProgramItem eklendi: $newId");
+      debugPrint("[ProgramService] Yeni ProgramItem eklendi: $newId");
       await _saveProgram(); // Değişiklikleri kaydet
     }
   }
@@ -1041,9 +1044,10 @@ class ProgramService extends ChangeNotifier {
     if (index != -1) {
       _workoutPrograms[index] = program;
       await _saveProgram();
-      print("[ProgramService] Günlük program güncellendi: $dayName");
+      debugPrint("[ProgramService] Günlük program güncellendi: $dayName");
     } else {
-      print('[ProgramService] Hata: Güncellenecek gün bulunamadı: $dayName');
+      debugPrint(
+          '[ProgramService] Hata: Güncellenecek gün bulunamadı: $dayName');
     }
   }
 
@@ -1051,7 +1055,7 @@ class ProgramService extends ChangeNotifier {
   DailyProgram _getDailyProgramInternal(String dayName) {
     return _workoutPrograms.firstWhere((dp) => dp.dayName == dayName,
         orElse: () {
-      print(
+      debugPrint(
           "[ProgramService] Uyarı: '$dayName' için program bulunamadı, varsayılan oluşturuluyor.");
       return _createDefaultDailyProgram(dayName);
     });
@@ -1100,7 +1104,7 @@ class ProgramService extends ChangeNotifier {
   // Get today's program based on device timezone (non-async)
   DailyProgram getTodaysProgram() {
     final String today = DateFormat('EEEE', 'tr_TR').format(DateTime.now());
-    print("[ProgramService] Bugünün programı getiriliyor: $today");
+    debugPrint("[ProgramService] Bugünün programı getiriliyor: $today");
     return _getDailyProgramInternal(today); // internal metodu çağır
   }
 
@@ -1108,7 +1112,7 @@ class ProgramService extends ChangeNotifier {
   DailyProgram getTomorrowsProgram() {
     final String tomorrow = DateFormat('EEEE', 'tr_TR')
         .format(DateTime.now().add(Duration(days: 1)));
-    print("[ProgramService] Yarının programı getiriliyor: $tomorrow");
+    debugPrint("[ProgramService] Yarının programı getiriliyor: $tomorrow");
     return _getDailyProgramInternal(tomorrow); // internal metodu çağır
   }
 
@@ -1119,8 +1123,8 @@ class ProgramService extends ChangeNotifier {
       List<String> idsToDelete,
       Map<String, String> categoryTitleChanges // Yeni parametre
       ) async {
-    print(
-        "[ProgramService][updateProgramItems] Başladı. Güncellenecek: ${itemsToUpdate.length}, Silinecek: ${idsToDelete.length}, Başlık Değişiklikleri: ${categoryTitleChanges}");
+    debugPrint(
+        "[ProgramService][updateProgramItems] Başladı. Güncellenecek: ${itemsToUpdate.length}, Silinecek: ${idsToDelete.length}, Başlık Değişiklikleri: $categoryTitleChanges");
     bool changed = false;
     bool unassignedChanged = false; // Atanmamış liste değişti mi?
 
@@ -1162,7 +1166,7 @@ class ProgramService extends ChangeNotifier {
         }
       }
     }
-    print(
+    debugPrint(
         "[ProgramService] Silinecek kategori başlıkları: $categoriesToDelete");
 
     // itemsToUpdate listesini işle
@@ -1174,7 +1178,7 @@ class ProgramService extends ChangeNotifier {
           categoryTitleChanges.containsValue(item.title);
 
       if (isCategoryUpdate) {
-        print(
+        debugPrint(
             "[ProgramService] Kategori güncelleme item'ı algılandı: ID=${item.id}, Başlık=${item.title}");
 
         // Bu kategori başlığı _weeklyProgram'da veya _unassignedCategories'de var mı kontrolü (isTrulyNew için)
@@ -1196,11 +1200,12 @@ class ProgramService extends ChangeNotifier {
             !categoryTitleChanges.containsKey(originalTitle);
 
         if (isTrulyNew) {
-          print("[ProgramService] Yeni kategori tespit edildi: ${item.title}");
+          debugPrint(
+              "[ProgramService] Yeni kategori tespit edildi: ${item.title}");
           newCategoryItems.add(item);
           unassignedChanged = true;
         } else {
-          print(
+          debugPrint(
               "[ProgramService] Mevcut kategori (${item.title}) için set güncellemesi.");
           // Mevcut kategori setlerini güncellemek için başlığı işaretle
           titlesToUpdateSetsFor.add(item.title!); // Yeni başlığı kullan
@@ -1229,7 +1234,7 @@ class ProgramService extends ChangeNotifier {
             if (existingItem != null &&
                 existingItem.id == item.id &&
                 existingItem.title == item.title) {
-              print(
+              debugPrint(
                   "[ProgramService] Mevcut atanmış kategori (${item.title}, ID: ${item.id}) için set güncellemesi.");
               titlesToUpdateSetsFor.add(item.title!); // Use existing title
               categorySetUpdates[item.title!] = item.programSets;
@@ -1274,7 +1279,7 @@ class ProgramService extends ChangeNotifier {
 
         // Kategori silinecek mi?
         if (categoriesToDelete.contains(currentTitle)) {
-          print(
+          debugPrint(
               "[ProgramService] Sabah egzersizi (${currentDay.dayName}, Kategori: '$currentTitle') siliniyor (yerine Rest konuluyor).");
           updatedMorningEx = ProgramItem(
               id: morningEx.id,
@@ -1291,7 +1296,7 @@ class ProgramService extends ChangeNotifier {
           if (categoryTitleChanges.containsKey(currentTitle)) {
             String newTitle = categoryTitleChanges[currentTitle]!;
             updatedMorningEx = updatedMorningEx.copyWith(title: newTitle);
-            print(
+            debugPrint(
                 "[ProgramService] Sabah egzersizi (${currentDay.dayName}) başlığı güncellendi: '$currentTitle' -> '$newTitle'");
             currentTitle = newTitle;
             dayChanged = true;
@@ -1303,7 +1308,7 @@ class ProgramService extends ChangeNotifier {
                 categorySetUpdates[currentTitle])) {
               updatedMorningEx = updatedMorningEx.copyWith(
                   programSets: categorySetUpdates[currentTitle]);
-              print(
+              debugPrint(
                   "[ProgramService] Sabah egzersizi (${currentDay.dayName}, Başlık: '$currentTitle') içeriği güncellendi.");
               dayChanged = true;
             }
@@ -1321,7 +1326,7 @@ class ProgramService extends ChangeNotifier {
 
         // Kategori silinecek mi?
         if (categoriesToDelete.contains(currentTitle)) {
-          print(
+          debugPrint(
               "[ProgramService] Akşam egzersizi (${currentDay.dayName}, Kategori: '$currentTitle') siliniyor (yerine Rest konuluyor).");
           updatedEveningEx = ProgramItem(
               id: eveningEx.id,
@@ -1338,7 +1343,7 @@ class ProgramService extends ChangeNotifier {
           if (categoryTitleChanges.containsKey(currentTitle)) {
             String newTitle = categoryTitleChanges[currentTitle]!;
             updatedEveningEx = updatedEveningEx.copyWith(title: newTitle);
-            print(
+            debugPrint(
                 "[ProgramService] Akşam egzersizi (${currentDay.dayName}) başlığı güncellendi: '$currentTitle' -> '$newTitle'");
             currentTitle = newTitle;
             dayChanged = true;
@@ -1350,7 +1355,7 @@ class ProgramService extends ChangeNotifier {
                 categorySetUpdates[currentTitle])) {
               updatedEveningEx = updatedEveningEx.copyWith(
                   programSets: categorySetUpdates[currentTitle]);
-              print(
+              debugPrint(
                   "[ProgramService] Akşam egzersizi (${currentDay.dayName}, Başlık: '$currentTitle') içeriği güncellendi.");
               dayChanged = true;
             }
@@ -1368,11 +1373,11 @@ class ProgramService extends ChangeNotifier {
 
     // Değişiklik varsa kaydet ve bildir
     if (changed || unassignedChanged) {
-      print("[ProgramService] Değişiklikler kaydediliyor...");
+      debugPrint("[ProgramService] Değişiklikler kaydediliyor...");
       await _saveProgram();
-      print("[ProgramService] Değişiklikler kaydedildi.");
+      debugPrint("[ProgramService] Değişiklikler kaydedildi.");
     } else {
-      print("[ProgramService] Kaydedilecek bir değişiklik bulunamadı.");
+      debugPrint("[ProgramService] Kaydedilecek bir değişiklik bulunamadı.");
     }
   }
 

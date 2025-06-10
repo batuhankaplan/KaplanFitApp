@@ -1,5 +1,6 @@
-import 'dart:math'; // max fonksiyonu için import
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:math';
 import 'package:provider/provider.dart'; // Provider ekleyelim
 import 'package:collection/collection.dart'; // DeepCollectionEquality için
 import '../models/program_model.dart';
@@ -18,7 +19,7 @@ class EditProgramCategoryScreen extends StatefulWidget {
     Key? key,
     required this.categoryName,
     required this.programItems,
-  }) : super(key: key);
+  });
 
   @override
   _EditProgramCategoryScreenState createState() =>
@@ -116,7 +117,7 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
         }
       }
     } catch (e) {
-      print("Egzersiz detayları yüklenirken hata: $e");
+      debugPrint("Egzersiz detayları yüklenirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Egzersiz detayları yüklenemedi.')),
@@ -142,11 +143,12 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
         // if (_currentProgramItems[programItemIndex].programSets?.isEmpty ?? true) {
         //    _currentProgramItems.removeAt(programItemIndex);
         // }
-        print(
+        debugPrint(
             "[EditScreen][_deleteExercise] UI Updated. Item ID: $programItemId, Exercise ID: $exerciseId. Current sets count: ${_currentProgramItems[programItemIndex].programSets?.length}");
       }
     });
-    print("Deleted exercise $exerciseId from item $programItemId (UI only)");
+    debugPrint(
+        "Deleted exercise $exerciseId from item $programItemId (UI only)");
   }
 
   void _addExercise() async {
@@ -224,7 +226,7 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
         });
       }
     } catch (e) {
-      print("[EditProgramCategoryScreen][_addExercise] Hata: $e");
+      debugPrint("[EditProgramCategoryScreen][_addExercise] Hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Egzersiz eklenirken bir hata oluştu.')),
@@ -272,7 +274,7 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
       // Kategori adı değişti mi?
       final initialCategoryName = widget.categoryName;
       if (initialCategoryName != newCategoryName) {
-        print(
+        debugPrint(
             "Kategori adı değişti: '$initialCategoryName' -> '$newCategoryName'");
         categoryTitleChange[initialCategoryName] = newCategoryName;
       }
@@ -334,20 +336,28 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
       //     .toList();
       // Şimdilik kategori silme dışında ana item silmeyi desteklemiyoruz.
 
-      print("--- Değişiklikler Kaydedilecek ---");
-      print("Kategori Adı Değişikliği: $categoryTitleChange");
-      print(
+      debugPrint("--- Değişiklikler Kaydedilecek ---");
+      debugPrint("Kategori Adı Değişikliği: $categoryTitleChange");
+      debugPrint(
           "Güncellenecek/Eklenecek Kategori Item (${itemsToUpdate.length}): ${itemsToUpdate.map((i) => i.id).toList()}");
       for (var item in itemsToUpdate) {
-        print(
+        debugPrint(
             "[SaveChanges] Item to update: ID=${item.id}, Title='${item.title}', SetsCount=${item.programSets?.length}");
+        // Her set için detaylı bilgi yazdır
+        if (item.programSets != null) {
+          for (int i = 0; i < item.programSets!.length; i++) {
+            final set = item.programSets![i];
+            debugPrint(
+                "  Set $i: ExerciseID=${set.exerciseId}, Setsler=${set.setsDescription}, Tekrarlar=${set.repsDescription}");
+          }
+        }
       }
-      //print("Silinecek (${idsToDelete.length}): $idsToDelete");
+      //debugPrint("Silinecek (${idsToDelete.length}): $idsToDelete");
 
       if (itemsToUpdate.isEmpty &&
           idsToDelete.isEmpty &&
           categoryTitleChange.isEmpty) {
-        print("[SaveChanges] Kaydedilecek bir değişiklik bulunamadı.");
+        debugPrint("[SaveChanges] Kaydedilecek bir değişiklik bulunamadı.");
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Kaydedilecek değişiklik yok.')),
@@ -361,24 +371,34 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
       }
 
       // ProgramService üzerinden toplu güncelleme yap
-      print("[SaveChanges] ProgramService.updateProgramItems çağrılıyor...");
+      debugPrint(
+          "[SaveChanges] ProgramService.updateProgramItems çağrılıyor...");
       await programService.updateProgramItems(
           itemsToUpdate, idsToDelete, categoryTitleChange // Yeni parametre
           );
-      print("[SaveChanges] ProgramService.updateProgramItems tamamlandı.");
+      debugPrint("[SaveChanges] ProgramService.updateProgramItems tamamlandı.");
 
-      print("--- Değişiklikler Servise Gönderildi ---");
+      debugPrint("--- Değişiklikler Servise Gönderildi ---");
 
       if (mounted) {
+        // Kaydetme başarılı oldu, UI'yı refresh et
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Program başarıyla güncellendi!')),
         );
+
+        // Ana program sayfasına geri dön ve refresh tetikle
         if (Navigator.canPop(context)) {
           Navigator.pop(context, true); // Başarı ile dön
+
+          // Main program screen'i refresh etmek için ek signal gönder
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            debugPrint(
+                "📢 Edit tamamlandı, ana program screen refresh edilecek");
+          });
         }
       }
     } catch (e, stackTrace) {
-      print("Program kaydedilirken hata: $e\nStackTrace: $stackTrace");
+      debugPrint("Program kaydedilirken hata: $e\nStackTrace: $stackTrace");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -448,7 +468,7 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
         Navigator.pop(context, true); // Başarılı olarak dön
       }
     } catch (e) {
-      print("Kategori silinirken hata: $e");
+      debugPrint("Kategori silinirken hata: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -608,9 +628,9 @@ class _EditProgramCategoryScreenState extends State<EditProgramCategoryScreen> {
                           );
                         }
 
-                        print(
+                        debugPrint(
                             "Updated set details for ${exercise.name} in UI.");
-                        print(
+                        debugPrint(
                             "[EditScreen][_showEditSetDialog] UI Updated. Item ID: ${programItem.id}, Set Order: ${set.order}. New Reps: ${updatedSetData['reps']}");
                       }
                     }

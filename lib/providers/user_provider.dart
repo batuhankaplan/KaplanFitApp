@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import '../providers/gamification_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -29,15 +30,24 @@ class UserProvider extends ChangeNotifier {
     if (activeUserId != null) {
       _user = await _databaseService.getUser(activeUserId);
       if (_user != null) {
-        // Günlük su tüketimini gün başında sıfırla
-        final String lastWaterLogDate =
-            prefs.getString('lastWaterLogDate_$_user!.id') ?? '';
-        final String todayDate =
-            DateFormat('yyyy-MM-dd').format(DateTime.now());
-        if (lastWaterLogDate != todayDate) {
-          _user = _user!.copyWith(currentDailyWaterIntake: 0.0);
-          // SharedPreferences'a hemen kaydetmeyelim, logWater veya saveUser içinde kaydedilsin
-          // await prefs.setString('lastWaterLogDate_$_user!.id', todayDate);
+        // Günlük su tüketimini veritabanından yükle
+        final today = DateTime.now();
+        final startOfDay = DateTime(today.year, today.month, today.day);
+        final endOfDay =
+            DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+        try {
+          final waterData = await _databaseService.getWaterLogInRange(
+              startOfDay, endOfDay, _user!.id!);
+          final todayWaterIntake = waterData[startOfDay] ?? 0;
+
+          // Su tüketimini güncel veriye göre güncelle
+          _user = _user!
+              .copyWith(currentDailyWaterIntake: todayWaterIntake.toDouble());
+          debugPrint(
+              "[UserProvider] Su tüketimi veritabanından yüklendi: $todayWaterIntake ml");
+        } catch (e) {
+          debugPrint("[UserProvider] Su tüketimi yüklenirken hata: $e");
         }
       }
     } else {
@@ -79,7 +89,7 @@ class UserProvider extends ChangeNotifier {
       }
       // _resetWaterIntakeIfNeeded(); // KALDIRILDI - Bu çağrı buradan kaldırıldı.
     } catch (e) {
-      print("UserProvider saveUser Hata: $e");
+      debugPrint("UserProvider saveUser Hata: $e");
       // Hata yönetimi eklenebilir
     } finally {
       _isLoading = false;
@@ -112,22 +122,22 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> logoutUser() async {
-    print("[UserProvider] logoutUser çağrıldı");
+    debugPrint("[UserProvider] logoutUser çağrıldı");
     final int? userIdToDeleteChats = _user?.id;
 
     _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('activeUserId');
-    print("[UserProvider] activeUserId SharedPreferences'dan silindi");
+    debugPrint("[UserProvider] activeUserId SharedPreferences'dan silindi");
 
     if (userIdToDeleteChats != null) {
       try {
         await _databaseService
             .deleteAllChatConversationsForUser(userIdToDeleteChats);
-        print(
+        debugPrint(
             "[UserProvider] Kullanıcı $userIdToDeleteChats için tüm konuşmalar silindi.");
       } catch (e) {
-        print("[UserProvider] Konuşmalar silinirken hata: $e");
+        debugPrint("[UserProvider] Konuşmalar silinirken hata: $e");
       }
     }
     notifyListeners();
@@ -149,7 +159,7 @@ class UserProvider extends ChangeNotifier {
 
     if (lastWaterLogDate != todayDate) {
       // Yeni bir gün, mevcut tüketimi sıfırla
-      print(
+      debugPrint(
           "[UserProvider] New day detected for water log. Resetting intake for user ${_user!.id}.");
       currentIntake = 0.0;
       // Bu yeni gün bilgisini hemen SharedPreferences'a yazalım ki sonraki logWater çağrıları doğru çalışsın.
@@ -169,7 +179,7 @@ class UserProvider extends ChangeNotifier {
       // Sonra user modelini ve users tablosunu güncelle
       await _databaseService.updateUser(_user!);
 
-      print(
+      debugPrint(
           "[UserProvider] Water logged: $amountInMl ml. New total: $newTotalWater ml for user ${_user!.id}");
 
       // Su hedefi rozetlerini kontrol et
@@ -190,7 +200,7 @@ class UserProvider extends ChangeNotifier {
         // Bu yaklaşım daha basit.
         if (goalAchieved) {
           await gamificationProvider.updateStreak('water', true);
-          print(
+          debugPrint(
               "[UserProvider] Water goal achieved for today. Streak updated.");
         } else {
           // Hedefe henüz ulaşılmadıysa veya altına düşüldüyse, updateStreak'i false ile çağırmak seriyi kırabilir.
@@ -200,12 +210,12 @@ class UserProvider extends ChangeNotifier {
           // Bu nedenle, burada false ile çağırmayalım. updateStreak('water', false) sadece gün başında veya hiç su içilmediğinde mantıklı.
           // Şimdilik sadece hedefe ulaşıldığında true gönderiyoruz.
           // GamificationProvider._syncWaterConsumption daha kapsamlı bir kontrol yapabilir.
-          print(
+          debugPrint(
               "[UserProvider] Water goal NOT YET achieved for today ($newTotalWater ml / $targetIntakeMl ml).");
         }
       }
     } catch (e) {
-      print("[UserProvider] Error logging water: $e");
+      debugPrint("[UserProvider] Error logging water: $e");
     } finally {
       _isLoading = false;
       notifyListeners(); // Değişikliği bildir
@@ -227,7 +237,7 @@ class UserProvider extends ChangeNotifier {
 
       final recordId =
           await _databaseService.insertWeightRecord(record, _user!.id!);
-      print("[UserProvider] Ağırlık kaydı eklendi: $recordId");
+      debugPrint("[UserProvider] Ağırlık kaydı eklendi: $recordId");
 
       // Update user's current weight and last weight update time
       _user = _user!.copyWith(
@@ -237,14 +247,15 @@ class UserProvider extends ChangeNotifier {
 
       // Update database with the new user information
       await _databaseService.updateUser(_user!);
-      print("[UserProvider] Kullanıcının mevcut ağırlığı güncellendi: $weight");
+      debugPrint(
+          "[UserProvider] Kullanıcının mevcut ağırlığı güncellendi: $weight");
 
       // Reload weight history from the database
       _weightHistory = await _databaseService.getWeightHistory(_user!.id!);
 
       notifyListeners();
     } catch (e) {
-      print("[UserProvider] addWeightRecord HATA: $e");
+      debugPrint("[UserProvider] addWeightRecord HATA: $e");
     }
   }
 

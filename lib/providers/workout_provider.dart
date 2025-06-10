@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/workout_log.dart';
 import '../models/exercise_log.dart';
 import '../models/workout_set.dart';
@@ -35,10 +36,10 @@ class WorkoutProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _workoutLogs = await _dbService.getWorkoutLogsInRange(start, end);
-      print(
+      debugPrint(
           "WorkoutProvider: ${_workoutLogs.length} workout log loaded for range.");
     } catch (e) {
-      print("Error loading workout logs: $e");
+      debugPrint("Error loading workout logs: $e");
       _workoutLogs = []; // Clear logs on error
     } finally {
       _isLoading = false;
@@ -50,7 +51,7 @@ class WorkoutProvider extends ChangeNotifier {
 
   Future<void> startNewWorkout(String name) async {
     if (_currentWorkoutLog != null) {
-      print("Warning: Cannot start a new workout while one is in progress.");
+      debugPrint("Warning: Cannot start a new workout while one is in progress.");
       return;
     }
     _currentWorkoutLog = WorkoutLog(
@@ -58,7 +59,7 @@ class WorkoutProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
       exerciseLogs: [], // Start with empty exercises
     );
-    print("New workout started (in memory).");
+    debugPrint("New workout started (in memory).");
     notifyListeners();
   }
 
@@ -81,7 +82,7 @@ class WorkoutProvider extends ChangeNotifier {
     // exerciseLogs null olamayacağı için bu if/else bloğu basitleştirilebilir.
     _currentWorkoutLog!.exerciseLogs!.add(newExerciseLog);
 
-    print("Exercise '${exercise.name}' added to current workout.");
+    debugPrint("Exercise '${exercise.name}' added to current workout.");
     notifyListeners();
   }
 
@@ -111,7 +112,7 @@ class WorkoutProvider extends ChangeNotifier {
     _currentWorkoutLog!.exerciseLogs![exerciseLogIndex] =
         exerciseLog.copyWith(sets: updatedSets);
 
-    print(
+    debugPrint(
         "Set $setNumber added to exercise '${exerciseLog.exerciseDetails?.name}'.");
     notifyListeners();
   }
@@ -145,7 +146,7 @@ class WorkoutProvider extends ChangeNotifier {
         .exerciseLogs![exerciseLogIndex]
         .copyWith(sets: currentSets);
 
-    print(
+    debugPrint(
         "Set $setIndex updated for exercise '${_currentWorkoutLog!.exerciseLogs![exerciseLogIndex].exerciseDetails?.name}'.");
     notifyListeners();
   }
@@ -168,7 +169,7 @@ class WorkoutProvider extends ChangeNotifier {
         .exerciseLogs![exerciseLogIndex]
         .copyWith(sets: currentSets);
 
-    print(
+    debugPrint(
         "Set $setIndex deleted from exercise '${_currentWorkoutLog!.exerciseLogs![exerciseLogIndex].exerciseDetails?.name}'.");
     notifyListeners();
   }
@@ -187,14 +188,14 @@ class WorkoutProvider extends ChangeNotifier {
     _currentWorkoutLog =
         _currentWorkoutLog!.copyWith(exerciseLogs: currentExerciseLogs);
 
-    print("Exercise $exerciseLogIndex deleted from workout.");
+    debugPrint("Exercise $exerciseLogIndex deleted from workout.");
     notifyListeners();
   }
 
   void cancelWorkout() {
     if (_currentWorkoutLog == null) return;
     _currentWorkoutLog = null;
-    print("Current workout cancelled.");
+    debugPrint("Current workout cancelled.");
     notifyListeners();
   }
 
@@ -205,7 +206,7 @@ class WorkoutProvider extends ChangeNotifier {
       String? feeling}) async {
     if (_currentWorkoutLog == null ||
         _currentWorkoutLog!.exerciseLogs!.isEmpty) {
-      print("Cannot save an empty workout.");
+      debugPrint("Cannot save an empty workout.");
       _currentWorkoutLog = null; // Clear the cancelled/empty workout
       notifyListeners();
       return false;
@@ -250,7 +251,7 @@ class WorkoutProvider extends ChangeNotifier {
         }
       }
 
-      print("Workout saved successfully with ID: $workoutLogId");
+      debugPrint("Workout saved successfully with ID: $workoutLogId");
       _currentWorkoutLog = null; // Clear current workout after saving
       _isLoading = false;
       notifyListeners();
@@ -258,7 +259,7 @@ class WorkoutProvider extends ChangeNotifier {
       // await loadWorkoutLogs(DateTime.now(), DateTime.now());
       return true;
     } catch (e) {
-      print("Error saving workout: $e");
+      debugPrint("Error saving workout: $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -273,9 +274,9 @@ class WorkoutProvider extends ChangeNotifier {
     try {
       await _dbService.deleteWorkoutLog(workoutLogId);
       _workoutLogs.removeWhere((log) => log.id == workoutLogId);
-      print("WorkoutProvider: Workout log $workoutLogId deleted.");
+      debugPrint("WorkoutProvider: Workout log $workoutLogId deleted.");
     } catch (e) {
-      print("Error deleting workout log $workoutLogId: $e");
+      debugPrint("Error deleting workout log $workoutLogId: $e");
     } finally {
       _isLoading = false;
       notifyListeners();

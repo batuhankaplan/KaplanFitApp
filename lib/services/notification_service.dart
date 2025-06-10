@@ -1,10 +1,11 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+import 'dart:math';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:math';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -293,7 +294,7 @@ class NotificationService {
 
     try {
       // ID oluşturma (aynı kalabilir)
-      final int notificationId = 20000 + Random().nextInt(10000);
+      final int notificationId = 20000 + Random().nextInt(10000).toInt();
 
       // Planlanacak zamanı hesapla (artık doğrudan DateTime kullanıyoruz)
       // _nextInstanceOfTime fonksiyonuna gerek kalmadı.

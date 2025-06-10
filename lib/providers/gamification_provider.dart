@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/badge_model.dart';
@@ -62,7 +63,7 @@ class GamificationProvider with ChangeNotifier {
       await _loadDefaultBadges();
       await _loadData();
     } catch (e) {
-      print('GamificationProvider initialize error: $e');
+      debugPrint('GamificationProvider initialize error: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -168,11 +169,11 @@ class GamificationProvider with ChangeNotifier {
   Future<void> updateStreak(String streakType, bool isCompleted) async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final lastUpdate = prefs.getString('${streakType}LastUpdate') ?? '';
+    final lastUpdate = prefs.getString('${streakType}_last_update') ?? '';
 
     if (lastUpdate != today) {
       // Yeni gün
-      prefs.setString('${streakType}LastUpdate', today);
+      prefs.setString('${streakType}_last_update', today);
 
       if (isCompleted) {
         // Seri devam ediyor
@@ -246,7 +247,7 @@ class GamificationProvider with ChangeNotifier {
   // AI Sohbet etkileşimini kaydet
   Future<void> recordChatInteraction(int userId) async {
     _chatInteractionCount++;
-    print(
+    debugPrint(
         'GamificationProvider: Chat interaction count: $_chatInteractionCount for user $userId');
     await _saveData(); // Kaydet
 
@@ -255,7 +256,7 @@ class GamificationProvider with ChangeNotifier {
         .where((b) => b.type == BadgeType.chatInteraction && !b.isUnlocked)) {
       if (_chatInteractionCount >= badge.threshold) {
         await unlockBadge(badge.id);
-        print('GamificationProvider: Unlocked chat badge: ${badge.name}');
+        debugPrint('GamificationProvider: Unlocked chat badge: ${badge.name}');
       }
     }
     notifyListeners();
@@ -512,10 +513,11 @@ class GamificationProvider with ChangeNotifier {
         _syncWaterConsumption(userId),
       ]);
 
-      print("GamificationProvider: Tüm kullanıcı verileri senkronize edildi");
+      debugPrint(
+          "GamificationProvider: Tüm kullanıcı verileri senkronize edildi");
       notifyListeners();
     } catch (e) {
-      print("GamificationProvider: Veri senkronizasyon hatası: $e");
+      debugPrint("GamificationProvider: Veri senkronizasyon hatası: $e");
     }
   }
 
@@ -536,14 +538,14 @@ class GamificationProvider with ChangeNotifier {
 
       // Toplam etkileşim sayısını güncelle
       _chatInteractionCount = allMessages.length;
-      print(
+      debugPrint(
           "GamificationProvider: AI Koç etkileşimleri senkronize edildi. Toplam: $_chatInteractionCount");
 
       // Etkileşim sayısına göre rozet kontrolü yap
       await updateChatInteractionCount(
           0); // 0 ekleyerek sadece mevcut değer ile kontrol et
     } catch (e) {
-      print(
+      debugPrint(
           "GamificationProvider: AI Koç etkileşimleri senkronizasyon hatası: $e");
     }
   }
@@ -557,14 +559,14 @@ class GamificationProvider with ChangeNotifier {
 
       // Tamamlanmış workout sayısını güncelle
       _workoutCount = workoutLogs.length;
-      print(
+      debugPrint(
           "GamificationProvider: Antrenman aktiviteleri senkronize edildi. Toplam: $_workoutCount");
 
       // Antrenman sayısına göre rozet kontrolü yap
       await updateWorkoutCount(
           0); // 0 ekleyerek sadece mevcut değer ile kontrol et
     } catch (e) {
-      print(
+      debugPrint(
           "GamificationProvider: Antrenman aktiviteleri senkronizasyon hatası: $e");
     }
   }
@@ -587,14 +589,15 @@ class GamificationProvider with ChangeNotifier {
             firstWeight > lastWeight ? firstWeight - lastWeight : 0.0;
         _weightLossKg = weightLoss;
 
-        print(
+        debugPrint(
             "GamificationProvider: Kilo kaybı senkronize edildi. Toplam: $_weightLossKg kg");
 
         // Kilo kaybına göre rozet kontrolü yap
         await updateWeightLoss(_weightLossKg);
       }
     } catch (e) {
-      print("GamificationProvider: Kilo kayıtları senkronizasyon hatası: $e");
+      debugPrint(
+          "GamificationProvider: Kilo kayıtları senkronizasyon hatası: $e");
     }
   }
 
@@ -641,13 +644,13 @@ class GamificationProvider with ChangeNotifier {
 
       // Su serisini güncelle
       _streaks['water'] = maxConsecutiveDays;
-      print(
+      debugPrint(
           "GamificationProvider: Su tüketimi senkronize edildi. En uzun seri: ${_streaks['water']} gün");
 
       // Su serisine göre rozet kontrolü yap
       await _checkStreakBadges('water');
     } catch (e) {
-      print("GamificationProvider: Su tüketimi senkronizasyon hatası: $e");
+      debugPrint("GamificationProvider: Su tüketimi senkronizasyon hatası: $e");
     }
   }
 
@@ -799,7 +802,7 @@ class GamificationProvider with ChangeNotifier {
   Future<void> checkWeightLossBadges(int userId) async {
     final user = await _dbService.getUser(userId);
     if (user == null) {
-      print(
+      debugPrint(
           'GamificationProvider: User not found for weight loss badges check.');
       return;
     }
@@ -807,7 +810,7 @@ class GamificationProvider with ChangeNotifier {
     final weightHistory = await _dbService.getWeightHistory(userId);
     if (weightHistory.length < 2) {
       // Karşılaştırma yapmak için en az 2 kayıt gerekli (başlangıç ve mevcut)
-      print(
+      debugPrint(
           'GamificationProvider: Not enough weight history to calculate loss.');
       _weightLossKg = 0.0; // Kilo kaybını sıfırla
       await _saveData();
@@ -828,7 +831,7 @@ class GamificationProvider with ChangeNotifier {
     if (totalLoss < 0) totalLoss = 0; // Kilo almışsa kayıp 0 kabul edilir.
 
     _weightLossKg = totalLoss;
-    print(
+    debugPrint(
         'GamificationProvider: Total weight loss calculated: $_weightLossKg kg for user $userId');
     await _saveData();
 
@@ -836,7 +839,7 @@ class GamificationProvider with ChangeNotifier {
         .where((b) => b.type == BadgeType.weightLoss && !b.isUnlocked)) {
       if (_weightLossKg >= badge.threshold) {
         await unlockBadge(badge.id);
-        print(
+        debugPrint(
             'GamificationProvider: Unlocked weight loss badge: ${badge.name}');
       }
     }
@@ -851,7 +854,7 @@ class GamificationProvider with ChangeNotifier {
     // Şimdilik, bu metodun yalnızca programdan gelen aktiviteler için çağrıldığını varsayalım.
 
     _workoutCount++;
-    print(
+    debugPrint(
         'GamificationProvider: Program workout count: $_workoutCount for user $userId, activityId: $activityId');
     await _saveData(); // workoutCount'u kaydet
 
@@ -860,7 +863,7 @@ class GamificationProvider with ChangeNotifier {
         .where((b) => b.type == BadgeType.workoutCount && !b.isUnlocked)) {
       if (_workoutCount >= badge.threshold) {
         await unlockBadge(badge.id);
-        print(
+        debugPrint(
             'GamificationProvider: Unlocked workout count badge: ${badge.name}');
       }
     }

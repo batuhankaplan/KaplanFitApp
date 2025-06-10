@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_coach_service.dart';
@@ -11,7 +12,7 @@ import '../widgets/kaplan_loading.dart';
 class AICoachScreen extends StatefulWidget {
   final int? conversationId; // Sohbet kimliği, null ise yeni sohbet başlatılır
 
-  const AICoachScreen({Key? key, this.conversationId}) : super(key: key);
+  const AICoachScreen({Key? key, this.conversationId}) ;
 
   @override
   State<AICoachScreen> createState() => _AICoachScreenState();
@@ -302,7 +303,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
 
     if (currentUser.id != null) {
       await gamificationProvider.recordChatInteraction(currentUser.id!);
-      print(
+      debugPrint(
           '[AICoachScreen] Recorded chat interaction for user ${currentUser.id}');
     }
 
@@ -348,9 +349,9 @@ class _AICoachScreenState extends State<AICoachScreen> {
           Provider.of<DatabaseService>(context, listen: false);
       await databaseService
           .updateChatConversationLastActivity(_conversationId!);
-      print("Konuşma aktivite zamanı güncellendi. ID: $_conversationId");
+      debugPrint("Konuşma aktivite zamanı güncellendi. ID: $_conversationId");
     } catch (e) {
-      print("Konuşma aktivite zamanı güncellenirken hata: $e");
+      debugPrint("Konuşma aktivite zamanı güncellenirken hata: $e");
     }
   }
 
@@ -525,7 +526,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
           BoxShadow(
             offset: const Offset(0, -2),
             blurRadius: 2.0,
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha:0.1),
           ),
         ],
       ),

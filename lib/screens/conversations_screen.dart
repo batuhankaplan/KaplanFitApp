@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../models/chat_model.dart';
@@ -7,7 +8,7 @@ import 'ai_coach_screen.dart';
 import '../widgets/kaplan_loading.dart';
 
 class ConversationsScreen extends StatefulWidget {
-  const ConversationsScreen({Key? key}) : super(key: key);
+  const ConversationsScreen({super.key});
 
   @override
   State<ConversationsScreen> createState() => _ConversationsScreenState();
@@ -56,7 +57,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         });
       }
     } catch (e) {
-      print("Konuşmalar yüklenirken hata: $e");
+      debugPrint("Konuşmalar yüklenirken hata: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -217,8 +218,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor:
-                                Theme.of(context).primaryColor.withOpacity(0.2),
+                            backgroundColor: Theme.of(context)
+                                .primaryColor
+                                .withValues(alpha: 0.2),
                             child: Icon(
                               Icons.chat,
                               color: Theme.of(context).primaryColor,

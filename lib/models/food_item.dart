@@ -1,4 +1,3 @@
-import 'dart:convert'; // JSON dönüşümleri için eklendi
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FoodItem {

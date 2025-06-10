@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/badge_model.dart';
 import '../theme.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/gamification_provider.dart';
 
 class BadgeDetailDialog extends StatelessWidget {
   final BadgeModel badge;
 
-  const BadgeDetailDialog({Key? key, required this.badge}) : super(key: key);
+  const BadgeDetailDialog({Key? key, required this.badge}) ;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +162,7 @@ class BadgeDetailDialog extends StatelessWidget {
         color: (isDarkMode
                 ? AppTheme.darkCardBackgroundColor
                 : Colors.grey.shade100)
-            .withOpacity(0.5),
+            .withValues(alpha:0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -211,7 +211,7 @@ class BadgeDetailDialog extends StatelessWidget {
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: progress,
-              backgroundColor: badge.color.withOpacity(0.1),
+              backgroundColor: badge.color.withValues(alpha:0.1),
               valueColor: AlwaysStoppedAnimation<Color>(badge.color),
               minHeight: 8,
               borderRadius: BorderRadius.circular(4),
@@ -223,11 +223,9 @@ class BadgeDetailDialog extends StatelessWidget {
   }
 
   Widget _buildBadgeImage() {
-    return Container(
-      width: 100,
-      height: 100,
+    return Container(width: 100, height: 100,
       decoration: BoxDecoration(
-        color: badge.color.withOpacity(0.2),
+        color: badge.color.withValues(alpha:0.2),
         shape: BoxShape.circle,
         border: Border.all(
           color: badge.color,
@@ -372,3 +370,6 @@ class BadgeDetailDialog extends StatelessWidget {
     }
   }
 }
+
+
+

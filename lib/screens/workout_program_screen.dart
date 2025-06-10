@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart'; // Youtube player importu
 import '../services/program_service.dart';
@@ -9,11 +10,10 @@ import '../models/exercise_model.dart';
 import '../widgets/kaplan_appbar.dart'; // KaplanAppBar kullanacağız
 import '../theme.dart';
 import 'package:collection/collection.dart'; // groupBy için
-import 'package:url_launcher/url_launcher.dart';
 import 'edit_program_category_screen.dart'; // Bu satırı ekleyin
 
 class WorkoutProgramScreen extends StatefulWidget {
-  const WorkoutProgramScreen({Key? key}) : super(key: key);
+  const WorkoutProgramScreen({super.key});
 
   @override
   State<WorkoutProgramScreen> createState() => _WorkoutProgramScreenState();
@@ -27,7 +27,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
   @override
   void initState() {
     super.initState();
-    print("[WorkoutProgramScreen] initState called.");
+    debugPrint("[WorkoutProgramScreen] initState called.");
     _loadInitialExerciseDetails();
   }
 
@@ -64,7 +64,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
       }
 
       if (exerciseIds.isNotEmpty) {
-        print(
+        debugPrint(
             "[WorkoutScreen][_loadInitialExerciseDetails] Fetching details for ${exerciseIds.length} exercise IDs...");
         final List<Exercise>? detailsList =
             await exerciseService.getExercisesByIds(exerciseIds.toList());
@@ -73,18 +73,19 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
           loadedDetails = Map.fromEntries(detailsList // Geçici map'e ata
               .where((ex) => ex.id != null)
               .map((ex) => MapEntry(ex.id!, ex)));
-          print(
+          debugPrint(
               "[WorkoutScreen][_loadInitialExerciseDetails] Loaded details for ${loadedDetails.length} exercises.");
         } else {
-          print(
+          debugPrint(
               "[WorkoutScreen][_loadInitialExerciseDetails] Exercise details list was null.");
         }
       } else {
-        print(
+        debugPrint(
             "[WorkoutScreen][_loadInitialExerciseDetails] No exercise IDs found.");
       }
     } catch (e, stackTrace) {
-      print("Initial exercise details load error: $e\nStackTrace: $stackTrace");
+      debugPrint(
+          "Initial exercise details load error: $e\nStackTrace: $stackTrace");
     } finally {
       if (mounted) {
         setState(() {
@@ -97,7 +98,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
 
   Map<String, List<ProgramItem>> _groupProgramsByCategory(
       List<ProgramItem> workoutPrograms) {
-    print(
+    debugPrint(
         "[WorkoutScreen][_groupProgramsByCategory] Grouping ${workoutPrograms.length} workout items...");
     return groupBy(workoutPrograms, (ProgramItem item) {
       String categoryResult = item.title ?? 'Diğer Antrenmanlar';
@@ -144,7 +145,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print("[WorkoutProgramScreen] build called. isLoading: $_isLoading");
+    debugPrint("[WorkoutProgramScreen] build called. isLoading: $_isLoading");
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final programService = context.watch<ProgramService>();
@@ -233,7 +234,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: Offset(0, 4),
                           ),
@@ -243,7 +244,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                         data: Theme.of(context).copyWith(
                           dividerColor: Colors.transparent,
                           colorScheme: Theme.of(context).colorScheme.copyWith(
-                                background: isDarkMode
+                                surface: isDarkMode
                                     ? Color(0xFF1E1E2E)
                                     : Colors.white,
                               ),
@@ -314,7 +315,8 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                                               horizontal: 12, vertical: 8),
                                           decoration: BoxDecoration(
                                             color: isDarkMode
-                                                ? Colors.white.withOpacity(0.05)
+                                                ? Colors.white
+                                                    .withValues(alpha: 0.05)
                                                 : Colors.grey.shade100,
                                             borderRadius:
                                                 BorderRadius.circular(12),
@@ -325,7 +327,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                                                 radius: 20,
                                                 backgroundColor: AppTheme
                                                     .primaryColor
-                                                    .withOpacity(0.1),
+                                                    .withValues(alpha: 0.1),
                                                 child: Icon(
                                                   Icons.fitness_center,
                                                   size: 20,
@@ -368,7 +370,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                                                 Icon(
                                                   Icons.play_circle_outline,
                                                   color: AppTheme.primaryColor
-                                                      .withOpacity(0.7),
+                                                      .withValues(alpha: 0.7),
                                                 ),
                                             ],
                                           ),
@@ -460,7 +462,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
     String? videoId = YoutubePlayer.convertUrlToId(videoUrl);
 
     if (videoId == null) {
-      print("Geçersiz YouTube URL'si: $videoUrl");
+      debugPrint("Geçersiz YouTube URL'si: $videoUrl");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Geçersiz YouTube video URL\'si.'),
@@ -488,7 +490,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
           progressIndicatorColor: AppTheme.primaryColor,
           progressColors: ProgressBarColors(
             playedColor: AppTheme.primaryColor,
-            handleColor: AppTheme.primaryColor.withOpacity(0.8),
+            handleColor: AppTheme.primaryColor.withValues(alpha: 0.8),
           ),
           onReady: () {},
         ),
@@ -541,7 +543,7 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
 
                 return ListTile(
                   title: Text(category),
-                  subtitle: Text('${exerciseCount} egzersiz'),
+                  subtitle: Text('$exerciseCount egzersiz'),
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -552,7 +554,18 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
                           programItems: programsInCategory,
                         ),
                       ),
-                    );
+                    ).then((result) {
+                      // Edit screen'den geri dönünce refresh yap
+                      if (result == true && mounted) {
+                        debugPrint(
+                            "🔄 Edit tamamlandı, program screen refresh ediliyor");
+                        setState(() {
+                          // Force rebuild to update UI
+                        });
+                        // Exercise details'i yeniden yükle
+                        _loadInitialExerciseDetails();
+                      }
+                    });
                   },
                 );
               },
