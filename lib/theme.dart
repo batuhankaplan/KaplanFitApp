@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Ana renkler
-  static const Color primaryColor = Color(0xFF5D69BE); // Mor-mavi ana renk
-  static const Color secondaryColor = Color(0xFF26C485); // Yeşil ikincil renk
-  static const Color accentColor =
-      Color(0xFFFF6B6B); // Canlı mercan aksan rengi
-  static const Color infoColor = Color(0xFF2196F3); // Bilgi rengi - mavi
+  // 🎨 ULTRA MODERN COLORS - 2024 Trends
+  static const Color primaryColor = Color(0xFF6366F1); // Modern indigo
+  static const Color secondaryColor = Color(0xFF10B981); // Fresh emerald
+  static const Color accentColor = Color(0xFFEF4444); // Vibrant red
+  static const Color infoColor = Color(0xFF3B82F6); // Cool blue
 
-  // Arka plan ve metin renkleri
-  static const Color backgroundColor = Color(0xFFF6F8FE);
-  static const Color darkBackgroundColor = Color(0xFF121219);
+  // 🌟 PREMIUM GRADIENTS
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+  );
+
+  static const LinearGradient successGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
+  );
+
+  // 🎯 MODERN BACKGROUND COLORS
+  static const Color backgroundColor =
+      Color(0xFFFAFBFC); // Ultra soft background
+  static const Color darkBackgroundColor = Color(0xFF0F0F23); // Deep dark
   static const Color surfaceColor = Color(0xFFFFFFFF);
-  static const Color darkSurfaceColor = Color(0xFF1A1A26);
-  static const Color cardBackgroundColor = Color(0xFF1C2E5E);
-  static const Color darkCardBackgroundColor = Color(0xFF242436);
+  static const Color darkSurfaceColor = Color(0xFF1A1A2E);
+  static const Color cardBackgroundColor = Color(0xFF1E293B); // Modern slate
+  static const Color darkCardBackgroundColor = Color(0xFF1E1E2E); // Rich dark
   static const Color textColor = Color(0xFF333333);
   static const Color darkTextColor = Color(0xFFE1E1E1);
   static const Color secondaryTextColor = Color(0xFF757575);
@@ -91,7 +104,7 @@ class AppTheme {
   static Color get taskCardColorDark => const Color(0xFF242424);
   static Color get cardColor => const Color(0xFF243355);
 
-  // Koyu tema
+  // 🌙 ULTRA MODERN DARK THEME
   static ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
@@ -113,77 +126,94 @@ class AppTheme {
     ),
     textTheme: TextTheme(
       headlineLarge: TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.5,
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.0,
         color: darkTextColor,
+        height: 1.1,
       ),
       headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.3,
+        fontSize: 26,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.8,
         color: darkTextColor,
+        height: 1.2,
       ),
       headlineSmall: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.2,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.5,
         color: darkTextColor,
+        height: 1.3,
       ),
       bodyLarge: TextStyle(
         fontSize: 18,
-        letterSpacing: 0.1,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.0,
         color: darkTextColor,
+        height: 1.5,
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
-        letterSpacing: 0.1,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.0,
         color: darkTextColor,
+        height: 1.5,
       ),
       bodySmall: TextStyle(
         fontSize: 14,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0.1,
         color: darkSecondaryTextColor,
+        height: 1.4,
       ),
       labelLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
+        letterSpacing: 0.2,
         color: darkTextColor,
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
+      foregroundColor: darkTextColor,
       elevation: 0,
-      centerTitle: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
+      centerTitle: false,
+      scrolledUnderElevation: 0,
       titleTextStyle: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 0.5,
-        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+        color: darkTextColor,
+      ),
+      iconTheme: IconThemeData(
+        color: darkTextColor,
+        size: 24,
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: darkCardBackgroundColor,
+      backgroundColor: darkSurfaceColor,
       selectedItemColor: primaryColor,
-      unselectedItemColor: darkSecondaryTextColor,
+      unselectedItemColor: darkSecondaryTextColor.withValues(alpha: 0.6),
       type: BottomNavigationBarType.fixed,
-      elevation: 8,
+      elevation: 0,
       showSelectedLabels: true,
-      showUnselectedLabels: true,
-      selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-      unselectedLabelStyle: TextStyle(fontSize: 12),
+      showUnselectedLabels: false,
+      selectedLabelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      unselectedLabelStyle:
+          TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
     ),
     cardTheme: CardTheme(
       color: darkCardBackgroundColor,
-      elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      elevation: 0,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      margin: EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
     ),
@@ -287,7 +317,7 @@ class AppTheme {
     disabledColor: darkSecondaryTextColor.withValues(alpha: 0.8),
   );
 
-  // Açık tema
+  // ☀️ ULTRA MODERN LIGHT THEME
   static ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
@@ -309,77 +339,94 @@ class AppTheme {
     ),
     textTheme: TextTheme(
       headlineLarge: TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.5,
+        fontSize: 34,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.0,
         color: textColor,
+        height: 1.1,
       ),
       headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.3,
+        fontSize: 26,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.8,
         color: textColor,
+        height: 1.2,
       ),
       headlineSmall: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        letterSpacing: -0.2,
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.5,
         color: textColor,
+        height: 1.3,
       ),
       bodyLarge: TextStyle(
         fontSize: 18,
-        letterSpacing: 0.1,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.0,
         color: textColor,
+        height: 1.5,
       ),
       bodyMedium: TextStyle(
         fontSize: 16,
-        letterSpacing: 0.1,
+        fontWeight: FontWeight.w400,
+        letterSpacing: 0.0,
         color: textColor,
+        height: 1.5,
       ),
       bodySmall: TextStyle(
         fontSize: 14,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0.1,
         color: secondaryTextColor,
+        height: 1.4,
       ),
       labelLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        letterSpacing: 0.5,
+        letterSpacing: 0.2,
         color: textColor,
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
+      foregroundColor: textColor,
       elevation: 0,
-      centerTitle: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
+      centerTitle: false,
+      scrolledUnderElevation: 0,
       titleTextStyle: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 0.5,
-        color: Colors.white,
+        fontSize: 24,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+        color: textColor,
+      ),
+      iconTheme: IconThemeData(
+        color: textColor,
+        size: 24,
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: surfaceColor,
       selectedItemColor: primaryColor,
-      unselectedItemColor: secondaryTextColor,
+      unselectedItemColor: secondaryTextColor.withValues(alpha: 0.6),
       type: BottomNavigationBarType.fixed,
-      elevation: 8,
+      elevation: 0,
       showSelectedLabels: true,
-      showUnselectedLabels: true,
-      selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-      unselectedLabelStyle: TextStyle(fontSize: 12),
+      showUnselectedLabels: false,
+      selectedLabelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      unselectedLabelStyle:
+          TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
     ),
     cardTheme: CardTheme(
       color: surfaceColor,
-      elevation: 2,
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      elevation: 0,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      margin: EdgeInsets.symmetric(vertical: 6, horizontal: 16),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: Colors.black.withValues(alpha: 0.08),
+          width: 1,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
     ),
@@ -452,4 +499,80 @@ class AppTheme {
     dividerColor: secondaryTextColor.withValues(alpha: 0.3),
     disabledColor: secondaryTextColor.withValues(alpha: 0.8),
   );
+
+  // 🎨 MODERN GLASS MORPHISM STYLES
+  static BoxDecoration glassContainer({
+    required BuildContext context,
+    Color? color,
+    double opacity = 0.1,
+    double blur = 20.0,
+    double borderRadius = 20.0,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      color: (color ?? (isDark ? Colors.white : Colors.black))
+          .withValues(alpha: opacity),
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+        width: 1,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: (isDark ? Colors.black : Colors.grey).withValues(alpha: 0.1),
+          blurRadius: blur,
+          offset: Offset(0, 8),
+        ),
+      ],
+    );
+  }
+
+  // 🌟 MODERN GRADIENT BUTTON
+  static BoxDecoration gradientButton({
+    List<Color>? colors,
+    double borderRadius = 16.0,
+  }) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: colors ?? [primaryColor, primaryColor.withValues(alpha: 0.8)],
+      ),
+      borderRadius: BorderRadius.circular(borderRadius),
+      boxShadow: [
+        BoxShadow(
+          color: (colors?.first ?? primaryColor).withValues(alpha: 0.3),
+          blurRadius: 16,
+          offset: Offset(0, 8),
+        ),
+      ],
+    );
+  }
+
+  // 💫 MODERN CARD SHADOW
+  static List<BoxShadow> modernCardShadow({
+    required BuildContext context,
+    double elevation = 4.0,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return [
+      BoxShadow(
+        color: (isDark ? Colors.black : Colors.grey)
+            .withValues(alpha: isDark ? 0.4 : 0.1),
+        blurRadius: elevation * 4,
+        offset: Offset(0, elevation),
+      ),
+      if (isDark)
+        BoxShadow(
+          color: Colors.white.withValues(alpha: 0.05),
+          blurRadius: 1,
+          offset: Offset(0, 1),
+        ),
+    ];
+  }
+
+  // 🎯 ANIMATION DURATIONS
+  static const Duration shortAnimation = Duration(milliseconds: 200);
+  static const Duration mediumAnimation = Duration(milliseconds: 300);
+  static const Duration longAnimation = Duration(milliseconds: 500);
 }

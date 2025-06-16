@@ -39,32 +39,47 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    return AppBar(
-      backgroundColor: AppTheme.primaryColor,
-      elevation: 4,
-      shadowColor: Colors.black26,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppTheme.primaryGradient,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
+      child: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            color: Colors.white,
+          ),
         ),
+        centerTitle: true,
+        actions: actions,
+        leading: showBackButton
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                onPressed: () {
+                  debugPrint("KaplanAppBar: Geri butonu tıklandı");
+                  Navigator.of(context).pop();
+                },
+              )
+            : null,
       ),
-      centerTitle: true,
-      actions: actions,
-      leading: showBackButton
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              onPressed: () {
-                debugPrint("KaplanAppBar: Geri butonu tıklandı");
-                Navigator.of(context).pop();
-              },
-            )
-          : null,
     );
   }
 

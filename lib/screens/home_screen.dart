@@ -372,7 +372,19 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode ? AppTheme.darkBackgroundColor : Color(0xFFF8F8FC),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDarkMode
+              ? [
+                  AppTheme.darkBackgroundColor,
+                  AppTheme.darkBackgroundColor.withValues(alpha: 0.9),
+                ]
+              : [
+                  Color(0xFFF8F9FA),
+                  Color(0xFFE9ECEF).withValues(alpha: 0.3),
+                ],
+        ),
       ),
       child: SafeArea(
         child: CustomScrollView(
@@ -391,14 +403,14 @@ class _HomeScreenState extends State<HomeScreen>
               child: KFSlideAnimation(
                 offsetBegin: Offset(0, 0.1),
                 delay: Duration(milliseconds: 150),
-                child: Card(
-                  elevation: 2,
+                child: Container(
                   margin: const EdgeInsets.symmetric(
                       horizontal: 20.0, vertical: 8.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  decoration: AppTheme.glassContainer(
+                    context: context,
+                    borderRadius: 24.0,
+                    blur: 15.0,
                   ),
-                  color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12.0, vertical: 16.0),

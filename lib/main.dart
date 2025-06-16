@@ -111,34 +111,49 @@ class _MainScreenState extends State<MainScreen> {
           isDarkMode ? AppTheme.darkBackgroundColor : const Color(0xFFF8F8FC),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDarkMode
+                ? [
+                    AppTheme.darkSurfaceColor.withValues(alpha: 0.95),
+                    AppTheme.darkSurfaceColor,
+                  ]
+                : [
+                    Colors.white.withValues(alpha: 0.95),
+                    Colors.white,
+                  ],
+          ),
           boxShadow: [
             BoxShadow(
-              blurRadius: 20,
-              color: Colors.black.withValues(alpha: .1),
-            )
+              blurRadius: 32,
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.08),
+              offset: Offset(0, -8),
+            ),
+            if (isDarkMode)
+              BoxShadow(
+                blurRadius: 8,
+                color: Colors.white.withValues(alpha: 0.05),
+                offset: Offset(0, -1),
+              ),
           ],
         ),
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
             child: GNav(
-              rippleColor: isDarkMode
-                  ? AppTheme.primaryColor.withValues(alpha: 0.1)
-                  : Colors.grey.shade300,
-              hoverColor: isDarkMode
-                  ? AppTheme.primaryColor.withValues(alpha: 0.15)
-                  : Colors.grey.shade200,
-              gap: 4,
-              activeColor: isDarkMode ? Colors.white : Colors.white,
-              iconSize: 24,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              duration: const Duration(milliseconds: 400),
-              tabBackgroundColor:
-                  isDarkMode ? AppTheme.primaryColor : AppTheme.primaryColor,
+              rippleColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+              hoverColor: AppTheme.primaryColor.withValues(alpha: 0.05),
+              gap: 6,
+              activeColor: Colors.white,
+              iconSize: 22,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              duration: const Duration(milliseconds: 300),
+              tabBackgroundGradient: AppTheme.primaryGradient,
+              tabBorderRadius: 16,
               color: isDarkMode
-                  ? AppTheme.darkSecondaryTextColor
-                  : Colors.grey.shade600,
+                  ? AppTheme.darkSecondaryTextColor.withValues(alpha: 0.8)
+                  : Colors.grey.shade500,
               tabs: const [
                 GButton(
                   icon: Icons.home_rounded,

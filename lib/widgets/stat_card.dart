@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 class StatCard extends StatelessWidget {
   final IconData icon;
@@ -12,56 +13,77 @@ class StatCard extends StatelessWidget {
     required this.color,
     required this.title,
     required this.value,
-  }) ;
+  });
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
     final isLightMode = brightness == Brightness.light;
-    
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(width: double.infinity, padding: const EdgeInsets.all(12.0),
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: AppTheme.glassContainer(
+        context: context,
+        borderRadius: 20.0,
+        blur: 12.0,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: isLightMode ? Colors.white : color.withValues(alpha:0.2),
-          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: isLightMode ? 0.1 : 0.2),
+              color.withValues(alpha: isLightMode ? 0.05 : 0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: color.withValues(alpha:0.5),
-            width: 1.5,
+            color: color.withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: color,
-              size: 24,
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 26,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               title,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 color: isLightMode ? Colors.black87 : Colors.white70,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                   color: isLightMode ? Colors.black : Colors.white,
+                  letterSpacing: -0.5,
                 ),
                 maxLines: 1,
               ),
@@ -71,6 +93,4 @@ class StatCard extends StatelessWidget {
       ),
     );
   }
-} 
-
-
+}
