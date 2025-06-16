@@ -70,6 +70,7 @@ class AppTheme {
       Color(0xFFFF8F5D); // Kalori takibi (turuncu)
   static const Color activityColor =
       Color(0xFF26C485); // Aktivite takibi (yeşil)
+  static const Color successColor = Color(0xFF4CAF50); // Başarı rengi (yeşil)
 
   // Grafik renkleri
   static const List<Color> chartColors = [
@@ -452,4 +453,3 @@ class AppTheme {
     disabledColor: secondaryTextColor.withValues(alpha: 0.8),
   );
 }
-

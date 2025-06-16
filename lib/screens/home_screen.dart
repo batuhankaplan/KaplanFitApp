@@ -34,6 +34,7 @@ import '../widgets/badge_grid.dart';
 import '../widgets/badge_detail_dialog.dart';
 import '../widgets/badge_widget.dart';
 import '../models/badge_model.dart';
+import 'all_badges_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -260,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen>
       color: isDone
           ? (isDarkMode
               ? AppTheme.completedTaskColor
-              : Colors.grey.withValues(alpha:0.1))
+              : Colors.grey.withValues(alpha: 0.1))
           : backgroundColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: InkWell(
@@ -271,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen>
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: iconColor.withValues(alpha:0.8),
+                backgroundColor: iconColor.withValues(alpha: 0.8),
                 radius: 24,
                 child: Icon(icon, color: Colors.white, size: 24),
               ),
@@ -300,8 +301,9 @@ class _HomeScreenState extends State<HomeScreen>
                                   : description,
                       style: TextStyle(
                         fontSize: 14,
-                        color:
-                            isDone ? Colors.grey : textColor.withValues(alpha:0.7),
+                        color: isDone
+                            ? Colors.grey
+                            : textColor.withValues(alpha: 0.7),
                         decoration: isDone ? TextDecoration.lineThrough : null,
                       ),
                       maxLines: 2,
@@ -318,11 +320,15 @@ class _HomeScreenState extends State<HomeScreen>
                     time,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDone ? Colors.grey : textColor.withValues(alpha:0.7),
+                      color: isDone
+                          ? Colors.grey
+                          : textColor.withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(width: 24, height: 24,
+                  Container(
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
@@ -506,7 +512,8 @@ class _HomeScreenState extends State<HomeScreen>
     debugPrint("[HomeScreen] _buildWelcomeHeader called."); // LOG
     final userName =
         user?.name ?? 'Kullanıcı'; // Eğer user null ise 'Kullanıcı' yaz
-    debugPrint("[HomeScreen] _buildWelcomeHeader: User name is '$userName'."); // LOG
+    debugPrint(
+        "[HomeScreen] _buildWelcomeHeader: User name is '$userName'."); // LOG
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -544,8 +551,8 @@ class _HomeScreenState extends State<HomeScreen>
                           fontSize: 15,
                           fontStyle: FontStyle.italic,
                           color: isDarkMode
-                              ? Colors.white.withValues(alpha:0.85)
-                              : Colors.black.withValues(alpha:0.7),
+                              ? Colors.white.withValues(alpha: 0.85)
+                              : Colors.black.withValues(alpha: 0.7),
                         ),
                         textAlign: TextAlign.start,
                       ),
@@ -588,8 +595,8 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? AppTheme.primaryColor.withValues(alpha:0.3)
-                        : AppTheme.primaryColor.withValues(alpha:0.1),
+                        ? AppTheme.primaryColor.withValues(alpha: 0.3)
+                        : AppTheme.primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: AppTheme.primaryColor,
@@ -615,79 +622,80 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildMenuSheet(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+    return SafeArea(
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            margin: EdgeInsets.only(top: 10),
-            width: 40,
-            height: 5,
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha:0.3),
-              borderRadius: BorderRadius.circular(10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: EdgeInsets.only(top: 10),
+              width: 40,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.calendar_today_rounded,
-              color: AppTheme.primaryColor,
+            ListTile(
+              leading: Icon(
+                Icons.calendar_today_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: Text('Program'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProgramScreen(),
+                    settings: RouteSettings(name: "ProgramScreen"),
+                  ),
+                );
+              },
             ),
-            title: Text('Program'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ProgramScreen(),
-                  settings: RouteSettings(name: "ProgramScreen"),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.fitness_center_rounded,
-              color: AppTheme.primaryColor,
+            ListTile(
+              leading: Icon(
+                Icons.fitness_center_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: Text('Antrenman Programı'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WorkoutProgramScreen(),
+                    settings: RouteSettings(name: "WorkoutProgramScreen"),
+                  ),
+                );
+              },
             ),
-            title: Text('Antrenman Programı'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const WorkoutProgramScreen(),
-                  settings: RouteSettings(name: "WorkoutProgramScreen"),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              Icons.check_circle_outline_rounded,
-              color: AppTheme.primaryColor,
+            ListTile(
+              leading: Icon(
+                Icons.check_circle_outline_rounded,
+                color: AppTheme.primaryColor,
+              ),
+              title: Text('Hedef Takibi'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GoalTrackingScreen(),
+                    settings: RouteSettings(name: "GoalTrackingScreen"),
+                  ),
+                );
+              },
             ),
-            title: Text('Hedef Takibi'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const GoalTrackingScreen(),
-                  settings: RouteSettings(name: "GoalTrackingScreen"),
-                ),
-              );
-            },
-          ),
-          SizedBox(height: 10),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -706,7 +714,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppTheme.primaryColor.withValues(alpha:0.1),
+        color: AppTheme.primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -717,7 +725,7 @@ class _HomeScreenState extends State<HomeScreen>
             strokeWidth: 3,
             value: completion,
             color: AppTheme.primaryColor,
-            backgroundColor: AppTheme.primaryColor.withValues(alpha:0.2),
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
           ),
           SizedBox(width: 8),
           Text(
@@ -755,12 +763,14 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildMotivationalBox() {
-    return Container(width: double.infinity, padding: const EdgeInsets.all(16),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.withValues(alpha:0.2),
+          color: Colors.grey.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -768,8 +778,11 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           Icon(
             Icons.lightbulb_outline,
-            color:
-                Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha:0.7),
+            color: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.color
+                ?.withValues(alpha: 0.7),
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -922,7 +935,8 @@ class _HomeScreenState extends State<HomeScreen>
       }
     } catch (e, stacktrace) {
       debugPrint("[HomeScreen] _loadWaterIntake Error: $e"); // LOG
-      debugPrint("[HomeScreen] _loadWaterIntake Stacktrace: $stacktrace"); // LOG
+      debugPrint(
+          "[HomeScreen] _loadWaterIntake Stacktrace: $stacktrace"); // LOG
     }
   }
 
@@ -954,7 +968,8 @@ class _HomeScreenState extends State<HomeScreen>
     //   // } else {
     //   //   debugPrint("[HomeScreen] _loadActivitySummary: No activity summary found for today."); // LOG
     //   // }
-    debugPrint("[HomeScreen] _loadActivitySummary: Temporarily disabled."); // LOG
+    debugPrint(
+        "[HomeScreen] _loadActivitySummary: Temporarily disabled."); // LOG
   }
 
   // Görev tamamlama durumunu değiştir
@@ -1161,7 +1176,7 @@ class _HomeScreenState extends State<HomeScreen>
       content = Row(
         children: [
           CircleAvatar(
-            backgroundColor: unlockedBadge.color.withValues(alpha:0.8),
+            backgroundColor: unlockedBadge.color.withValues(alpha: 0.8),
             radius: 20,
             child: Icon(
               _getBadgeIconForNotification(unlockedBadge),
@@ -1208,8 +1223,8 @@ class _HomeScreenState extends State<HomeScreen>
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         backgroundColor: unlockedBadge != null
-            ? unlockedBadge.color.withValues(alpha:0.9)
-            : AppTheme.primaryColor.withValues(alpha:0.9),
+            ? unlockedBadge.color.withValues(alpha: 0.9)
+            : AppTheme.primaryColor.withValues(alpha: 0.9),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -1370,322 +1385,3 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 }
-
-// Tüm rozetleri gösteren ekran
-class AllBadgesScreen extends StatelessWidget {
-  const AllBadgesScreen({super.key}) ;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final gamificationProvider = Provider.of<GamificationProvider>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Tüm Rozetlerim'),
-        backgroundColor: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-        foregroundColor: isDarkMode ? Colors.white : Colors.black87,
-        elevation: 0,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: isDarkMode ? AppTheme.darkBackgroundColor : Color(0xFFF8F8FC),
-        ),
-        child: CustomScrollView(
-          physics: BouncingScrollPhysics(),
-          slivers: [
-            // Puan özeti kartı
-            SliverToBoxAdapter(
-              child: _buildPointsSummaryCard(
-                  context, gamificationProvider, isDarkMode),
-            ),
-
-            SliverPadding(
-              padding: const EdgeInsets.all(16.0),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  'Açılan Rozetler',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-            if (gamificationProvider.unlockedBadges.isEmpty)
-              SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Text(
-                      'Henüz rozet kazanmadınız. Görevleri tamamlayarak rozetler kazanın!',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.white70 : Colors.black54,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.all(16.0),
-                sliver: SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.8,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final badge = gamificationProvider.unlockedBadges[index];
-                      return BadgeWidget(
-                        badge: badge,
-                        size: 80,
-                        showInfo: true,
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) =>
-                                BadgeDetailDialog(badge: badge),
-                          );
-                        },
-                      );
-                    },
-                    childCount: gamificationProvider.unlockedBadges.length,
-                  ),
-                ),
-              ),
-            SliverPadding(
-              padding: const EdgeInsets.all(16.0),
-              sliver: SliverToBoxAdapter(
-                child: Text(
-                  'Kilitli Rozetler',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.all(16.0),
-              sliver: SliverGrid(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.8,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final badge = gamificationProvider.lockedBadges[index];
-                    return BadgeWidget(
-                      badge: badge,
-                      size: 80,
-                      showInfo: true,
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => BadgeDetailDialog(badge: badge),
-                        );
-                      },
-                    );
-                  },
-                  childCount: gamificationProvider.lockedBadges.length,
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(height: 24),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Puanları ve rozet durumlarını gösteren özet kart
-  Widget _buildPointsSummaryCard(
-      BuildContext context, GamificationProvider provider, bool isDarkMode) {
-    final totalEarnedPoints = provider.totalEarnedPoints;
-    final maxPossiblePoints = provider.maxPossiblePoints;
-    final progress =
-        maxPossiblePoints > 0 ? totalEarnedPoints / maxPossiblePoints : 0.0;
-    final unlockedCount = provider.unlockedBadges.length;
-    final totalBadgesCount = provider.badges.length;
-    final badgeProgress =
-        totalBadgesCount > 0 ? unlockedCount / totalBadgesCount : 0.0;
-
-    return Card(
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Oyunlaştırma Özeti',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                // Puan dairesi
-                Container(width: 100, height: 100,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        value: progress,
-                        backgroundColor: AppTheme.primaryColor.withValues(alpha:0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryColor),
-                        strokeWidth: 10,
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$totalEarnedPoints',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                          Text(
-                            'puan',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color:
-                                  isDarkMode ? Colors.white70 : Colors.black54,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Toplam Puan: $totalEarnedPoints / $maxPossiblePoints',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: AppTheme.primaryColor.withValues(alpha:0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.primaryColor),
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Açılan Rozetler: $unlockedCount / $totalBadgesCount',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: badgeProgress,
-                        backgroundColor:
-                            AppTheme.secondaryColor.withValues(alpha:0.1),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            AppTheme.secondaryColor),
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (provider.streaks.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Mevcut Seriler:',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (provider.streaks['daily'] != null &&
-                      provider.streaks['daily']! > 0)
-                    _buildStreakChip(
-                      'Günlük: ${provider.streaks['daily']} gün',
-                      Icons.calendar_today,
-                      AppTheme.primaryColor,
-                    ),
-                  if (provider.streaks['water'] != null &&
-                      provider.streaks['water']! > 0)
-                    _buildStreakChip(
-                      'Su: ${provider.streaks['water']} gün',
-                      Icons.water_drop,
-                      AppTheme.waterColor,
-                    ),
-                  if (provider.workoutCount > 0)
-                    _buildStreakChip(
-                      'Antrenman: ${provider.workoutCount}',
-                      Icons.fitness_center,
-                      AppTheme.workoutColor,
-                    ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Seri durumunu gösteren chip widget
-  Widget _buildStreakChip(String label, IconData icon, Color color) {
-    return Chip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-        ),
-      ),
-      avatar: Icon(
-        icon,
-        color: Colors.white,
-        size: 16,
-      ),
-      backgroundColor: color,
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-    );
-  }
-}
-
-
-

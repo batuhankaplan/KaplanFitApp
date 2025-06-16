@@ -26,6 +26,8 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
         title != 'İstatistikler' &&
         title != 'Egzersiz Seç' &&
         title !=
+            'Bildirim Ayarları' && // Bildirim Ayarları sayfası için eklendi
+        title !=
             'Antrenman Programı' && // Antrenman Programı için appbar göstermek için ekledim
         !title.contains('Programı Düzenle') &&
         !title.contains('Yeni Kategori')) {
@@ -70,6 +72,8 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => isRequiredPage ||
           title == 'Program' ||
           title == 'İstatistikler' ||
+          title ==
+              'Bildirim Ayarları' || // Bildirim Ayarları için yükseklik ayarı
           title ==
               'Antrenman Programı' || // Antrenman Programı için yükseklik ayarı
           title.contains('Programı Düzenle') ||

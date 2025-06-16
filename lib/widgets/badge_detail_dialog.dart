@@ -8,7 +8,7 @@ import '../providers/gamification_provider.dart';
 class BadgeDetailDialog extends StatelessWidget {
   final BadgeModel badge;
 
-  const BadgeDetailDialog({Key? key, required this.badge}) ;
+  const BadgeDetailDialog({Key? key, required this.badge});
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +162,7 @@ class BadgeDetailDialog extends StatelessWidget {
         color: (isDarkMode
                 ? AppTheme.darkCardBackgroundColor
                 : Colors.grey.shade100)
-            .withValues(alpha:0.5),
+            .withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -211,7 +211,7 @@ class BadgeDetailDialog extends StatelessWidget {
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: progress,
-              backgroundColor: badge.color.withValues(alpha:0.1),
+              backgroundColor: badge.color.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(badge.color),
               minHeight: 8,
               borderRadius: BorderRadius.circular(4),
@@ -223,9 +223,11 @@ class BadgeDetailDialog extends StatelessWidget {
   }
 
   Widget _buildBadgeImage() {
-    return Container(width: 100, height: 100,
+    return Container(
+      width: 100,
+      height: 100,
       decoration: BoxDecoration(
-        color: badge.color.withValues(alpha:0.2),
+        color: badge.color.withValues(alpha: 0.2),
         shape: BoxShape.circle,
         border: Border.all(
           color: badge.color,
@@ -282,12 +284,56 @@ class BadgeDetailDialog extends StatelessWidget {
         }
       case BadgeType.waterStreak:
         switch (badge.threshold) {
+          case 3:
+            return Icons.water_drop_rounded; // 3 günlük su serisi
           case 5:
             return Icons.water_drop_rounded; // 5 günlük su serisi
           case 20:
             return Icons.water_rounded; // 20 günlük su serisi
+          case 30:
+            return Icons.local_drink_rounded; // 30 günlük su serisi
+          case 90:
+            return Icons.waves_rounded; // 90 günlük su serisi
+          case 365:
+            return Icons.psychology_alt_rounded; // 365 günlük su serisi
           default:
             return Icons.water_drop_rounded;
+        }
+      case BadgeType.workoutStreak:
+        switch (badge.threshold) {
+          case 30:
+            return Icons.timeline_rounded; // 30 günlük antrenman serisi
+          case 100:
+            return Icons.sports_score_rounded; // 100 günlük antrenman serisi
+          default:
+            return Icons.fitness_center_rounded;
+        }
+      case BadgeType.weightGain:
+        switch (badge.threshold) {
+          case 2:
+            return Icons.trending_up_rounded; // 2 kg alma
+          case 5:
+            return Icons.scale_rounded; // 5 kg alma
+          case 10:
+            return Icons.fitness_center_rounded; // 10 kg alma
+          default:
+            return Icons.trending_up_rounded;
+        }
+      case BadgeType.targetWeight:
+        return Icons.track_changes_rounded;
+      case BadgeType.maintainWeight:
+        return Icons.horizontal_rule_rounded;
+      case BadgeType.calorieStreak:
+        switch (badge.threshold) {
+          case 7:
+            return Icons.restaurant_rounded; // 7 günlük kalori serisi
+          case 30:
+            return Icons.local_dining_rounded; // 30 günlük kalori serisi
+          case 100:
+            return Icons
+                .emoji_food_beverage_rounded; // 100 günlük kalori serisi
+          default:
+            return Icons.restaurant_rounded;
         }
       case BadgeType.weightLoss:
         switch (badge.threshold) {
@@ -328,13 +374,19 @@ class BadgeDetailDialog extends StatelessWidget {
     switch (type) {
       case BadgeType.dailyStreak:
       case BadgeType.waterStreak:
+      case BadgeType.workoutStreak:
+      case BadgeType.calorieStreak:
         return 'gün';
       case BadgeType.workoutCount:
         return 'antrenman';
       case BadgeType.chatInteraction:
         return 'sohbet';
       case BadgeType.weightLoss:
+      case BadgeType.weightGain:
         return 'kg';
+      case BadgeType.targetWeight:
+      case BadgeType.maintainWeight:
+        return 'gün';
       default:
         return 'kez';
     }
@@ -352,6 +404,8 @@ class BadgeDetailDialog extends StatelessWidget {
         return Colors.orange;
       case BadgeRarity.legendary:
         return Colors.red;
+      case BadgeRarity.mythic:
+        return Colors.deepPurple;
     }
   }
 
@@ -367,9 +421,8 @@ class BadgeDetailDialog extends StatelessWidget {
         return 'Epik';
       case BadgeRarity.legendary:
         return 'Efsanevi';
+      case BadgeRarity.mythic:
+        return 'Efsanevi+';
     }
   }
 }
-
-
-

@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:math' show min;
 import '../theme.dart';
 import '../widgets/kaplan_appbar.dart';
 import '../services/notification_service.dart';
-// import 'package:awesome_notifications/awesome_notifications.dart'; // Kaldırıldı
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -16,16 +12,21 @@ class NotificationSettingsScreen extends StatefulWidget {
       _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState
-    extends State<NotificationSettingsScreen> {
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
+    with AutomaticKeepAliveClientMixin<NotificationSettingsScreen> {
+  @override
+  bool get wantKeepAlive => true;
+
   bool _notificationsEnabled = true;
-  bool _soundEnabled = true;
-  bool _vibrationEnabled = true;
+  bool _permissionsGranted = false;
   bool _workoutReminderEnabled = true;
   bool _mealReminderEnabled = true;
   bool _waterReminderEnabled = true;
-  bool _isLoading = true;
+  bool _soundEnabled = true;
+  bool _vibrationEnabled = true;
+  bool _isLoading = false;
   String? _errorMessage;
+  int _pendingNotificationsCount = 0;
 
   @override
   void initState() {
@@ -34,27 +35,48 @@ class _NotificationSettingsScreenState
   }
 
   Future<void> _loadSettings() async {
-    setState(() => _isLoading = true);
-    _errorMessage = null;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
       final prefs = await SharedPreferences.getInstance();
-      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-      _workoutReminderEnabled =
-          prefs.getBool('workout_reminder_enabled') ?? true;
-      _mealReminderEnabled = prefs.getBool('meal_reminder_enabled') ?? true;
-      _waterReminderEnabled = prefs.getBool('water_reminder_enabled') ?? true;
 
-      // Sistem seviyesinde izinleri de kontrol et (ilk yüklemede önemli)
-      final bool systemEnabled =
+      // Bildirim izinlerini kontrol et
+      await NotificationService.instance.init();
+      final permissions =
           await NotificationService.instance.areNotificationsEnabled();
-      if (!systemEnabled && _notificationsEnabled) {
-        // Eğer ayarlarda açık ama sistemde kapalıysa, ayarı da kapat
-        _notificationsEnabled = false;
-        await _saveSettings(); // Durumu kaydet
+
+      // Ayarları yükle
+      setState(() {
+        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+        _permissionsGranted = permissions;
+        _workoutReminderEnabled =
+            prefs.getBool('workout_reminder_enabled') ?? true;
+        _mealReminderEnabled = prefs.getBool('meal_reminder_enabled') ?? true;
+        _waterReminderEnabled = prefs.getBool('water_reminder_enabled') ?? true;
+        _soundEnabled = prefs.getBool('sound_enabled') ?? true;
+        _vibrationEnabled = prefs.getBool('vibration_enabled') ?? true;
+      });
+
+      // Planlanmış bildirim sayısını al
+      final pending =
+          await NotificationService.instance.getPendingNotifications();
+      setState(() => _pendingNotificationsCount = pending.length);
+
+      debugPrint(
+          '✅ Bildirim ayarları yüklendi - İzinler: $_permissionsGranted, Aktif: $_notificationsEnabled, Planlanmış: $_pendingNotificationsCount');
+
+      // Eğer izinler varsa ve ayarlar aktifse bildirimleri planla
+      if (_permissionsGranted && _notificationsEnabled) {
+        await _rescheduleNotifications();
       }
     } catch (e) {
-      _errorMessage = "Ayarlar yüklenirken bir hata oluştu: $e";
-      debugPrint(_errorMessage);
+      debugPrint('❌ Bildirim ayarları yüklenirken hata: $e');
+      setState(() {
+        _errorMessage = 'Ayarlar yüklenemedi: $e';
+      });
     } finally {
       setState(() => _isLoading = false);
     }
@@ -67,38 +89,45 @@ class _NotificationSettingsScreenState
       await prefs.setBool('workout_reminder_enabled', _workoutReminderEnabled);
       await prefs.setBool('meal_reminder_enabled', _mealReminderEnabled);
       await prefs.setBool('water_reminder_enabled', _waterReminderEnabled);
+      await prefs.setBool('sound_enabled', _soundEnabled);
+      await prefs.setBool('vibration_enabled', _vibrationEnabled);
+      debugPrint('✅ Bildirim ayarları kaydedildi');
     } catch (e) {
-      debugPrint("Ayarlar kaydedilirken hata: $e");
-      // Kullanıcıya hata gösterilebilir
+      debugPrint('❌ Bildirim ayarları kaydedilirken hata: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bildirim Ayarları'),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 4,
-        shadowColor: Colors.black26,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-        ),
-        centerTitle: true,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                onPressed: () => Navigator.of(context).pop(),
-              )
-            : null,
-      ),
       backgroundColor:
-          isDarkMode ? AppTheme.darkBackgroundColor : const Color(0xFFF8F8FC),
+          isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey.shade50,
+      appBar: KaplanAppBar(
+        title: 'Bildirim Ayarları',
+        isDarkMode: isDarkMode,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadSettings,
+            tooltip: 'Yenile',
+          ),
+        ],
+      ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Bildirim ayarları yükleniyor...'),
+                  ],
+                ),
+              )
             : _errorMessage != null
                 ? Center(
                     child: Padding(
@@ -106,15 +135,24 @@ class _NotificationSettingsScreenState
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          Icon(Icons.error_outline,
+                              size: 64, color: Colors.red),
+                          SizedBox(height: 16),
                           Text(
                             _errorMessage!,
-                            style: const TextStyle(color: Colors.red),
+                            style: const TextStyle(
+                                color: Colors.red, fontSize: 16),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
                             onPressed: _loadSettings,
-                            child: const Text('Tekrar Dene'),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Tekrar Dene'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
                           ),
                         ],
                       ),
@@ -122,192 +160,105 @@ class _NotificationSettingsScreenState
                   )
                 : SingleChildScrollView(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // İzin uyarısı (gerekirse)
+                        if (!_permissionsGranted) _buildPermissionWarning(),
+
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Ana bildirim ayarı
+                              // Genel bildirim toggle
                               _buildSectionTitle('Genel Bildirim Ayarları'),
-                              _buildNotificationSwitch(
-                                'Tüm Bildirimler',
-                                _notificationsEnabled,
-                                (value) async {
-                                  if (value) {
-                                    // Bildirimleri etkinleştirmek için izinleri kontrol et
-                                    await NotificationService.instance.init();
-                                    // Bildirimleri otomatik olarak planla
-                                    await _rescheduleNotifications();
-
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Bildirimler etkinleştirildi.'),
-                                          duration: Duration(seconds: 3),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    }
-                                  } else {
-                                    // Bildirimleri devre dışı bırak (mevcut bildirimleri iptal et)
-                                    await NotificationService.instance
-                                        .cancelAllNotifications();
-
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                              'Bildirimler devre dışı bırakıldı.'),
-                                          duration: Duration(seconds: 3),
-                                          backgroundColor: Colors.blue,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                  setState(() {
-                                    _notificationsEnabled = value;
-                                  });
-                                },
-                              ),
+                              _buildMainNotificationToggle(),
 
                               // Bildirim türleri
-                              if (_notificationsEnabled) ...[
-                                const SizedBox(height: 16),
+                              if (_notificationsEnabled &&
+                                  _permissionsGranted) ...[
+                                const SizedBox(height: 24),
                                 _buildSectionTitle(
                                     'Bildirim Türleri ve Saatleri'),
 
-                                // Sabah antrenman hatırlatması - 08:00
                                 _buildNotificationSwitchWithTime(
                                   'Antrenman Hatırlatmaları',
                                   _workoutReminderEnabled,
-                                  "08:00",
+                                  "08:00, 20:00",
+                                  Icons.fitness_center,
                                   (value) {
                                     setState(() {
                                       _workoutReminderEnabled = value;
                                     });
+                                    _saveSettings();
                                     _rescheduleNotifications();
                                   },
                                 ),
 
-                                // Öğle yemeği hatırlatması - 12:00
                                 _buildNotificationSwitchWithTime(
                                   'Beslenme Hatırlatmaları',
                                   _mealReminderEnabled,
-                                  "12:00",
+                                  "12:00, 18:00",
+                                  Icons.restaurant,
                                   (value) {
                                     setState(() {
                                       _mealReminderEnabled = value;
                                     });
+                                    _saveSettings();
                                     _rescheduleNotifications();
                                   },
                                 ),
 
-                                // Su içme hatırlatması - 10:00, 13:00, 16:00
                                 _buildNotificationSwitchWithTime(
                                   'Su İçme Hatırlatmaları',
                                   _waterReminderEnabled,
-                                  "10:00, 13:00, 16:00",
+                                  "10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00, 00:00",
+                                  Icons.water_drop,
                                   (value) {
                                     setState(() {
                                       _waterReminderEnabled = value;
                                     });
+                                    _saveSettings();
                                     _rescheduleNotifications();
                                   },
                                 ),
 
                                 // Bildirim seçenekleri
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 24),
                                 _buildSectionTitle('Bildirim Seçenekleri'),
+
                                 _buildNotificationSwitch(
                                   'Ses',
                                   _soundEnabled,
+                                  Icons.volume_up,
                                   (value) {
                                     setState(() {
                                       _soundEnabled = value;
                                     });
+                                    _saveSettings();
                                     _rescheduleNotifications();
                                   },
                                 ),
+
                                 _buildNotificationSwitch(
                                   'Titreşim',
                                   _vibrationEnabled,
+                                  Icons.vibration,
                                   (value) {
                                     setState(() {
                                       _vibrationEnabled = value;
                                     });
+                                    _saveSettings();
                                     _rescheduleNotifications();
                                   },
                                 ),
 
-                                // Bildirim bilgisi
-                                const SizedBox(height: 16),
-                                Card(
-                                  color: isDarkMode
-                                      ? AppTheme.darkCardBackgroundColor
-                                      : Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  elevation: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(Icons.info_outline,
-                                                color: AppTheme.primaryColor),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'Bildirim Saatleri',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 8),
-                                        Text(
-                                          'Bildirimlerin günün belirli saatlerinde gönderilmesi için ayarlanmıştır. Her bildirim türü kendine özgü saatinde gönderilecektir.',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-
-                                // Yeni "Özel Bildirim Ekle" Butonu
+                                // Özel bildirim ekleme
                                 const SizedBox(height: 24),
-                                Center(
-                                  child: ElevatedButton.icon(
-                                    onPressed: _showCustomNotificationDialog,
-                                    icon: const Icon(Icons.add_alarm,
-                                        color: Colors.white),
-                                    label: const Text('Özel Bildirim Ekle',
-                                        style: TextStyle(color: Colors.white)),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme
-                                          .accentColor, // Farklı bir renk
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 30, vertical: 15),
-                                      textStyle: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                _buildCustomNotificationSection(),
+
+                                // Test butonları (en alta taşındı)
+                                const SizedBox(height: 24),
+                                _buildTestSection(),
                               ],
                             ],
                           ),
@@ -319,29 +270,244 @@ class _NotificationSettingsScreenState
     );
   }
 
+  Widget _buildMainNotificationToggle() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF243355) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SwitchListTile(
+        title: Row(
+          children: [
+            Icon(Icons.notifications, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'Tüm Bildirimler',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        subtitle: Text(
+          _permissionsGranted
+              ? 'Planlanmış: $_pendingNotificationsCount bildirim'
+              : 'İzin gerekli',
+          style: TextStyle(
+            fontSize: 12,
+            color: isDarkMode ? Colors.white70 : Colors.grey.shade600,
+          ),
+        ),
+        value: _notificationsEnabled && _permissionsGranted,
+        onChanged: _toggleMainNotifications,
+        activeColor: AppTheme.accentColor,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildPermissionWarning() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF243355) : Colors.orange.shade50,
+        border: Border.all(
+            color:
+                isDarkMode ? Colors.orange.shade400 : Colors.orange.shade200),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber,
+                  color: isDarkMode
+                      ? Colors.orange.shade300
+                      : Colors.orange.shade700),
+              const SizedBox(width: 8),
+              Text(
+                'Bildirim İzni Gerekli',
+                style: TextStyle(
+                  color: isDarkMode
+                      ? Colors.orange.shade300
+                      : Colors.orange.shade700,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Bildirimlerin çalışması için sistem ayarlarından bildirim izni verilmelidir.',
+            style: TextStyle(
+              color: isDarkMode ? Colors.white70 : Colors.orange.shade700,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: _checkPermissions,
+            icon: const Icon(Icons.settings),
+            label: const Text('İzinleri Kontrol Et'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTestSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bug_report, color: AppTheme.primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Test Bildirimleri',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _sendTestNotification,
+                  icon: const Icon(Icons.send, size: 16),
+                  label: const Text('Test Gönder'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentColor,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _showPendingNotifications,
+                  icon: const Icon(Icons.schedule, size: 16),
+                  label: Text('Planlanmış ($_pendingNotificationsCount)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomNotificationSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.add_alarm, color: AppTheme.accentColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Özel Bildirim',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Kendinize özel bir hatırlatma oluşturun.',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _showCustomNotificationDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Özel Bildirim Ekle'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(
         title,
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: AppTheme.primaryColor,
+          color: isDarkMode ? Colors.white : Colors.black87,
         ),
       ),
     );
   }
 
   Widget _buildNotificationSwitch(
-      String title, bool value, void Function(bool) onChanged) {
+      String title, bool value, IconData icon, void Function(bool) onChanged) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 8.0),
       decoration: BoxDecoration(
-        color: isDarkMode
-            ? const Color(0xFF243355) // Koyu tema için
-            : Colors.white, // Açık tema için
+        color: isDarkMode ? const Color(0xFF243355) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -352,33 +518,36 @@ class _NotificationSettingsScreenState
         ],
       ),
       child: SwitchListTile(
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-          ),
+        title: Row(
+          children: [
+            Icon(icon, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+          ],
         ),
         value: value,
         onChanged: onChanged,
         activeColor: AppTheme.accentColor,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  Widget _buildNotificationSwitchWithTime(
-      String title, bool value, String time, void Function(bool) onChanged) {
+  Widget _buildNotificationSwitchWithTime(String title, bool value, String time,
+      IconData icon, void Function(bool) onChanged) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 8.0),
       decoration: BoxDecoration(
-        color: isDarkMode
-            ? const Color(0xFF243355) // Koyu tema için
-            : Colors.white, // Açık tema için
+        color: isDarkMode ? const Color(0xFF243355) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -389,11 +558,18 @@ class _NotificationSettingsScreenState
         ],
       ),
       child: SwitchListTile(
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-          ),
+        title: Row(
+          children: [
+            Icon(icon, size: 20, color: AppTheme.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isDarkMode ? Colors.white : Colors.black87,
+              ),
+            ),
+          ],
         ),
         subtitle: Text(
           'Saat: $time',
@@ -407,132 +583,70 @@ class _NotificationSettingsScreenState
         activeColor: AppTheme.accentColor,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  // Planlı bildirimleri SharedPreferences'daki ayarlara göre yeniden planla
-  Future<void> _rescheduleNotifications() async {
-    if (!_notificationsEnabled) {
-      // Genel bildirimler kapalıysa tümünü iptal et
-      await NotificationService.instance.cancelAllNotifications();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Tüm bildirimler devre dışı bırakıldı.'),
-            backgroundColor: Colors.orange),
-      );
-      return;
-    }
-
+  // Ana bildirim toggle işlevi
+  Future<void> _toggleMainNotifications(bool value) async {
     setState(() => _isLoading = true);
-    int plannedCount = 0;
+
     try {
-      // Önce mevcutları temizle
-      await NotificationService.instance.cancelAllNotifications();
+      if (value) {
+        // Bildirimleri etkinleştir
+        await NotificationService.instance.init();
+        final permissions =
+            await NotificationService.instance.areNotificationsEnabled();
 
-      // Workout Reminder (ID 1001, 08:00)
-      if (_workoutReminderEnabled) {
-        await NotificationService.instance.scheduleDailyNotification(
-            id: 1001,
-            title: 'Antrenman Zamanı',
-            body: 'Bugünkü antrenmanını unutma!',
-            timeOfDay: const TimeOfDay(hour: 8, minute: 0),
-            payload: 'workout');
-        plannedCount++;
-      }
+        if (permissions) {
+          setState(() {
+            _notificationsEnabled = true;
+            _permissionsGranted = true;
+          });
+          await _saveSettings();
+          await _rescheduleNotifications();
 
-      // Meal Reminder (ID 1002, 12:00)
-      if (_mealReminderEnabled) {
-        await NotificationService.instance.scheduleDailyNotification(
-            id: 1002,
-            title: 'Beslenme Vakti',
-            body: 'Öğle yemeği zamanı yaklaşıyor!',
-            timeOfDay: const TimeOfDay(hour: 12, minute: 0),
-            payload: 'meal');
-        plannedCount++;
-      }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Bildirimler başarıyla etkinleştirildi!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          setState(() {
+            _notificationsEnabled = false;
+            _permissionsGranted = false;
+          });
 
-      // Water Reminders (ID 1003-1005, 10:00, 13:00, 16:00)
-      if (_waterReminderEnabled) {
-        await NotificationService.instance.scheduleDailyNotification(
-            id: 1003,
-            title: 'Su İç',
-            body: 'Vücudunu susuz bırakma!',
-            timeOfDay: const TimeOfDay(hour: 10, minute: 0),
-            payload: 'water10');
-        await NotificationService.instance.scheduleDailyNotification(
-            id: 1004,
-            title: 'Su İç',
-            body: 'Bir bardak daha su?',
-            timeOfDay: const TimeOfDay(hour: 13, minute: 0),
-            payload: 'water13');
-        await NotificationService.instance.scheduleDailyNotification(
-            id: 1005,
-            title: 'Su İç',
-            body: 'Günün son su hatırlatması!',
-            timeOfDay: const TimeOfDay(hour: 16, minute: 0),
-            payload: 'water16');
-        plannedCount += 3;
-      }
-
-      if (plannedCount > 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('$plannedCount adet günlük bildirim planlandı.'),
-              backgroundColor: Colors.green),
-        );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  '⚠️ Bildirim izni verilmedi. Sistem ayarlarını kontrol edin.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       } else {
+        // Bildirimleri devre dışı bırak
+        await NotificationService.instance.cancelAllNotifications();
+        setState(() {
+          _notificationsEnabled = false;
+        });
+        await _saveSettings();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Aktif günlük bildirim ayarı yok.'),
-              backgroundColor: Colors.blue),
+            content: Text('🔕 Tüm bildirimler devre dışı bırakıldı'),
+            backgroundColor: Colors.blue,
+          ),
         );
       }
     } catch (e) {
-      _errorMessage = "Bildirimler planlanırken hata: $e";
-      debugPrint(_errorMessage);
+      debugPrint('❌ Ana bildirim toggle hatası: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Bildirimler planlanamadı: $e'),
-            backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  // --- YENİ: Tek Seferlik Bildirim Planlama Fonksiyonu ---
-  Future<void> _scheduleOneTimeNotification(
-      String title, String body, DateTime dateTime) async {
-    // Parametre DateTime oldu
-    setState(() => _isLoading = true);
-    try {
-      // --- Anlık test kodu kaldırıldı, orijinal zamanlama kodu geri getirildi ---
-      await NotificationService.instance.scheduleOneTimeNotification(
-        title: title,
-        body: body,
-        scheduledDateTime: dateTime, // DateTime olarak gönderiliyor
-      );
-
-      final formattedTime = TimeOfDay.fromDateTime(dateTime).format(context);
-      final formattedDate =
-          "${dateTime.day}/${dateTime.month}/${dateTime.year}";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '"$title" bildirimi $formattedDate $formattedTime için planlandı.'),
-          backgroundColor: Colors.teal,
-        ),
-      );
-    } catch (e) {
-      _errorMessage = "Özel bildirim planlanırken hata: $e";
-      debugPrint(_errorMessage);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Özel bildirim planlanamadı: $e'),
+          content: Text('❌ Hata: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -541,12 +655,216 @@ class _NotificationSettingsScreenState
     }
   }
 
+  // İzinleri kontrol et
+  Future<void> _checkPermissions() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await NotificationService.instance.init();
+      final permissions =
+          await NotificationService.instance.areNotificationsEnabled();
+
+      setState(() {
+        _permissionsGranted = permissions;
+      });
+
+      if (permissions) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Bildirim izinleri aktif!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                '❌ Bildirim izinleri verilmemiş. Sistem ayarlarını kontrol edin.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ İzin kontrolü hatası: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // Test bildirimi gönder
+  Future<void> _sendTestNotification() async {
+    try {
+      debugPrint('🧪 Test bildirimi gönderiliyor...');
+
+      // Önce izinleri kontrol et
+      final permissions =
+          await NotificationService.instance.areNotificationsEnabled();
+      debugPrint('🔐 Bildirim izinleri: $permissions');
+
+      if (!permissions) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Bildirim izinleri aktif değil!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      await NotificationService.instance.sendNowTestNotification(
+        title: '🔥 Test Bildirimi',
+        body:
+            'KaplanFit bildirim sistemi mükemmel çalışıyor! ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Test bildirimi gönderildi!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Test bildirimi hatası: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Test bildirimi gönderilemedi: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Planlanmış bildirimleri göster
+  Future<void> _showPendingNotifications() async {
+    try {
+      final pending =
+          await NotificationService.instance.getPendingNotifications();
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Planlanmış Bildirimler'),
+          content: pending.isEmpty
+              ? const Text('Henüz planlanmış bildirim yok.')
+              : SizedBox(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                          'Toplam ${pending.length} adet bildirim planlanmış:'),
+                      const SizedBox(height: 8),
+                      ...pending.take(5).map((notification) => ListTile(
+                            dense: true,
+                            leading: CircleAvatar(
+                              backgroundColor: AppTheme.primaryColor,
+                              radius: 12,
+                              child: Text(
+                                notification.id.toString(),
+                                style: const TextStyle(
+                                    fontSize: 10, color: Colors.white),
+                              ),
+                            ),
+                            title: Text(
+                              notification.title ?? 'Başlıksız',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              notification.body ?? '',
+                              style: const TextStyle(fontSize: 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )),
+                      if (pending.length > 5)
+                        Text('... ve ${pending.length - 5} tane daha'),
+                    ],
+                  ),
+                ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Tamam'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Planlanmış bildirimler alınamadı: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Hata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Bildirimleri yeniden planla
+  Future<void> _rescheduleNotifications() async {
+    if (!_notificationsEnabled || !_permissionsGranted) {
+      await NotificationService.instance.cancelAllNotifications();
+      setState(() => _pendingNotificationsCount = 0);
+      return;
+    }
+
+    try {
+      await NotificationService.instance.cancelAllNotifications();
+      debugPrint('✅ Tüm planlanmış bildirimler iptal edildi');
+
+      int plannedCount = 0;
+
+      // Yeni geliştirilmiş bildirim sistemi kullan
+      if (_workoutReminderEnabled ||
+          _mealReminderEnabled ||
+          _waterReminderEnabled) {
+        plannedCount =
+            await NotificationService.instance.scheduleDailyNotifications();
+
+        // İçerik bazlı bildirimler
+        final contentCount = await NotificationService.instance
+            .scheduleContentBasedNotifications();
+        plannedCount += contentCount;
+      }
+
+      // Planlanmış bildirim sayısını güncelle
+      final pending =
+          await NotificationService.instance.getPendingNotifications();
+      setState(() => _pendingNotificationsCount = pending.length);
+
+      if (plannedCount > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ $plannedCount adet günlük bildirim planlandı'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Bildirimler planlanırken hata: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Bildirimler planlanamadı: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // Özel bildirim ekleme dialogu
   void _showCustomNotificationDialog() {
     final titleController = TextEditingController();
     final bodyController = TextEditingController();
-    DateTime? selectedDate; // Başlangıçta null
-    TimeOfDay? selectedTime; // Başlangıçta null
+    DateTime? selectedDate;
+    TimeOfDay? selectedTime;
 
     showDialog(
       context: context,
@@ -565,11 +883,12 @@ class _NotificationSettingsScreenState
                     TextField(
                       controller: titleController,
                       decoration: const InputDecoration(
-                        labelText: 'Başlık',
+                        labelText: 'Başlık *',
                         hintText: 'Ne hatırlatmamı istersin?',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.title),
                       ),
+                      textCapitalization: TextCapitalization.sentences,
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -581,52 +900,45 @@ class _NotificationSettingsScreenState
                         prefixIcon: Icon(Icons.description),
                       ),
                       maxLines: 2,
+                      textCapitalization: TextCapitalization.sentences,
                     ),
                     const SizedBox(height: 16),
+
+                    // Tarih seçimi
                     ListTile(
-                      contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.calendar_today),
-                      title: Text(
-                        selectedDate == null // Null kontrolü
-                            ? 'Tarih Seç' // Seçilmediyse uyarı
-                            : 'Tarih: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
-                      ),
-                      trailing: const Icon(Icons.edit_calendar),
+                      title: Text(selectedDate == null
+                          ? 'Tarih Seç'
+                          : 'Tarih: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () async {
-                        final DateTime? pickedDate = await showDatePicker(
+                        final date = await showDatePicker(
                           context: context,
-                          initialDate: selectedDate ??
-                              DateTime
-                                  .now(), // Seçiliyse onu, değilse bugünü göster
+                          initialDate: DateTime.now(),
                           firstDate: DateTime.now(),
                           lastDate:
                               DateTime.now().add(const Duration(days: 365)),
                         );
-                        if (pickedDate != null) {
-                          setDialogState(() {
-                            selectedDate = pickedDate;
-                          });
+                        if (date != null) {
+                          setDialogState(() => selectedDate = date);
                         }
                       },
                     ),
+
+                    // Saat seçimi
                     ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.access_time_filled),
-                      title: Text(
-                        selectedTime == null
-                            ? 'Saat Seç'
-                            : 'Saat: ${selectedTime!.format(context)}',
-                      ),
-                      trailing: const Icon(Icons.edit),
+                      leading: const Icon(Icons.access_time),
+                      title: Text(selectedTime == null
+                          ? 'Saat Seç'
+                          : 'Saat: ${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}'),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () async {
-                        final TimeOfDay? pickedTime = await showTimePicker(
+                        final time = await showTimePicker(
                           context: context,
-                          initialTime: selectedTime ?? TimeOfDay.now(),
+                          initialTime: TimeOfDay.now(),
                         );
-                        if (pickedTime != null) {
-                          setDialogState(() {
-                            selectedTime = pickedTime;
-                          });
+                        if (time != null) {
+                          setDialogState(() => selectedTime = time);
                         }
                       },
                     ),
@@ -639,29 +951,30 @@ class _NotificationSettingsScreenState
                   child: const Text('İptal'),
                 ),
                 ElevatedButton(
-                  onPressed: (selectedDate == null ||
-                          selectedTime == null ||
-                          titleController.text.isEmpty)
-                      ? null // Saat VEYA Tarih VEYA Başlık boşsa pasif
-                      : () {
-                          // Seçilen tarih ve saati birleştir
-                          final DateTime finalDateTime = DateTime(
-                            selectedDate!.year, // Null olamaz (buton aktifse)
-                            selectedDate!.month,
-                            selectedDate!.day,
-                            selectedTime!.hour, // Null olamaz (buton aktifse)
-                            selectedTime!.minute,
-                          );
-
-                          Navigator.of(context).pop(); // Dialog'u kapat
-                          _scheduleOneTimeNotification(
+                  onPressed: (titleController.text.isNotEmpty &&
+                          selectedDate != null &&
+                          selectedTime != null)
+                      ? () async {
+                          Navigator.of(context).pop();
+                          await _scheduleCustomNotification(
                             titleController.text,
                             bodyController.text.isEmpty
-                                ? "Hatırlatma"
+                                ? 'KaplanFit hatırlatması'
                                 : bodyController.text,
-                            finalDateTime,
+                            DateTime(
+                              selectedDate!.year,
+                              selectedDate!.month,
+                              selectedDate!.day,
+                              selectedTime!.hour,
+                              selectedTime!.minute,
+                            ),
                           );
-                        },
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
                   child: const Text('Planla'),
                 ),
               ],
@@ -670,5 +983,90 @@ class _NotificationSettingsScreenState
         );
       },
     );
+  }
+
+  // Özel bildirim planlama
+  Future<void> _scheduleCustomNotification(
+      String title, String body, DateTime dateTime) async {
+    try {
+      debugPrint('📅 Özel bildirim planlanıyor...');
+      debugPrint('   📝 Başlık: $title');
+      debugPrint('   📄 İçerik: $body');
+      debugPrint('   🕒 Zaman: $dateTime');
+
+      print('=== ÖZEL BİLDİRİM PLANLIYOR ===');
+      print('Başlık: $title');
+      print('Zaman: $dateTime');
+      print('==============================');
+
+      // Eğer geçmiş tarih seçildiyse hata ver
+      final now = DateTime.now();
+      if (dateTime.isBefore(now)) {
+        final difference = now.difference(dateTime);
+        debugPrint(
+            '❌ Geçmiş zaman seçildi - Fark: ${difference.inMinutes} dakika');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                '❌ Geçmiş bir zaman için bildirim planlanamaz! (${difference.inMinutes} dakika geçmiş)'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // İzinleri kontrol et
+      final permissions =
+          await NotificationService.instance.areNotificationsEnabled();
+      debugPrint('🔐 Bildirim izinleri: $permissions');
+
+      if (!permissions) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Bildirim izinleri aktif değil!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final difference = dateTime.difference(now);
+      debugPrint('   ⏳ ${difference.inMinutes} dakika sonra gelecek');
+
+      await NotificationService.instance.scheduleOneTimeNotification(
+        title: title,
+        body: body,
+        scheduledDateTime: dateTime,
+      );
+
+      final formattedTime = TimeOfDay.fromDateTime(dateTime).format(context);
+      final formattedDate =
+          "${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year}";
+
+      // Planlanmış bildirim sayısını güncelle
+      final pending =
+          await NotificationService.instance.getPendingNotifications();
+      setState(() => _pendingNotificationsCount = pending.length);
+
+      debugPrint(
+          '✅ Özel bildirim planlandı: "$title" - $formattedDate $formattedTime');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '✅ "$title" bildirimi $formattedDate $formattedTime için planlandı'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Özel bildirim planlanırken hata: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Özel bildirim planlanamadı: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

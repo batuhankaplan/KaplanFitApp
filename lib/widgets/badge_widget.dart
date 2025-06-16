@@ -13,7 +13,7 @@ class BadgeWidget extends StatelessWidget {
     this.onTap,
     this.size = 60.0,
     this.showInfo = false,
-  }) ;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,10 +40,12 @@ class BadgeWidget extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         // Rozet arka planı
-        Container(width: size, height: size,
+        Container(
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             color: isUnlocked
-                ? badge.color.withValues(alpha:0.2)
+                ? badge.color.withValues(alpha: 0.2)
                 : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300),
             shape: BoxShape.circle,
             border: Border.all(
@@ -53,7 +55,7 @@ class BadgeWidget extends StatelessWidget {
             boxShadow: isUnlocked
                 ? [
                     BoxShadow(
-                      color: badge.color.withValues(alpha:0.3),
+                      color: badge.color.withValues(alpha: 0.3),
                       blurRadius: 8,
                       spreadRadius: 1,
                     )
@@ -73,7 +75,7 @@ class BadgeWidget extends StatelessWidget {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha:0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -176,14 +178,76 @@ class BadgeWidget extends StatelessWidget {
         break;
       case BadgeType.waterStreak:
         switch (badge.threshold) {
+          case 3:
+            iconData = Icons.water_drop_rounded; // 3 günlük su serisi
+            break;
           case 5:
             iconData = Icons.water_drop_rounded; // 5 günlük su serisi
             break;
           case 20:
             iconData = Icons.water_rounded; // 20 günlük su serisi
             break;
+          case 30:
+            iconData = Icons.local_drink_rounded; // 30 günlük su serisi
+            break;
+          case 90:
+            iconData = Icons.waves_rounded; // 90 günlük su serisi
+            break;
+          case 365:
+            iconData = Icons.psychology_alt_rounded; // 365 günlük su serisi
+            break;
           default:
             iconData = Icons.water_drop_rounded;
+        }
+        break;
+      case BadgeType.workoutStreak:
+        switch (badge.threshold) {
+          case 30:
+            iconData = Icons.timeline_rounded; // 30 günlük antrenman serisi
+            break;
+          case 100:
+            iconData =
+                Icons.sports_score_rounded; // 100 günlük antrenman serisi
+            break;
+          default:
+            iconData = Icons.fitness_center_rounded;
+        }
+        break;
+      case BadgeType.weightGain:
+        switch (badge.threshold) {
+          case 2:
+            iconData = Icons.trending_up_rounded; // 2 kg alma
+            break;
+          case 5:
+            iconData = Icons.scale_rounded; // 5 kg alma
+            break;
+          case 10:
+            iconData = Icons.fitness_center_rounded; // 10 kg alma
+            break;
+          default:
+            iconData = Icons.trending_up_rounded;
+        }
+        break;
+      case BadgeType.targetWeight:
+        iconData = Icons.track_changes_rounded;
+        break;
+      case BadgeType.maintainWeight:
+        iconData = Icons.horizontal_rule_rounded;
+        break;
+      case BadgeType.calorieStreak:
+        switch (badge.threshold) {
+          case 7:
+            iconData = Icons.restaurant_rounded; // 7 günlük kalori serisi
+            break;
+          case 30:
+            iconData = Icons.local_dining_rounded; // 30 günlük kalori serisi
+            break;
+          case 100:
+            iconData =
+                Icons.emoji_food_beverage_rounded; // 100 günlük kalori serisi
+            break;
+          default:
+            iconData = Icons.restaurant_rounded;
         }
         break;
       case BadgeType.weightLoss:
@@ -269,6 +333,8 @@ class BadgeWidget extends StatelessWidget {
         return Colors.orange;
       case BadgeRarity.legendary:
         return Colors.red;
+      case BadgeRarity.mythic:
+        return Colors.deepPurple;
     }
   }
 
@@ -284,8 +350,8 @@ class BadgeWidget extends StatelessWidget {
         return 'E';
       case BadgeRarity.legendary:
         return 'L';
+      case BadgeRarity.mythic:
+        return 'M';
     }
   }
 }
-
-

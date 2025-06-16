@@ -9,12 +9,19 @@ enum BadgeType {
 
   // Antrenman tabanlı rozetler
   workoutCount, // Belirli sayıda antrenman tamamlama
+  workoutStreak, // Üst üste günlerde antrenman yapma
 
   // Su tabanlı rozetler
   waterStreak, // Üst üste günlerde su hedefini tamamlama
 
   // Kilo tabanlı rozetler
   weightLoss, // Belirli miktar kilo verme
+  weightGain, // Belirli miktar kilo alma
+  targetWeight, // Hedef kiloya ulaşma
+  maintainWeight, // Hedef kiloda kalma
+
+  // Beslenme tabanlı rozetler
+  calorieStreak, // Üst üste günlerde kalori hedefini tamamlama
 
   // Etkileşim tabanlı rozetler
   chatInteraction, // AI sohbet ile etkileşim
@@ -31,7 +38,8 @@ enum BadgeRarity {
   uncommon, // Az yaygın
   rare, // Nadir
   epic, // Epik
-  legendary // Efsanevi (çok zor kazanılan)
+  legendary, // Efsanevi (çok zor kazanılan)
+  mythic // Efsanevi (neredeyse imkansız)
 }
 
 class BadgeModel {

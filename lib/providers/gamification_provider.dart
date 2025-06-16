@@ -499,6 +499,196 @@ class GamificationProvider with ChangeNotifier {
         points: 1000,
       ),
     ]);
+
+    // Yeni uzun vadeli su içme rozetleri
+    _badges.addAll([
+      BadgeModel(
+        id: 22,
+        name: 'Su Bağımlısı',
+        description: '1 ay üst üste su hedefini tamamla',
+        type: BadgeType.waterStreak,
+        rarity: BadgeRarity.epic,
+        threshold: 30,
+        color: AppTheme.waterColor,
+        points: 3000,
+      ),
+      BadgeModel(
+        id: 23,
+        name: 'Hidrasyon Ustası',
+        description: '3 ay üst üste su hedefini tamamla',
+        type: BadgeType.waterStreak,
+        rarity: BadgeRarity.legendary,
+        threshold: 90,
+        color: AppTheme.waterColor,
+        points: 9000,
+      ),
+      BadgeModel(
+        id: 24,
+        name: 'Su Devi',
+        description: '1 yıl üst üste su hedefini tamamla',
+        type: BadgeType.waterStreak,
+        rarity: BadgeRarity.mythic,
+        threshold: 365,
+        color: AppTheme.waterColor,
+        points: 36500,
+      ),
+    ]);
+
+    // Kilo alma rozetleri
+    _badges.addAll([
+      BadgeModel(
+        id: 25,
+        name: 'Kas Geliştirici',
+        description: '2 kg sağlıklı kilo al',
+        type: BadgeType.weightGain,
+        rarity: BadgeRarity.uncommon,
+        threshold: 2,
+        color: AppTheme.successColor,
+        points: 200,
+      ),
+      BadgeModel(
+        id: 26,
+        name: 'Bulk Ustası',
+        description: '5 kg sağlıklı kilo al',
+        type: BadgeType.weightGain,
+        rarity: BadgeRarity.rare,
+        threshold: 5,
+        color: AppTheme.successColor,
+        points: 500,
+      ),
+      BadgeModel(
+        id: 27,
+        name: 'Güçlü Vücut',
+        description: '10 kg sağlıklı kilo al',
+        type: BadgeType.weightGain,
+        rarity: BadgeRarity.epic,
+        threshold: 10,
+        color: AppTheme.successColor,
+        points: 1000,
+      ),
+    ]);
+
+    // Hedef kilo rozetleri
+    _badges.addAll([
+      BadgeModel(
+        id: 28,
+        name: 'Hedef Kiloda',
+        description: 'Hedef kilona ulaştın!',
+        type: BadgeType.targetWeight,
+        rarity: BadgeRarity.legendary,
+        threshold: 1,
+        color: AppTheme.goalColor,
+        points: 5000,
+      ),
+      BadgeModel(
+        id: 29,
+        name: 'Kilo Koruyucu',
+        description: 'Hedef kilonda 1 ay kaldın',
+        type: BadgeType.maintainWeight,
+        rarity: BadgeRarity.epic,
+        threshold: 30,
+        color: AppTheme.goalColor,
+        points: 3000,
+      ),
+    ]);
+
+    // Yeni antrenman rozetleri
+    _badges.addAll([
+      BadgeModel(
+        id: 30,
+        name: 'Efsane Sporcu',
+        description: '1000 antrenman tamamla',
+        type: BadgeType.workoutCount,
+        rarity: BadgeRarity.mythic,
+        threshold: 1000,
+        color: AppTheme.workoutColor,
+        points: 10000,
+      ),
+      BadgeModel(
+        id: 31,
+        name: 'Günlük Disiplin',
+        description: '30 gün üst üste antrenman yap',
+        type: BadgeType.workoutStreak,
+        rarity: BadgeRarity.rare,
+        threshold: 30,
+        color: AppTheme.workoutColor,
+        points: 3000,
+      ),
+      BadgeModel(
+        id: 32,
+        name: 'Antrenman Makinesi',
+        description: '100 gün üst üste antrenman yap',
+        type: BadgeType.workoutStreak,
+        rarity: BadgeRarity.legendary,
+        threshold: 100,
+        color: AppTheme.workoutColor,
+        points: 10000,
+      ),
+    ]);
+
+    // Kalori rozetleri
+    _badges.addAll([
+      BadgeModel(
+        id: 33,
+        name: 'Kalori Bilincli',
+        description: '1 hafta kalori hedefini tut',
+        type: BadgeType.calorieStreak,
+        rarity: BadgeRarity.common,
+        threshold: 7,
+        color: AppTheme.nutritionColor,
+        points: 70,
+      ),
+      BadgeModel(
+        id: 34,
+        name: 'Beslenme Uzmanı',
+        description: '1 ay kalori hedefini tut',
+        type: BadgeType.calorieStreak,
+        rarity: BadgeRarity.rare,
+        threshold: 30,
+        color: AppTheme.nutritionColor,
+        points: 3000,
+      ),
+      BadgeModel(
+        id: 35,
+        name: 'Makro Ustası',
+        description: '100 gün kalori hedefini tut',
+        type: BadgeType.calorieStreak,
+        rarity: BadgeRarity.epic,
+        threshold: 100,
+        color: AppTheme.nutritionColor,
+        points: 10000,
+      ),
+    ]);
+
+    // Demo amaçlı bazı rozetleri aç (sadece test için)
+    _unlockDemoBadges();
+  }
+
+  // Demo amaçlı rozetleri aç (test için)
+  void _unlockDemoBadges() {
+    // Mantıklı olarak en düşük seviyeli rozetleri aç
+    for (var i = 0; i < _badges.length; i++) {
+      final badge = _badges[i];
+      if (badge.id == 1 || // İlk giriş
+          badge.id == 2 || // İlk su seri (3 gün)
+          badge.id == 8 || // İlk antrenman
+          badge.id == 16 || // İlk 1 kg kilo verme
+          badge.id == 19) {
+        // İlk sohbet
+        _badges[i] = BadgeModel(
+          id: badge.id,
+          name: badge.name,
+          description: badge.description,
+          type: badge.type,
+          rarity: badge.rarity,
+          threshold: badge.threshold,
+          color: badge.color,
+          points: badge.points,
+          unlockedAt: DateTime.now().subtract(Duration(days: 1)),
+        );
+        _totalPoints += badge.points;
+      }
+    }
   }
 
   // Veri takibi için diğer kaynaklardan veri alma metodları
