@@ -2259,4 +2259,108 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     debugPrint("Firebase devre dışı: addOrUpdateFoodItem çalıştırılmadı");
     return;
   }
+
+  // YENİ: Kullanıcıyı ve tüm ilgili verilerini tamamen sil
+  Future<void> deleteUserCompletely(int userId) async {
+    final db = await database;
+    debugPrint("[DB] Kullanıcı $userId tamamen siliniyor...");
+
+    try {
+      var batch = db.batch();
+
+      // 1. Chat konuşmalarını ve mesajlarını sil
+      await deleteAllChatConversationsForUser(userId);
+
+      // 2. Kullanıcıya ait aktiviteleri sil
+      batch.delete('activities', where: 'userId = ?', whereArgs: [userId]);
+
+      // 3. Kullanıcıya ait beslenme kayıtlarını sil
+      batch.delete('meals', where: 'userId = ?', whereArgs: [userId]);
+
+      // 4. Kullanıcıya ait kilo kayıtlarını sil
+      batch.delete('weight_records', where: 'userId = ?', whereArgs: [userId]);
+
+      // 5. Kullanıcıya ait görevleri sil
+      batch.delete('tasks', where: 'userId = ?', whereArgs: [userId]);
+
+      // 6. Kullanıcıya ait su tüketim kayıtlarını sil
+      batch.delete('water_logs', where: 'userId = ?', whereArgs: [userId]);
+
+      // 7. Kullanıcıya ait program kayıtlarını sil
+      batch.delete('user_programs', where: 'userId = ?', whereArgs: [userId]);
+
+      // 8. Kullanıcıya ait antrenman kayıtlarını sil
+      batch.delete('workout_logs', where: 'userId = ?', whereArgs: [userId]);
+
+      // 9. Kullanıcının kendisini sil
+      batch.delete('users', where: 'id = ?', whereArgs: [userId]);
+
+      await batch.commit(noResult: true);
+      debugPrint("[DB] Kullanıcı $userId ve tüm verileri başarıyla silindi");
+    } catch (e) {
+      debugPrint("[DB] Kullanıcı $userId silinirken hata: $e");
+      throw Exception('Veritabanından kullanıcı silinirken hata: $e');
+    }
+  }
+
+  // YENİ: Sadece kullanıcı verilerini temizle (besinler ve egzersizler korunur)
+  Future<void> clearUserData() async {
+    final db = await database;
+    debugPrint("[DB] Kullanıcı verileri temizleniyor...");
+
+    try {
+      var batch = db.batch();
+
+      // Sadece kullanıcı verilerini temizle (foreign key sırası önemli)
+      batch.delete('chat_messages');
+      batch.delete('chat_conversations');
+      batch.delete('activities');
+      batch.delete('meals');
+      batch.delete('weight_records');
+      batch.delete('tasks');
+      batch.delete('water_log'); // Doğru tablo adı
+      batch.delete('user_programs');
+      batch.delete('workout_logs');
+      batch.delete('exercise_logs');
+      batch.delete('users');
+      // foods ve exercises tabloları korunur - varsayılan veriler
+
+      await batch.commit(noResult: true);
+      debugPrint(
+          "[DB] Kullanıcı verileri temizlendi, besinler/egzersizler korundu");
+    } catch (e) {
+      debugPrint("[DB] Kullanıcı verileri temizlenirken hata: $e");
+      throw Exception('Kullanıcı verileri temizlenirken hata: $e');
+    }
+  }
+
+  // YENİ: Veritabanındaki tüm verileri temizle
+  Future<void> clearAllData() async {
+    final db = await database;
+    debugPrint("[DB] Tüm veriler temizleniyor...");
+
+    try {
+      var batch = db.batch();
+
+      // Tüm tabloları temizle (foreign key sırası önemli)
+      batch.delete('chat_messages');
+      batch.delete('chat_conversations');
+      batch.delete('activities');
+      batch.delete('meals');
+      batch.delete('weight_records');
+      batch.delete('tasks');
+      batch.delete('water_log');
+      batch.delete('user_programs');
+      batch.delete('workout_logs');
+      batch.delete('exercise_logs');
+      batch.delete('users');
+      // foods tablosunu temizleme - varsayılan besinler kalmalı
+
+      await batch.commit(noResult: true);
+      debugPrint("[DB] Tüm kullanıcı verileri başarıyla temizlendi");
+    } catch (e) {
+      debugPrint("[DB] Veriler temizlenirken hata: $e");
+      throw Exception('Veritabanı temizlenirken hata: $e');
+    }
+  }
 } // DatabaseService sınıfının kapanış parantezi

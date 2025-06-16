@@ -207,6 +207,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
 
+            // Uygulamayı sıfırla seçeneği
+            _buildSettingsOption(
+              context,
+              'Uygulamayı Sıfırla',
+              Icons.restore,
+              Colors.deepOrange,
+              () {
+                _showResetAppDialog(context);
+              },
+            ),
+
             SizedBox(height: 16),
 
             // Çıkış düğmesi
@@ -418,6 +429,111 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showResetAppDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.deepOrange),
+              SizedBox(width: 8),
+              Text('Uygulamayı Sıfırla'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Bu işlem aşağıdaki tüm verileri KALICI olarak silecektir:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              SizedBox(height: 12),
+              Text('• Kullanıcı profili ve bilgileri'),
+              Text('• Antrenman kayıtları'),
+              Text('• Beslenme geçmişi'),
+              Text('• Kilo takibi ve geçmiş'),
+              Text('• Su içme kayıtları'),
+              Text('• AI sohbet geçmişi'),
+              Text('• Tüm rozetler ve puanlar'),
+              Text('• Uygulama ayarları'),
+              SizedBox(height: 12),
+              Text(
+                'Bu işlem GERİ ALINAMAZ!',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('İptal'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepOrange,
+              ),
+              child:
+                  const Text('SIFIRLA', style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+
+                // Loading dialog göster
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    content: Row(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Uygulama sıfırlanıyor...'),
+                      ],
+                    ),
+                  ),
+                );
+
+                try {
+                  await Provider.of<UserProvider>(context, listen: false)
+                      .resetApp();
+
+                  Navigator.of(context).pop(); // Loading dialog'u kapat
+
+                  // Başarı mesajı göster
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Uygulama başarıyla sıfırlandı!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+
+                  // Ana ekrana yönlendir
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/', (Route<dynamic> route) => false);
+                } catch (e) {
+                  Navigator.of(context).pop(); // Loading dialog'u kapat
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Sıfırlama hatası: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

@@ -27,9 +27,15 @@ class UserProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final int? activeUserId = prefs.getInt('activeUserId');
 
+    debugPrint("[UserProvider] loadUser çağrıldı, activeUserId: $activeUserId");
+
     if (activeUserId != null) {
+      debugPrint(
+          "[UserProvider] activeUserId bulundu, veritabanından kullanıcı yükleniyor...");
       _user = await _databaseService.getUser(activeUserId);
       if (_user != null) {
+        debugPrint(
+            "[UserProvider] Kullanıcı yüklendi: ${_user!.name} (ID: ${_user!.id})");
         // Günlük su tüketimini veritabanından yükle
         final today = DateTime.now();
         final startOfDay = DateTime(today.year, today.month, today.day);
@@ -49,8 +55,15 @@ class UserProvider extends ChangeNotifier {
         } catch (e) {
           debugPrint("[UserProvider] Su tüketimi yüklenirken hata: $e");
         }
+      } else {
+        debugPrint(
+            "[UserProvider] activeUserId var ama kullanıcı bulunamadı, temizleniyor...");
+        // activeUserId var ama kullanıcı bulunamadıysa temizle
+        await prefs.remove('activeUserId');
+        _user = null;
       }
     } else {
+      debugPrint("[UserProvider] activeUserId bulunamadı, kullanıcı null");
       _user = null;
     }
     _isLoading = false;
@@ -300,5 +313,67 @@ class UserProvider extends ChangeNotifier {
     // Kullanıcı modelini sıfırla
     _user = null;
     notifyListeners();
+  }
+
+  // YENİ: Kullanıcıyı tamamen sil ve tüm verilerini temizle
+  Future<void> deleteUserCompletely() async {
+    if (_user?.id == null) return;
+
+    debugPrint("[UserProvider] Kullanıcı tamamen siliniyor: ${_user!.id}");
+
+    final prefs = await SharedPreferences.getInstance();
+    final userId = _user!.id!;
+
+    try {
+      // 1. Veritabanından kullanıcıyı ve tüm ilgili verilerini sil
+      await _databaseService.deleteUserCompletely(userId);
+
+      // 2. SharedPreferences'dan tüm kullanıcı verilerini temizle
+      await prefs.clear(); // Tüm tercihleri temizle
+
+      // 3. Memory'deki kullanıcı bilgilerini temizle
+      _user = null;
+      _weightHistory = [];
+
+      debugPrint("[UserProvider] Kullanıcı tamamen silindi: $userId");
+      notifyListeners();
+    } catch (e) {
+      debugPrint("[UserProvider] Kullanıcı silinirken hata: $e");
+      throw Exception('Kullanıcı silinirken bir hata oluştu: $e');
+    }
+  }
+
+  // YENİ: Uygulamayı tamamen sıfırla (fabrika ayarları)
+  Future<void> resetApp() async {
+    debugPrint("[UserProvider] Uygulama sıfırlanıyor...");
+
+    try {
+      // 1. Mevcut kullanıcıyı sil
+      if (_user != null) {
+        await deleteUserCompletely();
+      }
+
+      // 2. SharedPreferences'ı tamamen temizle
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // 3. Veritabanını tamamen temizle
+      await _databaseService.clearAllData();
+
+      // 4. Memory'deki tüm verileri temizle
+      _user = null;
+      _weightHistory = [];
+      _isLoading = false;
+
+      // 5. Onboarding'i tekrar gösterilmesi için temizle
+      // (SharedPreferences.clear() zaten bunu yapıyor ama açık olması için)
+      await prefs.setBool('onboarding_completed', false);
+
+      debugPrint("[UserProvider] Uygulama başarıyla sıfırlandı");
+      notifyListeners();
+    } catch (e) {
+      debugPrint("[UserProvider] Uygulama sıfırlanırken hata: $e");
+      throw Exception('Uygulama sıfırlanırken bir hata oluştu: $e');
+    }
   }
 }

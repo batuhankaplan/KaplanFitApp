@@ -35,6 +35,8 @@ import 'screens/workout_program_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'services/ai_coach_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/onboarding_screen.dart';
 
 // Ana ekran
 class MainScreen extends StatefulWidget {
@@ -177,11 +179,47 @@ void initPlatformSpecificFeatures() {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool? _onboardingCompleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final completed = prefs.getBool('onboarding_completed') ?? false;
+    if (mounted) {
+      setState(() {
+        _onboardingCompleted = completed;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Onboarding durumu henüz kontrol edilmediyse loading göster
+    if (_onboardingCompleted == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Onboarding tamamlanmamışsa onboarding screen göster
+    if (!_onboardingCompleted!) {
+      return const OnboardingScreen();
+    }
+
+    // Onboarding tamamlanmışsa kullanıcı kontrolü yap
     return Consumer<UserProvider>(
       builder: (context, userProvider, child) {
         if (userProvider.isLoading) {

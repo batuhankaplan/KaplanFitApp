@@ -660,36 +660,10 @@ class GamificationProvider with ChangeNotifier {
       ),
     ]);
 
-    // Demo amaçlı bazı rozetleri aç (sadece test için)
-    _unlockDemoBadges();
+    // Demo rozetler kaldırıldı - gerçek kullanım için
   }
 
-  // Demo amaçlı rozetleri aç (test için)
-  void _unlockDemoBadges() {
-    // Mantıklı olarak en düşük seviyeli rozetleri aç
-    for (var i = 0; i < _badges.length; i++) {
-      final badge = _badges[i];
-      if (badge.id == 1 || // İlk giriş
-          badge.id == 2 || // İlk su seri (3 gün)
-          badge.id == 8 || // İlk antrenman
-          badge.id == 16 || // İlk 1 kg kilo verme
-          badge.id == 19) {
-        // İlk sohbet
-        _badges[i] = BadgeModel(
-          id: badge.id,
-          name: badge.name,
-          description: badge.description,
-          type: badge.type,
-          rarity: badge.rarity,
-          threshold: badge.threshold,
-          color: badge.color,
-          points: badge.points,
-          unlockedAt: DateTime.now().subtract(Duration(days: 1)),
-        );
-        _totalPoints += badge.points;
-      }
-    }
-  }
+  // Demo rozetler kaldırıldı - gerçek kullanım için temiz başlangıç
 
   // Veri takibi için diğer kaynaklardan veri alma metodları
   Future<void> syncAllUserData(String? userId) async {

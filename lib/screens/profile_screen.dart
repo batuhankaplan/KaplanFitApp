@@ -41,13 +41,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _loadUserData() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final user = userProvider.user;
+
+    debugPrint("[ProfileScreen] _loadUserData çağrıldı, user: $user");
+
     if (user != null) {
+      // Sadece mevcut kullanıcı düzenleme modunda veriyi yükle
+      debugPrint(
+          "[ProfileScreen] Mevcut kullanıcı düzenleme modu - veriler yükleniyor");
       setState(() {
         _nameController.text = user.name;
         _ageController.text = user.age.toString();
         _emailController.text = user.email ?? '';
         _phoneController.text = user.phoneNumber ?? '';
         _profileImagePath = user.profileImagePath;
+      });
+    } else {
+      // Yeni kullanıcı oluşturma modu - tüm alanları boş bırak
+      debugPrint("[ProfileScreen] Yeni kullanıcı oluşturma modu - alanlar boş");
+      setState(() {
+        _nameController.clear();
+        _ageController.clear();
+        _emailController.clear();
+        _phoneController.clear();
+        _profileImagePath = null;
       });
     }
   }
