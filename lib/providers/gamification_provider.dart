@@ -6,7 +6,7 @@ import '../models/badge_model.dart';
 import '../theme.dart';
 import '../services/database_service.dart';
 import '../models/chat_model.dart';
-import '../models/user_model.dart';
+
 import 'user_provider.dart'; // UserProvider importu
 
 class GamificationProvider with ChangeNotifier {

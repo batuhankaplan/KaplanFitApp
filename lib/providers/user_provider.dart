@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:intl/intl.dart';
 import '../models/user_model.dart';
 import '../services/database_service.dart';
@@ -18,7 +18,7 @@ class UserProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   UserProvider(this._databaseService) {
-    loadUser();
+    // loadUser(); // Kaldırıldı - artık main.dart'ta kontrollü yapılıyor
   }
 
   Future<void> loadUser() async {

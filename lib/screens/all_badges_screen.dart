@@ -41,7 +41,7 @@ class AllBadgesScreen extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 AppTheme.primaryColor,
-                AppTheme.primaryColor.withOpacity(0.8),
+                AppTheme.primaryColor.withValues(alpha: 0.8),
               ],
             ),
           ),
@@ -84,13 +84,13 @@ class AllBadgesScreen extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryColor.withOpacity(0.1),
-            AppTheme.secondaryColor.withOpacity(0.1),
+            AppTheme.primaryColor.withValues(alpha: 0.1),
+            AppTheme.secondaryColor.withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AppTheme.primaryColor.withOpacity(0.2),
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -111,7 +111,7 @@ class AllBadgesScreen extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primaryColor.withOpacity(0.3),
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -125,7 +125,7 @@ class AllBadgesScreen extends StatelessWidget {
                   height: 100,
                   child: CircularProgressIndicator(
                     value: badgeProgress,
-                    backgroundColor: Colors.white.withOpacity(0.3),
+                    backgroundColor: Colors.white.withValues(alpha: 0.3),
                     valueColor:
                         const AlwaysStoppedAnimation<Color>(Colors.white),
                     strokeWidth: 8,
@@ -225,14 +225,14 @@ class AllBadgesScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           width: 1,
         ),
       ),
@@ -242,7 +242,7 @@ class AllBadgesScreen extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -350,7 +350,7 @@ class AllBadgesScreen extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -409,7 +409,7 @@ class AllBadgesScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 15,
               spreadRadius: 0,
               offset: const Offset(0, 5),
@@ -417,8 +417,8 @@ class AllBadgesScreen extends StatelessWidget {
           ],
           border: Border.all(
             color: isUnlocked
-                ? badge.color.withOpacity(0.5)
-                : Colors.grey.withOpacity(0.1),
+                ? badge.color.withValues(alpha: 0.5)
+                : Colors.grey.withValues(alpha: 0.1),
             width: 2,
           ),
           gradient: isUnlocked
@@ -427,7 +427,7 @@ class AllBadgesScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [
                     Colors.white,
-                    badge.color.withOpacity(0.05),
+                    badge.color.withValues(alpha: 0.05),
                   ],
                 )
               : null,
@@ -449,7 +449,7 @@ class AllBadgesScreen extends StatelessWidget {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -496,7 +496,7 @@ class AllBadgesScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: FractionallySizedBox(
@@ -526,7 +526,7 @@ class AllBadgesScreen extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppTheme.secondaryColor.withOpacity(0.1),
+                    color: AppTheme.secondaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(

@@ -5,7 +5,7 @@ import '../models/user_model.dart';
 import '../models/task_model.dart';
 import '../models/activity_record.dart';
 import '../models/meal_record.dart';
-import '../models/task_type.dart';
+
 import '../models/chat_model.dart';
 import '../models/exercise_model.dart';
 import '../models/food_item.dart';
@@ -13,7 +13,7 @@ import '../models/workout_log.dart';
 import '../models/exercise_log.dart';
 import '../models/workout_set.dart';
 import 'package:flutter/material.dart';
-import 'package:collection/collection.dart'; // groupBy için eklendi
+// groupBy için eklendi
 import 'package:flutter/services.dart'
     show rootBundle; // Asset okumak için eklendi
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -38,7 +38,7 @@ class DatabaseService {
   DatabaseService._internal();
 
   static const int _dbVersion =
-      24; // 23'ten 24'e yükseltildi (activities.isFromProgram eklendi)
+      25; // 23'ten 24'e yükseltildi (activities.isFromProgram eklendi)
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -71,8 +71,8 @@ class DatabaseService {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         age INTEGER NOT NULL,
-        height REAL NOT NULL,
-        weight REAL NOT NULL,
+        height REAL,
+        weight REAL,
         profileImagePath TEXT,
         email TEXT,
         phoneNumber TEXT,
@@ -150,7 +150,9 @@ class DatabaseService {
         estimatedCalories REAL,
         estimatedProtein REAL,
         estimatedCarbs REAL,
-        estimatedFat REAL
+        estimatedFat REAL,
+        userId INTEGER,
+        FOREIGN KEY (userId) REFERENCES users (id) ON DELETE CASCADE
       )
     ''');
     debugPrint("Tasks tablosu oluşturuldu.");
@@ -837,11 +839,13 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
 
     // Eğer ağırlık değişmişse, kilo geçmişine yeni kayıt ekle
     UserModel? existingUser = await getUser(user.id!);
-    if (existingUser != null && existingUser.weight != user.weight) {
-      // Kilo değişmiş, yeni kilo kaydı ekle
+    if (existingUser != null &&
+        existingUser.weight != user.weight &&
+        user.weight != null) {
+      // Kilo değişmiş ve yeni kilo null değil, yeni kilo kaydı ekle
       await addWeightRecord(
           WeightRecord(
-            weight: user.weight,
+            weight: user.weight!,
             date: DateTime.now(),
           ),
           user.id!);
@@ -1676,6 +1680,87 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       }
     }
 
+    // YENİ: Sürüm 25 için yükseltme (users.height/weight nullable, tasks.userId)
+    if (oldVersion < 25) {
+      try {
+        // 1. Tasks tablosuna userId ekle
+        batch.execute(
+            'ALTER TABLE tasks ADD COLUMN userId INTEGER REFERENCES users(id) ON DELETE CASCADE');
+        debugPrint("Tasks tablosuna userId sütunu eklendi (upgrade v25).");
+      } catch (e) {
+        debugPrint(
+            "Tasks tablosuna userId sütunu eklenirken hata (zaten olabilir): $e");
+      }
+
+      try {
+        // 2. Users tablosunu yeniden oluştur (height/weight nullable)
+        // Önce eski verileri yedekle
+        batch.execute('''
+          CREATE TABLE users_backup AS 
+          SELECT id, name, age, height, weight, profileImagePath, email, phoneNumber, 
+                 gender, createdAt, lastWeightUpdate, targetCalories, targetProtein, 
+                 targetCarbs, targetFat, targetWeight, weeklyWeightGoal, 
+                 activityLevel, targetWaterIntake, weeklyActivityGoal, 
+                 autoCalculateNutrition, currentDailyWaterIntake 
+          FROM users
+        ''');
+
+        // Eski tabloyu sil
+        batch.execute('DROP TABLE users');
+
+        // Yeni tabloyu oluştur (height/weight nullable)
+        batch.execute('''
+          CREATE TABLE users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            height REAL, 
+            weight REAL,
+            profileImagePath TEXT,
+            email TEXT,
+            phoneNumber TEXT,
+            gender TEXT,
+            createdAt INTEGER NOT NULL,
+            lastWeightUpdate INTEGER NOT NULL,
+            targetCalories REAL,
+            targetProtein REAL,
+            targetCarbs REAL,
+            targetFat REAL,
+            targetWeight REAL,
+            weeklyWeightGoal REAL,
+            activityLevel TEXT,
+            targetWaterIntake REAL,
+            weeklyActivityGoal REAL,
+            autoCalculateNutrition INTEGER DEFAULT 0,
+            currentDailyWaterIntake REAL DEFAULT 0.0
+          )
+        ''');
+
+        // Verileri geri yükle
+        batch.execute('''
+          INSERT INTO users (id, name, age, height, weight, profileImagePath, email, phoneNumber, 
+                           gender, createdAt, lastWeightUpdate, targetCalories, targetProtein, 
+                           targetCarbs, targetFat, targetWeight, weeklyWeightGoal, 
+                           activityLevel, targetWaterIntake, weeklyActivityGoal, 
+                           autoCalculateNutrition, currentDailyWaterIntake)
+          SELECT id, name, age, height, weight, profileImagePath, email, phoneNumber, 
+                 gender, createdAt, lastWeightUpdate, targetCalories, targetProtein, 
+                 targetCarbs, targetFat, targetWeight, weeklyWeightGoal, 
+                 activityLevel, targetWaterIntake, weeklyActivityGoal, 
+                 autoCalculateNutrition, currentDailyWaterIntake
+          FROM users_backup
+        ''');
+
+        // Yedek tabloyu sil
+        batch.execute('DROP TABLE users_backup');
+
+        debugPrint(
+            "Users tablosu yeniden oluşturuldu - height/weight nullable (upgrade v25).");
+      } catch (e) {
+        debugPrint("Users tablosu yeniden oluşturulurken hata: $e");
+      }
+    }
+
     await batch.commit();
     debugPrint("Veritabanı yükseltme tamamlandı.");
   }
@@ -2280,19 +2365,29 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
       // 4. Kullanıcıya ait kilo kayıtlarını sil
       batch.delete('weight_records', where: 'userId = ?', whereArgs: [userId]);
 
-      // 5. Kullanıcıya ait görevleri sil
-      batch.delete('tasks', where: 'userId = ?', whereArgs: [userId]);
+      // 5. Kullanıcıya ait görevleri sil (userId kolonu yoksa hata vermesin)
+      try {
+        batch.delete('tasks', where: 'userId = ?', whereArgs: [userId]);
+      } catch (e) {
+        debugPrint(
+            "[DB] Tasks tablosunda userId kolonu henüz yok (migration öncesi): $e");
+      }
 
       // 6. Kullanıcıya ait su tüketim kayıtlarını sil
-      batch.delete('water_logs', where: 'userId = ?', whereArgs: [userId]);
+      batch.delete('water_log', where: 'userId = ?', whereArgs: [userId]);
 
-      // 7. Kullanıcıya ait program kayıtlarını sil
-      batch.delete('user_programs', where: 'userId = ?', whereArgs: [userId]);
+      // 7. Kullanıcıya ait program kayıtlarını sil (user_programs tablosu yoksa hata vermesin)
+      try {
+        batch.delete('user_programs', where: 'userId = ?', whereArgs: [userId]);
+      } catch (e) {
+        debugPrint(
+            "[DB] user_programs tablosu bulunamadı (henüz oluşturulmamış): $e");
+      }
 
       // 8. Kullanıcıya ait antrenman kayıtlarını sil
       batch.delete('workout_logs', where: 'userId = ?', whereArgs: [userId]);
 
-      // 9. Kullanıcının kendisini sil
+      // 9. Son olarak kullanıcıyı sil
       batch.delete('users', where: 'id = ?', whereArgs: [userId]);
 
       await batch.commit(noResult: true);

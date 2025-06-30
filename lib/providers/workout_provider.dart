@@ -11,7 +11,7 @@ class WorkoutProvider extends ChangeNotifier {
   List<WorkoutLog> _workoutLogs = [];
   bool _isLoading = false;
   WorkoutLog? _currentWorkoutLog; // For live tracking/building a workout
-  List<WorkoutLog> _workoutHistory = [];
+  final List<WorkoutLog> _workoutHistory = [];
 
   List<WorkoutLog> get workoutLogs => _workoutLogs;
   bool get isLoading => _isLoading;
@@ -51,7 +51,8 @@ class WorkoutProvider extends ChangeNotifier {
 
   Future<void> startNewWorkout(String name) async {
     if (_currentWorkoutLog != null) {
-      debugPrint("Warning: Cannot start a new workout while one is in progress.");
+      debugPrint(
+          "Warning: Cannot start a new workout while one is in progress.");
       return;
     }
     _currentWorkoutLog = WorkoutLog(

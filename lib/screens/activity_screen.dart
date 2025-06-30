@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -20,7 +19,6 @@ import 'exercise_library_screen.dart';
 import '../services/program_service.dart';
 import '../services/exercise_service.dart';
 import '../models/program_model.dart';
-import '../models/program_set.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});

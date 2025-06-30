@@ -5,17 +5,16 @@ import 'package:fl_chart/fl_chart.dart';
 import '../providers/user_provider.dart';
 import '../providers/activity_provider.dart';
 import '../models/user_model.dart';
-import '../models/task_model.dart';
+
 import '../providers/nutrition_provider.dart';
 import '../theme.dart';
-import '../models/activity_record.dart';
-import '../models/meal_record.dart';
+
 import '../models/task_type.dart';
 import '../utils/animations.dart';
 import '../widgets/kaplan_appbar.dart';
 
 class StatsScreen extends StatefulWidget {
-  const StatsScreen({super.key}) ;
+  const StatsScreen({super.key});
 
   @override
   State<StatsScreen> createState() => _StatsScreenState();
@@ -169,7 +168,7 @@ class _StatsScreenState extends State<StatsScreen>
         isRequiredPage: true,
       ),
       body: Container(
-        color: AppTheme.primaryColor.withValues(alpha:0.05),
+        color: AppTheme.primaryColor.withValues(alpha: 0.05),
         child: Column(
           children: [
             // Üst panel - Tab Bar
@@ -180,8 +179,8 @@ class _StatsScreenState extends State<StatsScreen>
                 borderRadius: BorderRadius.circular(30),
                 child: Material(
                   color: isDarkMode
-                      ? Colors.black.withValues(alpha:0.2)
-                      : Colors.white.withValues(alpha:0.9),
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.9),
                   child: TabBar(
                     controller: _tabController,
                     labelColor: Colors.white,
@@ -193,7 +192,7 @@ class _StatsScreenState extends State<StatsScreen>
                       gradient: LinearGradient(
                         colors: [
                           AppTheme.accentColor,
-                          AppTheme.accentColor.withValues(alpha:0.8),
+                          AppTheme.accentColor.withValues(alpha: 0.8),
                         ],
                       ),
                     ),
@@ -260,12 +259,12 @@ class _StatsScreenState extends State<StatsScreen>
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isDarkMode
-                          ? Colors.black.withValues(alpha:0.3)
-                          : Colors.white.withValues(alpha:0.8),
+                          ? Colors.black.withValues(alpha: 0.3)
+                          : Colors.white.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha:0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 5,
                           offset: Offset(0, 2),
                         ),
@@ -309,9 +308,9 @@ class _StatsScreenState extends State<StatsScreen>
                                       gradient: LinearGradient(
                                         colors: [
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.7),
+                                              .withValues(alpha: 0.7),
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.9),
+                                              .withValues(alpha: 0.9),
                                         ],
                                       ),
                                     ),
@@ -354,9 +353,9 @@ class _StatsScreenState extends State<StatsScreen>
                                       gradient: LinearGradient(
                                         colors: [
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.7),
+                                              .withValues(alpha: 0.7),
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.9),
+                                              .withValues(alpha: 0.9),
                                         ],
                                       ),
                                     ),
@@ -398,7 +397,9 @@ class _StatsScreenState extends State<StatsScreen>
                           SizedBox(height: 8),
                           KFSlideAnimation(
                             offsetBegin: const Offset(0, 0.3),
-                            child: Container(height: 300, padding: EdgeInsets.all(8),
+                            child: Container(
+                              height: 300,
+                              padding: EdgeInsets.all(8),
                               child: filteredMeals.isEmpty
                                   ? Center(child: Text('Veri bulunamadı'))
                                   : _buildNutritionLineChart(
@@ -431,9 +432,9 @@ class _StatsScreenState extends State<StatsScreen>
                                       gradient: LinearGradient(
                                         colors: [
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.7),
+                                              .withValues(alpha: 0.7),
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.9),
+                                              .withValues(alpha: 0.9),
                                         ],
                                       ),
                                     ),
@@ -476,9 +477,9 @@ class _StatsScreenState extends State<StatsScreen>
                                       gradient: LinearGradient(
                                         colors: [
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.7),
+                                              .withValues(alpha: 0.7),
                                           AppTheme.primaryColor
-                                              .withValues(alpha:0.9),
+                                              .withValues(alpha: 0.9),
                                         ],
                                       ),
                                     ),
@@ -520,7 +521,9 @@ class _StatsScreenState extends State<StatsScreen>
                           SizedBox(height: 8),
                           KFSlideAnimation(
                             offsetBegin: const Offset(0, 0.3),
-                            child: Container(height: 300, padding: EdgeInsets.all(8),
+                            child: Container(
+                              height: 300,
+                              padding: EdgeInsets.all(8),
                               child: _buildActivityLineChart(
                                   activityDataByDate, isDarkMode),
                             ),
@@ -553,9 +556,9 @@ class _StatsScreenState extends State<StatsScreen>
                                         gradient: LinearGradient(
                                           colors: [
                                             AppTheme.primaryColor
-                                                .withValues(alpha:0.7),
+                                                .withValues(alpha: 0.7),
                                             AppTheme.primaryColor
-                                                .withValues(alpha:0.9),
+                                                .withValues(alpha: 0.9),
                                           ],
                                         ),
                                       ),
@@ -572,7 +575,7 @@ class _StatsScreenState extends State<StatsScreen>
                                           ),
                                           SizedBox(height: 8),
                                           Text(
-                                            '${user.weight.toStringAsFixed(1)} kg',
+                                            '${user.weight?.toStringAsFixed(1) ?? "Belirtilmemiş"} kg',
                                             style: TextStyle(
                                               fontSize: 24,
                                               fontWeight: FontWeight.bold,
@@ -597,9 +600,9 @@ class _StatsScreenState extends State<StatsScreen>
                                         gradient: LinearGradient(
                                           colors: [
                                             AppTheme.primaryColor
-                                                .withValues(alpha:0.7),
+                                                .withValues(alpha: 0.7),
                                             AppTheme.primaryColor
-                                                .withValues(alpha:0.9),
+                                                .withValues(alpha: 0.9),
                                           ],
                                         ),
                                       ),
@@ -646,7 +649,9 @@ class _StatsScreenState extends State<StatsScreen>
                           SizedBox(height: 8),
                           KFSlideAnimation(
                             offsetBegin: const Offset(0, 0.3),
-                            child: Container(height: 300, padding: EdgeInsets.all(8),
+                            child: Container(
+                              height: 300,
+                              padding: EdgeInsets.all(8),
                               child: _buildWeightChart(
                                   filteredWeightHistory, isDarkMode),
                             ),
@@ -672,8 +677,8 @@ class _StatsScreenState extends State<StatsScreen>
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: isDarkMode
-            ? Colors.black.withValues(alpha:0.2)
-            : Colors.white.withValues(alpha:0.9),
+            ? Colors.black.withValues(alpha: 0.2)
+            : Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(40),
       ),
       child: Row(
@@ -704,7 +709,7 @@ class _StatsScreenState extends State<StatsScreen>
               ? LinearGradient(
                   colors: [
                     AppTheme.accentColor,
-                    AppTheme.accentColor.withValues(alpha:0.8),
+                    AppTheme.accentColor.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -719,7 +724,7 @@ class _StatsScreenState extends State<StatsScreen>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppTheme.accentColor.withValues(alpha:0.3),
+                    color: AppTheme.accentColor.withValues(alpha: 0.3),
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
@@ -801,7 +806,7 @@ class _StatsScreenState extends State<StatsScreen>
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: _getColorForActivityType(type).withValues(alpha:0.2),
+              color: _getColorForActivityType(type).withValues(alpha: 0.2),
             ),
           ),
         );
@@ -945,7 +950,7 @@ class _StatsScreenState extends State<StatsScreen>
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: _getColorForMealType(type).withValues(alpha:0.2),
+              color: _getColorForMealType(type).withValues(alpha: 0.2),
             ),
           ),
         );
@@ -1078,7 +1083,7 @@ class _StatsScreenState extends State<StatsScreen>
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
-              color: Colors.teal.withValues(alpha:0.2),
+              color: Colors.teal.withValues(alpha: 0.2),
             ),
           ),
         ],
@@ -1204,6 +1209,3 @@ enum TimeRange {
   month,
   year,
 }
-
-
-

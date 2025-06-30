@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/ai_coach_service.dart';
@@ -12,7 +11,7 @@ import '../widgets/kaplan_loading.dart';
 class AICoachScreen extends StatefulWidget {
   final int? conversationId; // Sohbet kimliği, null ise yeni sohbet başlatılır
 
-  const AICoachScreen({Key? key, this.conversationId}) ;
+  const AICoachScreen({Key? key, this.conversationId});
 
   @override
   State<AICoachScreen> createState() => _AICoachScreenState();
@@ -424,16 +423,6 @@ class _AICoachScreenState extends State<AICoachScreen> {
     );
   }
 
-  Future<void> _startNewConversation() async {
-    if (mounted) {
-      setState(() {
-        _prepareNewConversationUI();
-      });
-      FocusScope.of(context).unfocus();
-      debugPrint("Yeni sohbet UI'da başlatıldı (silme sonrası).");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -526,7 +515,7 @@ class _AICoachScreenState extends State<AICoachScreen> {
           BoxShadow(
             offset: const Offset(0, -2),
             blurRadius: 2.0,
-            color: Colors.black.withValues(alpha:0.1),
+            color: Colors.black.withValues(alpha: 0.1),
           ),
         ],
       ),

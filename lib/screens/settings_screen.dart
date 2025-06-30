@@ -10,7 +10,7 @@ import '../theme.dart';
 import 'profile_screen.dart';
 import 'notification_settings_screen.dart';
 import 'faq_screen.dart';
-import '../models/user_model.dart';
+
 import 'goal_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {

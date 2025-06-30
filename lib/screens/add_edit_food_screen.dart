@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/food_item.dart';
 import '../services/database_service.dart';
 import '../utils/show_dialogs.dart'; // SnackBar için
@@ -7,7 +6,7 @@ import '../utils/show_dialogs.dart'; // SnackBar için
 class AddEditFoodScreen extends StatefulWidget {
   final FoodItem? foodItem; // Düzenleme için (opsiyonel)
 
-  const AddEditFoodScreen({Key? key, this.foodItem}) ;
+  const AddEditFoodScreen({Key? key, this.foodItem});
 
   @override
   _AddEditFoodScreenState createState() => _AddEditFoodScreenState();

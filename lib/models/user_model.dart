@@ -5,8 +5,8 @@ class UserModel {
   final String? uid;
   final String name;
   final int age;
-  final double height; // cm cinsinden
-  final double weight; // kg cinsinden
+  final double? height; // nullable yaptık
+  final double? weight; // nullable yaptık
   final String? profileImagePath;
   final String? email; // E-posta adresi
   final String? phoneNumber; // Telefon numarası
@@ -36,8 +36,8 @@ class UserModel {
     this.uid,
     required this.name,
     required this.age,
-    required this.height,
-    required this.weight,
+    this.height, // nullable yaptık
+    this.weight, // nullable yaptık
     this.profileImagePath,
     this.email,
     this.phoneNumber,
@@ -94,8 +94,8 @@ class UserModel {
       uid: map['uid'],
       name: map['name'],
       age: map['age'],
-      height: (map['height'] as num?)?.toDouble() ?? 0.0,
-      weight: (map['weight'] as num?)?.toDouble() ?? 0.0,
+      height: (map['height'] as num?)?.toDouble(),
+      weight: (map['weight'] as num?)?.toDouble(),
       profileImagePath: map['profileImagePath'],
       email: map['email'],
       phoneNumber: map['phoneNumber'],
@@ -125,12 +125,17 @@ class UserModel {
   }
 
   double get bmi {
-    return weight / ((height / 100) * (height / 100));
+    if (height == null || weight == null || height! <= 0 || weight! <= 0) {
+      return 0.0;
+    }
+    return weight! / ((height! / 100) * (height! / 100));
   }
 
   String get bmiCategory {
     double bmiValue = bmi;
-    if (bmiValue < 18.5) {
+    if (bmiValue == 0.0) {
+      return "Belirtilmemiş";
+    } else if (bmiValue < 18.5) {
       return "Zayıf";
     } else if (bmiValue < 25) {
       return "Normal";

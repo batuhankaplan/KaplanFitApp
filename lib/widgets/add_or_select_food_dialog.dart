@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart';
+
 import 'package:provider/provider.dart';
 import '../models/food_item.dart';
 import '../models/meal_record.dart';
 import '../models/task_type.dart'; // FitMealType için
 import '../screens/add_edit_food_screen.dart'; // Manuel ekleme ekranı
 import '../providers/nutrition_provider.dart';
-import '../services/database_service.dart';
+
 import '../utils/show_dialogs.dart'; // SnackBar vb. için
 import 'food_search_select_dialog.dart'; // Liste dialogu (sonraki adımda oluşturulacak)
 

@@ -203,7 +203,7 @@ class AppTheme {
       unselectedLabelStyle:
           TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: darkCardBackgroundColor,
       elevation: 0,
       shadowColor: Colors.black.withValues(alpha: 0.3),
@@ -236,7 +236,7 @@ class AppTheme {
         letterSpacing: 0.5,
       ),
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: darkCardBackgroundColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
@@ -305,7 +305,7 @@ class AppTheme {
       linearTrackColor: cardBackgroundColor,
       circularTrackColor: cardBackgroundColor,
     ),
-    tabBarTheme: TabBarTheme(
+    tabBarTheme: TabBarThemeData(
       labelColor: primaryColor,
       unselectedLabelColor: secondaryTextColor,
       indicatorColor: primaryColor,
@@ -416,7 +416,7 @@ class AppTheme {
       unselectedLabelStyle:
           TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: surfaceColor,
       elevation: 0,
       shadowColor: Colors.black.withValues(alpha: 0.1),
@@ -450,7 +450,7 @@ class AppTheme {
         letterSpacing: 0.5,
       ),
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: surfaceColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),

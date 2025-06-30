@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -53,7 +52,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
   @override
   void initState() {
     super.initState();
-    debugPrint("[GoalTrackingScreen] initState called."); // Log eklendi
+
     WidgetsBinding.instance.addObserver(this); // Observer'ı ekle
     // Kullanıcı yüklendiğinde verileri yükle
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-import '../theme.dart';
+
 import 'profile_screen.dart';
 import '../providers/user_provider.dart';
-import '../services/database_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -99,7 +98,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       debugPrint(
           "[OnboardingScreen] Temiz başlangıç için uygulama sıfırlanıyor...");
 
-      // UserProvider'dan uygulamayı tamamen sıfırla
+      // 1. SharedPreferences'ı tamamen temizle
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // 2. Onboarding'i tamamlanmamış olarak işaretle
+      await prefs.setBool('onboarding_completed', false);
+
+      // 3. UserProvider'dan uygulamayı tamamen sıfırla
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       await userProvider.resetApp();
 
@@ -215,7 +221,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         if (_currentIndex < 3)
                           Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: TextButton(
@@ -368,17 +374,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.white.withOpacity(0.25),
-                            Colors.white.withOpacity(0.15),
+                            Colors.white.withValues(alpha: 0.25),
+                            Colors.white.withValues(alpha: 0.15),
                           ],
                         ),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -404,14 +410,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                         shape: BoxShape.circle,
                                         gradient: LinearGradient(
                                           colors: [
-                                            Colors.white.withOpacity(0.3),
-                                            Colors.white.withOpacity(0.1),
+                                            Colors.white.withValues(alpha: 0.3),
+                                            Colors.white.withValues(alpha: 0.1),
                                           ],
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color:
-                                                Colors.white.withOpacity(0.2),
+                                            color: Colors.white
+                                                .withValues(alpha: 0.2),
                                             blurRadius: 15,
                                             spreadRadius: 5,
                                           ),
@@ -434,7 +440,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 shaderCallback: (bounds) => LinearGradient(
                                   colors: [
                                     Colors.white,
-                                    Colors.white.withOpacity(0.8)
+                                    Colors.white.withValues(alpha: 0.8)
                                   ],
                                 ).createShader(bounds),
                                 child: Text(
@@ -470,7 +476,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   height: 1.5,
                                 ),
                               ),
@@ -545,7 +551,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: gradientColors[0].withOpacity(0.3),
+                              color: gradientColors[0].withValues(alpha: 0.3),
                               blurRadius: 15,
                               spreadRadius: 5,
                             ),
@@ -677,7 +683,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF2196F3).withOpacity(0.3),
+                              color: const Color(0xFF2196F3)
+                                  .withValues(alpha: 0.3),
                               blurRadius: 15,
                               spreadRadius: 5,
                             ),
@@ -733,7 +740,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF4CAF50).withOpacity(0.3),
+                              color: const Color(0xFF4CAF50)
+                                  .withValues(alpha: 0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 5),
                             ),
@@ -791,7 +799,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         borderRadius: BorderRadius.circular(4),
         color: _currentIndex == index
             ? Colors.white
-            : Colors.white.withOpacity(0.4),
+            : Colors.white.withValues(alpha: 0.4),
         boxShadow: _currentIndex == index
             ? [
                 BoxShadow(
@@ -811,7 +819,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       height: 50,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(25),
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         border: Border.all(
           color: Colors.white.withOpacity(0.3),
           width: 1,

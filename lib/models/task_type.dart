@@ -35,8 +35,6 @@ enum FitActivityType {
         return 'Yoga';
       case FitActivityType.other:
         return 'Diğer Aktivite';
-      default:
-        return 'Bilinmeyen Aktivite';
     }
   }
 }
@@ -61,8 +59,6 @@ enum FitMealType {
         return 'Ara Öğün';
       case FitMealType.other:
         return 'Diğer Öğün';
-      default:
-        return 'Bilinmeyen Öğün';
     }
   }
 }

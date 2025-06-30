@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/program_model.dart';
-import '../models/program_set.dart';
+
 import '../services/program_service.dart';
 import '../widgets/program_detail_dialog.dart';
 import 'package:provider/provider.dart';
-import '../providers/database_provider.dart';
+
 import '../theme.dart';
 import '../widgets/kaplan_appbar.dart';
 
 class ProgramScreen extends StatefulWidget {
-  const ProgramScreen({super.key}) ;
+  const ProgramScreen({super.key});
 
   @override
   State<ProgramScreen> createState() => _ProgramScreenState();
@@ -100,7 +99,8 @@ class _ProgramScreenState extends State<ProgramScreen> {
       context: context,
       builder: (BuildContext context) {
         if (item.id == null) {
-          debugPrint("Uyarı: Düzenlenecek ProgramItem'ın ID'si yok: ${item.title}");
+          debugPrint(
+              "Uyarı: Düzenlenecek ProgramItem'ın ID'si yok: ${item.title}");
         }
         return ProgramDetailDialog(
           programItem: item,
@@ -304,7 +304,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                       colors: [
                         isDarkMode
                             ? const Color(0xFF2C2C2C)
-                            : AppTheme.primaryColor.withValues(alpha:0.7),
+                            : AppTheme.primaryColor.withValues(alpha: 0.7),
                         isDarkMode
                             ? const Color(0xFF1F1F1F)
                             : AppTheme.primaryColor,
@@ -316,7 +316,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha:0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -339,12 +339,15 @@ class _ProgramScreenState extends State<ProgramScreen> {
                                 _selectedDayIndex = index;
                               });
                             },
-                            child: Container(width: 40, height: 40,
+                            child: Container(
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? AppTheme.accentColor
                                     : isToday
-                                        ? AppTheme.accentColor.withValues(alpha:0.2)
+                                        ? AppTheme.accentColor
+                                            .withValues(alpha: 0.2)
                                         : Colors.transparent,
                                 shape: BoxShape.circle,
                                 border: !isSelected && isToday
@@ -554,7 +557,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                 decoration: BoxDecoration(
                   color: isDarkMode
                       ? Colors.black26
-                      : Colors.white.withValues(alpha:0.7),
+                      : Colors.white.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -602,8 +605,8 @@ class _ProgramScreenState extends State<ProgramScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                color.withValues(alpha:isDarkMode ? 0.3 : 0.2),
-                color.withValues(alpha:isDarkMode ? 0.1 : 0.05),
+                color.withValues(alpha: isDarkMode ? 0.3 : 0.2),
+                color.withValues(alpha: isDarkMode ? 0.1 : 0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(12),
@@ -712,5 +715,3 @@ class _ProgramScreenState extends State<ProgramScreen> {
     }
   }
 }
-
-

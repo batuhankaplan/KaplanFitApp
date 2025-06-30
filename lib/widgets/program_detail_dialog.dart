@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../models/program_model.dart';
 import '../models/program_set.dart';
@@ -168,7 +167,9 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
           ),
         ],
       ),
-      content: Container(width: double.maxFinite, height:
+      content: Container(
+        width: double.maxFinite,
+        height:
             350, // Sabit bir yükseklik ekleyerek ScrollView sorununu çözüyoruz
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -374,7 +375,8 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Antrenman Kategorisi Seç'),
-          content: Container(width: double.maxFinite, height: 300, // Sabit yükseklik
+          content: Container(
+            width: double.maxFinite, height: 300, // Sabit yükseklik
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: sortedCategories.length,
@@ -507,5 +509,3 @@ class _ProgramDetailDialogState extends State<ProgramDetailDialog> {
     }
   }
 }
-
-

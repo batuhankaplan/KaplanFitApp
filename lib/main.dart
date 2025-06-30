@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:io' show Platform;
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme.dart';
 import 'screens/home_screen.dart';
@@ -35,7 +34,6 @@ import 'screens/workout_program_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'services/ai_coach_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/onboarding_screen.dart';
 
 // Ana ekran
@@ -284,7 +282,18 @@ Future<void> main() async {
 
   try {
     await programService.initialize(exerciseService);
-    await userProvider.loadUser();
+
+    // Onboarding tamamlanmışsa kullanıcıyı yükle, değilse yükleme
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
+
+    if (onboardingCompleted) {
+      debugPrint("[main] Onboarding tamamlanmış, kullanıcı yükleniyor...");
+      await userProvider.loadUser();
+    } else {
+      debugPrint("[main] Onboarding tamamlanmamış, kullanıcı yüklenmiyor.");
+    }
+
     await gamificationProvider.initialize();
   } catch (e) {
     debugPrint("Servisler başlatılırken genel bir hata oluştu: $e");

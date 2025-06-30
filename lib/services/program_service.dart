@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/program_model.dart';
 import '../models/program_set.dart';
 import '../services/exercise_service.dart';
-import 'package:flutter/foundation.dart';
+
 import '../models/exercise_model.dart';
 import 'package:sqflite/sqflite.dart';
 import '../services/database_service.dart';
@@ -164,7 +164,6 @@ class ProgramService extends ChangeNotifier {
     debugPrint("[ProgramService] Haftalık program döngüsü başlıyor...");
     _workoutPrograms = List.generate(7, (index) {
       final String dayName = weekDays[index];
-      // debugPrint("[ProgramService] Gün $index ($dayName) için program oluşturuluyor..."); // Çok fazla log olabilir
 
       // Sabit ID'leri oluştur
       final String morningId = '${dayName}_morning';

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
@@ -115,16 +114,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         updatedUser = UserModel(
           name: name,
           age: age,
-          height:
-              currentUser?.height ?? 0, // Bu değerler aslında formdan gelmeli
-          weight:
-              currentUser?.weight ?? 0, // Bu değerler aslında formdan gelmeli
+          height: null, // Null olarak başlat, GoalSettings'de kullanıcı girecek
+          weight: null, // Null olarak başlat, GoalSettings'de kullanıcı girecek
           email: email.isNotEmpty ? email : null,
           phoneNumber: phoneNumber.isNotEmpty ? phoneNumber : null,
           profileImagePath: _profileImagePath,
           createdAt: DateTime.now(),
-          lastWeightUpdate:
-              DateTime.now(), // İlk ağırlık kaydı olarak düşünülebilir
+          lastWeightUpdate: DateTime.now(),
           weeklyActivityGoal: null,
           targetCalories: null,
           targetProtein: null,

@@ -1,38 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/user_provider.dart';
-import '../providers/activity_provider.dart';
-import '../providers/nutrition_provider.dart';
 import '../theme.dart';
-import '../widgets/stat_card.dart';
-import '../widgets/program_card.dart';
-import '../models/task_model.dart';
-import '../models/activity_record.dart';
-import '../models/meal_record.dart';
 import '../models/task_type.dart';
 import '../utils/animations.dart';
-import '../providers/database_provider.dart';
-import 'package:flutter/services.dart';
-import 'dart:ui';
-import 'program_screen.dart';
-import 'stats_screen.dart';
-import '../models/program_model.dart';
 import '../models/user_model.dart';
 import '../services/program_service.dart';
-import 'goal_tracking_screen.dart';
 import '../services/database_service.dart';
-import '../services/exercise_service.dart';
-import 'profile_screen.dart';
+import 'goal_tracking_screen.dart';
+import 'program_screen.dart';
 import 'workout_program_screen.dart';
 import '../widgets/home_mini_dashboard.dart';
 import '../widgets/badges_showcase.dart';
 import '../providers/gamification_provider.dart';
-import '../widgets/badge_grid.dart';
 import '../widgets/badge_detail_dialog.dart';
-import '../widgets/badge_widget.dart';
 import '../models/badge_model.dart';
 import 'all_badges_screen.dart';
 
@@ -91,22 +74,19 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    debugPrint("[HomeScreen] initState started."); // LOG
+
     _pageController = PageController();
     _animationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 800),
     )..forward();
 
-    debugPrint("[HomeScreen] initState calling _loadData()."); // LOG
     _loadData();
     _loadMotivationalMessage(); // Motivasyon sözünü yükle
-    debugPrint("[HomeScreen] initState finished."); // LOG
   }
 
   @override
   void dispose() {
-    debugPrint("[HomeScreen] dispose called."); // LOG
     // Listener'ı temizleme kısmını güncelliyoruz
     _pageController.dispose();
     _animationController.dispose();
@@ -171,7 +151,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Görev durumlarını kaydet
   Future<void> _savingTaskStates() async {
-    debugPrint("[HomeScreen] _savingTaskStates called."); // LOG
     final prefs = await SharedPreferences.getInstance();
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
@@ -352,7 +331,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    debugPrint("[HomeScreen] build started. isLoading: $isLoading"); // LOG
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     // Kullanıcıyı al (null olabilir, güvenli erişim önemli)
@@ -362,7 +340,6 @@ class _HomeScreenState extends State<HomeScreen>
         "[HomeScreen] build: User fetched from provider. User is ${user == null ? 'null' : 'not null'}."); // LOG
 
     if (isLoading) {
-      debugPrint("[HomeScreen] build: Showing loading indicator."); // LOG
       return Center(
         child: CircularProgressIndicator(
           color: AppTheme.primaryColor,
@@ -521,7 +498,6 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildWelcomeHeader(BuildContext context, UserModel? user) {
-    debugPrint("[HomeScreen] _buildWelcomeHeader called."); // LOG
     final userName =
         user?.name ?? 'Kullanıcı'; // Eğer user null ise 'Kullanıcı' yaz
     debugPrint(
@@ -752,28 +728,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildGreetingCard() {
-    final userName = Provider.of<UserProvider>(context).user?.name ?? 'Kaplan';
-    final formattedDate =
-        DateFormat('d MMMM yyyy, EEEE', 'tr_TR').format(DateTime.now());
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Merhaba, $userName',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        Text(
-          formattedDate,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        _buildMotivationalBox(),
-      ],
-    );
-  }
-
   Widget _buildMotivationalBox() {
     return Container(
       width: double.infinity,
@@ -815,28 +769,22 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Tüm verileri yükle
   Future<void> _loadData() async {
-    debugPrint("[HomeScreen] _loadData started."); // LOG
     if (!mounted) {
-      debugPrint("[HomeScreen] _loadData: Not mounted, returning."); // LOG
       return;
     }
     setState(() {
       isLoading = true;
-      debugPrint("[HomeScreen] _loadData: isLoading set to true."); // LOG
     });
 
     try {
-      debugPrint("[HomeScreen] _loadData: Loading saved task states..."); // LOG
       await _loadSavedTaskStates();
-      debugPrint("[HomeScreen] _loadData: Loading daily tasks..."); // LOG
+
       await _loadDailyTasks();
-      debugPrint("[HomeScreen] _loadData: Loading water intake..."); // LOG
+
       await _loadWaterIntake();
-      debugPrint("[HomeScreen] _loadData: Loading activity summary..."); // LOG
+
       await _loadActivitySummary();
     } catch (e, stacktrace) {
-      debugPrint("[HomeScreen] _loadData Error: $e"); // LOG
-      debugPrint("[HomeScreen] _loadData Stacktrace: $stacktrace"); // LOG
       // Hata durumunda kullanıcıya bilgi verilebilir
       // ScaffoldMessenger.of(context).showSnackBar(...);
     } finally {
@@ -852,7 +800,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Günlük görevleri ve programı yükle
   Future<void> _loadDailyTasks() async {
-    debugPrint("[HomeScreen] _loadDailyTasks started."); // LOG
     if (!mounted) return;
 
     final programService = Provider.of<ProgramService>(context, listen: false);
@@ -905,8 +852,6 @@ class _HomeScreenState extends State<HomeScreen>
         }
       }
     } catch (e, stacktrace) {
-      debugPrint("[HomeScreen] _loadDailyTasks Error: $e"); // LOG
-      debugPrint("[HomeScreen] _loadDailyTasks Stacktrace: $stacktrace"); // LOG
       if (mounted) {
         setState(() {
           morningProgram = 'Hata oluştu';
@@ -920,7 +865,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Bugün içilen suyu yükle
   Future<void> _loadWaterIntake() async {
-    debugPrint("[HomeScreen] _loadWaterIntake started."); // LOG
     if (!mounted) return;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     if (userProvider.user?.id == null) {
@@ -946,7 +890,6 @@ class _HomeScreenState extends State<HomeScreen>
         });
       }
     } catch (e, stacktrace) {
-      debugPrint("[HomeScreen] _loadWaterIntake Error: $e"); // LOG
       debugPrint(
           "[HomeScreen] _loadWaterIntake Stacktrace: $stacktrace"); // LOG
     }
@@ -954,7 +897,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Bugünkü aktivite özetini yükle (adım sayısı vb.)
   Future<void> _loadActivitySummary() async {
-    debugPrint("[HomeScreen] _loadActivitySummary started."); // LOG
     if (!mounted) return;
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     if (userProvider.user?.id == null) {
@@ -967,7 +909,7 @@ class _HomeScreenState extends State<HomeScreen>
     //    final today = DateTime.now();
     //   final startOfDay = DateTime(today.year, today.month, today.day);
     //   final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
-    //   debugPrint("[HomeScreen] _loadActivitySummary: Getting activity summary for user ${userProvider.user!.id}"); // LOG
+
     //   // Bu kısım DatabaseService'e bağlı, varsayılan bir fonksiyon olduğunu varsayalım
     //   // final summary = await dbService.getTodayActivitySummary(userProvider.user!.id!); // Varsayımsal fonksiyon
     //   // if (mounted && summary != null) {
@@ -975,10 +917,10 @@ class _HomeScreenState extends State<HomeScreen>
     //   //     // Adım sayısı veya aktif dakika gibi değerleri burada state'e atayın
     //   //     // _todaySteps = summary['steps'] ?? 0;
     //   //     // _todayActiveMinutes = summary['activeMinutes'] ?? 0;
-    //   //     debugPrint("[HomeScreen] _loadActivitySummary: Activity summary loaded."); // LOG - Gerçek değerleri loglayın
+
     //   //   });
     //   // } else {
-    //   //   debugPrint("[HomeScreen] _loadActivitySummary: No activity summary found for today."); // LOG
+
     //   // }
     debugPrint(
         "[HomeScreen] _loadActivitySummary: Temporarily disabled."); // LOG
@@ -1064,8 +1006,6 @@ class _HomeScreenState extends State<HomeScreen>
 
     // Görev tamamlama durumuna göre GamificationProvider'ı güncelle
     _updateGameProgressForTask(taskType, newState);
-
-    debugPrint("Görev durumu güncellendi: $taskType -> $newState"); // Loglama
   }
 
   // Oyunlaştırma sistemini güncelleyen yardımcı metot

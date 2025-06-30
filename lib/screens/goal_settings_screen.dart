@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart'; // UserProvider'a erişim için eklendi
 import '../utils/animations.dart'; // Animasyonlar için eklendi (gerekirse)
@@ -10,7 +9,7 @@ import '../services/database_service.dart'; // DatabaseService'e erişim için e
 import '../providers/gamification_provider.dart'; // GamificationProvider importu
 
 class GoalSettingsScreen extends StatefulWidget {
-  const GoalSettingsScreen({super.key}) ;
+  const GoalSettingsScreen({super.key});
 
   @override
   State<GoalSettingsScreen> createState() => _GoalSettingsScreenState();
@@ -127,9 +126,11 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     if (mounted) {
       setState(() {
         if (user != null) {
+          // Mevcut kullanıcı verileri varsa doldur, yoksa boş bırak
           _heightController.text = user.height?.toString() ?? '';
           _weightController.text = user.weight?.toString() ?? '';
-          _ageController.text = user.age?.toString() ?? '';
+          _ageController.text =
+              user.age.toString(); // Yaş her zaman dolu olmalı
           _targetWeightController.text = user.targetWeight?.toString() ?? '';
           _selectedWeeklyGoal = user.weeklyWeightGoal;
           _selectedActivityLevel = user.activityLevel;
@@ -145,24 +146,15 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               user.targetProtein?.toStringAsFixed(0) ?? '';
           _carbsController.text = user.targetCarbs?.toStringAsFixed(0) ?? '';
           _fatController.text = user.targetFat?.toStringAsFixed(0) ?? '';
+
           _autoCalculateNutrition = user.autoCalculateNutrition;
 
-          // _calculateBMI(); // YENİ YAPI: _calculateAndDisplayBMI ile değiştirildi
-          _calculateAndDisplayBMI(); // Yükleme sonrası BMI'yı hemen hesapla
-          if (_autoCalculateNutrition &&
-              _areRequiredFieldsFilledForAutoCalc()) {
-            _autoCalculateNutritionTargets();
-          }
-        } else {
-          _selectedGender = null;
-          _selectedWeeklyGoal = null;
-          _autoCalculateNutrition = false;
+          debugPrint(
+              "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=$_selectedActivityLevel, Gender=$_selectedGender, WeeklyGoal=$_selectedWeeklyGoal, AutoCalc=$_autoCalculateNutrition");
         }
         // _isLoading = false; // build içinde Consumer yönetiyor
       });
     }
-    debugPrint(
-        "[GoalSettings] Kullanıcı verileri yüklendi: ActivityLevel=$_selectedActivityLevel, Gender=$_selectedGender, WeeklyGoal=$_selectedWeeklyGoal, AutoCalc=$_autoCalculateNutrition");
   }
 
   // YENİ: BMI Hesaplama ve Gösterme Fonksiyonu (State Güncellemesi ile)
@@ -261,7 +253,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
       }
     }
-    debugPrint("[GoalSettings] BMR Hesaplandı: $bmr"); // Debug log
+
     return bmr;
   }
 
@@ -332,7 +324,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                   'Hesaplama için boy, kilo, yaş ve cinsiyet bilgilerinizi kontrol edin')),
         );
       }
-      debugPrint("[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0");
+      debugPrint(
+          "[GoalSettings] Otomatik hesaplama başarısız: Hedef kalori <= 0");
       return;
     }
 
@@ -379,7 +372,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     double carbGrams = carbCalories / 4;
 
     if (carbGrams < 0) {
-      debugPrint("[GoalSettings] Karbonhidrat negatif çıktı, 0\'a ayarlanıyor.");
+      debugPrint(
+          "[GoalSettings] Karbonhidrat negatif çıktı, 0\'a ayarlanıyor.");
       carbGrams = 0;
     }
 
@@ -647,12 +641,14 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             const SizedBox(height: 16),
             // YENİ BMI GÖSTERİMİ
             if (_currentBmiValue > 0)
-              Container(width: double.infinity, padding: const EdgeInsets.all(12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: bmiColor.withValues(alpha:0.1),
+                  color: bmiColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: bmiColor.withValues(alpha:0.5), width: 1),
+                  border: Border.all(
+                      color: bmiColor.withValues(alpha: 0.5), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -819,7 +815,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withValues(alpha:0.1),
+                color: AppTheme.infoColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -927,7 +923,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                       _weeklyActivityGoalController.text = '300';
                     _autoCalculateNutritionTargets();
                   }
-                  debugPrint("[GoalSettings] Aktivite Seviyesi değişti: $newValue");
+                  debugPrint(
+                      "[GoalSettings] Aktivite Seviyesi değişti: $newValue");
                 });
               },
               isExpanded: true,
@@ -936,7 +933,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.infoColor.withValues(alpha:0.1),
+                color: AppTheme.infoColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1027,7 +1024,7 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                    color: AppTheme.infoColor.withValues(alpha:0.1),
+                    color: AppTheme.infoColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8)),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,11 +1089,11 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDarkMode
-                      ? AppTheme.primaryColor.withValues(alpha:0.1)
-                      : AppTheme.primaryColor.withValues(alpha:0.05),
+                      ? AppTheme.primaryColor.withValues(alpha: 0.1)
+                      : AppTheme.primaryColor.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: AppTheme.primaryColor.withValues(alpha:0.2)),
+                  border: Border.all(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1235,7 +1232,8 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
         setState(() {
           _isLoading = false;
         });
-        debugPrint("[GoalSettings] Kaydetme işlemi tamamlandı (finally bloğu).");
+        debugPrint(
+            "[GoalSettings] Kaydetme işlemi tamamlandı (finally bloğu).");
       }
     }
   }
@@ -1246,6 +1244,3 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
 // UserModelGender extension KALDIRILDI, UserModel içinde gender zaten var varsayılıyor.
 // Eğer UserModel'de gender yoksa, UserModel tanımına eklenmeli.
 // Varsayılan olarak UserModel'de String? gender; olduğu kabul edildi.
-
-
-

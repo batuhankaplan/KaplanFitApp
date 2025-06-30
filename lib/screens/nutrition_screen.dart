@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../theme.dart';
@@ -10,7 +9,7 @@ import '../models/food_item.dart';
 import '../utils/animations.dart';
 import '../utils/show_dialogs.dart';
 import '../widgets/kaplan_loading.dart';
-import '../providers/user_provider.dart';
+
 import '../services/database_service.dart';
 import 'add_edit_food_screen.dart';
 import 'dart:async';
@@ -55,7 +54,9 @@ class _NutritionScreenState extends State<NutritionScreen> {
           KFSlideAnimation(
             offsetBegin: const Offset(0, -0.2),
             duration: const Duration(milliseconds: 500),
-            child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -429,7 +430,9 @@ class _NutritionScreenState extends State<NutritionScreen> {
 
   // Öğün ekle butonunu özelleştirilmiş tasarımla oluştur
   Widget _buildAddMealButton(BuildContext context) {
-    return Container(width: 200, margin: const EdgeInsets.symmetric(vertical: 16),
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.symmetric(vertical: 16),
       child: ElevatedButton(
         onPressed: () => _showMealTypeSelectionDialog(),
         style: ElevatedButton.styleFrom(
@@ -483,33 +486,6 @@ class _NutritionScreenState extends State<NutritionScreen> {
       case FitMealType.other:
         return Icons.restaurant;
     }
-  }
-
-  // Öğün ekleme dialogunu göster
-  void _showAddMealDialog(BuildContext context) {
-    // Bu fonksiyon artık kullanılmıyor, yerine _showMealTypeSelectionDialog geldi.
-    // İçeriği referans olarak kalabilir veya silinebilir.
-    /*
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return SimpleDialog(
-          title: const Text('Öğün Tipi Seç'),
-          children: [
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(context);
-                _showFoodSelectionDialog(context,
-                    mealType: FitMealType.breakfast);
-              },
-              child: const Text('Kahvaltı'),
-            ),
-            // ... Diğer öğün tipleri ...
-          ],
-        );
-      },
-    );
-    */
   }
 
   // YENİ: Öğün Tipi Seçim Dialogu
@@ -709,7 +685,9 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Besin Listesi"),
-      content: Container(width: double.maxFinite, height: MediaQuery.of(context).size.height * 0.6,
+      content: Container(
+        width: double.maxFinite,
+        height: MediaQuery.of(context).size.height * 0.6,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -840,7 +818,9 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
                                       });
                                     },
                                     secondary: isSelected
-                                        ? Container(width: 70, child: TextField(
+                                        ? Container(
+                                            width: 70,
+                                            child: TextField(
                                               controller:
                                                   _gramControllers[food.id!],
                                               keyboardType: TextInputType
@@ -916,6 +896,3 @@ class _FoodSelectionDialogState extends State<FoodSelectionDialog> {
     );
   }
 }
-
-
-

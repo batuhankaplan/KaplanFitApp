@@ -17,7 +17,7 @@ class NutritionProvider with ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   DateTime? _startDate; // Tarih aralığı başlangıcı
   DateTime? _endDate; // Tarih aralığı sonu
-  String _dailyTasksDate = '';
+  final String _dailyTasksDate = '';
   // int? _currentUserId; // Kaldırıldı, _userProvider.user.id kullanılacak
 
   // int? get currentUserId => _userProvider.user?.id; // _currentUserId getter'ı kaldırıldı
