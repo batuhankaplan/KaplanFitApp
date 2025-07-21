@@ -586,15 +586,19 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
       context: context,
       builder: (context) => AlertDialog(
         contentPadding: EdgeInsets.zero,
-        content: YoutubePlayer(
-          controller: _controller,
-          showVideoProgressIndicator: true,
-          progressIndicatorColor: AppTheme.primaryColor,
-          progressColors: ProgressBarColors(
-            playedColor: AppTheme.primaryColor,
-            handleColor: AppTheme.primaryColor.withValues(alpha: 0.8),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: YoutubePlayer(
+            controller: _controller,
+            showVideoProgressIndicator: true,
+            progressIndicatorColor: AppTheme.primaryColor,
+            progressColors: ProgressBarColors(
+              playedColor: AppTheme.primaryColor,
+              handleColor: AppTheme.primaryColor.withValues(alpha: 0.8),
+            ),
+            onReady: () {},
           ),
-          onReady: () {},
         ),
         actions: [
           TextButton(

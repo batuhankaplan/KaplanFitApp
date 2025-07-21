@@ -1039,4 +1039,169 @@ class HealthProvider with ChangeNotifier {
       debugPrint('[HealthProvider] ❌ Duplicate temizleme hatası: $e');
     }
   }
+
+  /// Samsung Health'e bağlan - Dashboard için
+  Future<bool> connectToSamsungHealth() async {
+    try {
+      debugPrint('[HealthProvider] Samsung Health bağlantısı kuruluyor...');
+      
+      // Cihaz algılaması yap
+      await _detectConnectedDevice();
+      
+      // Samsung Health provider seç
+      _activeProvider = 'samsungHealth';
+      
+      // İzinleri iste
+      final success = await requestSamsungHealthDirectPermissions();
+      
+      if (success && _hasPermissions) {
+        _isConnected = true;
+        
+        // İlk veri senkronizasyonunu yap
+        await syncAllData();
+        await syncHistoricalData(months: 1);
+        
+        notifyListeners();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      debugPrint('[HealthProvider] Samsung Health bağlantı hatası: $e');
+      return false;
+    }
+  }
+
+  /// Bugünkü istatistikleri al - Dashboard için
+  Future<Map<String, dynamic>> getTodayStats() async {
+    try {
+      await syncStepsData();
+      await syncHeartRateData();
+      await syncWorkoutData();
+      
+      return {
+        'steps': todaySteps,
+        'calories': todayCalories,
+        'distance': _calculateTodayDistance(),
+        'heartRate': latestHeartRate ?? 0,
+        'watch_connected': _connectedDeviceType == 'samsungWatch',
+        'band_connected': _connectedDeviceType == 'samsungBand',
+      };
+    } catch (e) {
+      debugPrint('[HealthProvider] Bugünkü istatistikler alınamadı: $e');
+      return {
+        'steps': 0,
+        'calories': 0,
+        'distance': 0.0,
+        'heartRate': 0,
+      };
+    }
+  }
+
+  /// Son antrenmanları al - Dashboard için
+  Future<List<Map<String, dynamic>>> getRecentWorkouts(int days) async {
+    try {
+      final endDate = DateTime.now();
+      final startDate = endDate.subtract(Duration(days: days));
+      
+      await syncWorkoutData(startDate: startDate, endDate: endDate);
+      
+      List<Map<String, dynamic>> workouts = [];
+      
+      // _workoutData'dan antrenmanları çıkar
+      if (_workoutData.containsKey('exercises') && _workoutData['exercises'] is List) {
+        final exercises = _workoutData['exercises'] as List;
+        
+        for (var exercise in exercises) {
+          if (exercise is Map<String, dynamic>) {
+            workouts.add({
+              'id': exercise['id'] ?? DateTime.now().millisecondsSinceEpoch,
+              'type': exercise['type'] ?? exercise['name'] ?? 'Antrenman',
+              'duration': exercise['duration'] ?? 0,
+              'calories': exercise['calories'] ?? 0,
+              'date': exercise['date'] ?? DateTime.now().toIso8601String(),
+              'steps': exercise['steps'] ?? 0,
+              'distance': exercise['distance'] ?? 0.0,
+              'avgHeartRate': exercise['averageHeartRate'] ?? exercise['heartRate'] ?? 0,
+            });
+          }
+        }
+      } else if (_workoutData.isNotEmpty) {
+        // Tek antrenman verisi varsa
+        workouts.add({
+          'id': _workoutData['id'] ?? DateTime.now().millisecondsSinceEpoch,
+          'type': _workoutData['type'] ?? _workoutData['workoutType'] ?? 'Antrenman',
+          'duration': _workoutData['duration'] ?? _workoutData['totalDuration'] ?? 0,
+          'calories': _workoutData['calories'] ?? _workoutData['caloriesBurned'] ?? 0,
+          'date': _workoutData['date'] ?? DateTime.now().toIso8601String(),
+          'steps': _workoutData['steps'] ?? 0,
+          'distance': _workoutData['distance'] ?? 0.0,
+          'avgHeartRate': _workoutData['averageHeartRate'] ?? 0,
+        });
+      }
+      
+      // Tarih sırasına göre sırala (en yeniden eskiye)
+      workouts.sort((a, b) {
+        final dateA = DateTime.tryParse(a['date'] ?? '') ?? DateTime.now();
+        final dateB = DateTime.tryParse(b['date'] ?? '') ?? DateTime.now();
+        return dateB.compareTo(dateA);
+      });
+      
+      return workouts.take(days * 2).toList(); // Günde ortalama 2 antrenman varsayımı
+    } catch (e) {
+      debugPrint('[HealthProvider] Son antrenmanlar alınamadı: $e');
+      return [];
+    }
+  }
+
+  /// Haftalık istatistikleri al - Dashboard için
+  Future<Map<String, int>> getWeeklyStats() async {
+    try {
+      final endDate = DateTime.now();
+      final startDate = endDate.subtract(const Duration(days: 7));
+      
+      await syncStepsData(startDate: startDate, endDate: endDate);
+      
+      Map<String, int> weeklyStats = {};
+      
+      // _stepsData'dan haftalık adımları çıkar
+      if (_stepsData.containsKey('dailySteps') && _stepsData['dailySteps'] is Map) {
+        final dailySteps = _stepsData['dailySteps'] as Map<String, dynamic>;
+        
+        for (int i = 1; i <= 7; i++) {
+          final day = endDate.subtract(Duration(days: 7 - i));
+          final dayKey = day.toIso8601String().substring(0, 10); // YYYY-MM-DD
+          weeklyStats['day_$i'] = (dailySteps[dayKey] as int?) ?? 0;
+        }
+      } else {
+        // Varsayılan mock veri
+        for (int i = 1; i <= 7; i++) {
+          weeklyStats['day_$i'] = (todaySteps * (0.7 + (i * 0.1))).round();
+        }
+      }
+      
+      return weeklyStats;
+    } catch (e) {
+      debugPrint('[HealthProvider] Haftalık istatistikler alınamadı: $e');
+      return {
+        for (int i = 1; i <= 7; i++) 'day_$i': 0
+      };
+    }
+  }
+
+  /// En son verileri senkronize et - Dashboard için
+  Future<void> syncLatestData() async {
+    try {
+      await syncAllData();
+    } catch (e) {
+      debugPrint('[HealthProvider] En son veri senkronizasyonu başarısız: $e');
+    }
+  }
+
+  /// Bugünkü mesafeyi hesapla (adım sayısından)
+  double _calculateTodayDistance() {
+    final steps = todaySteps;
+    // Ortalama adım uzunluğu ~0.8 metre varsayımı
+    return (steps * 0.0008); // km cinsinden
+  }
 }

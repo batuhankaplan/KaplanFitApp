@@ -31,11 +31,77 @@ class ProgramService extends ChangeNotifier {
     this._exerciseService = exerciseService;
     await _loadProgram(exerciseService);
 
+    // MIGRATION: Kullanıcının mevcut programından kardiyo egzersizlerini kaldır
+    await _migrateRemoveCardioFromWorkouts(exerciseService);
+
     // Her initialize'da hem eski hem yeni programları yükle
     await _ensureBothOldAndNewPrograms(exerciseService);
-    
+
     // Akşam antremanlarının başlıklarını newtraining.txt'e göre düzelt
     await _fixEveningProgramTitles();
+  }
+
+  /// MIGRATION: Kullanıcının mevcut programından kardiyo egzersizlerini kaldırır.
+  /// Bu, eski program yapısından yeni yapıya geçiş için bir kerelik bir işlemdir.
+  Future<void> _migrateRemoveCardioFromWorkouts(
+      ExerciseService exerciseService) async {
+    bool wasMigrationNeeded = false;
+    final cardioExerciseNames = [
+      'eliptik bisiklet',
+      'kondisyon bisikleti',
+      'tempolu yürüyüş',
+      'yürüyüş'
+    ];
+    final allExercises = await exerciseService.getExercises();
+    final cardioExerciseIds = allExercises
+        .where((ex) => cardioExerciseNames.contains(ex.name.toLowerCase()))
+        .map((ex) => ex.id)
+        .toSet();
+
+    for (var dailyProgram in _workoutPrograms) {
+      final eveningSets = dailyProgram.eveningExercise.programSets;
+      if (eveningSets != null && eveningSets.isNotEmpty) {
+        int initialCount = eveningSets.length;
+        eveningSets
+            .removeWhere((pset) => cardioExerciseIds.contains(pset.exerciseId));
+        if (eveningSets.length < initialCount) {
+          wasMigrationNeeded = true;
+        }
+      }
+    }
+
+    if (wasMigrationNeeded) {
+      debugPrint(
+          "[ProgramService] Kardiyo egzersizleri mevcut programlardan kaldırıldı (migrasyon).");
+      await _saveProgram();
+    }
+  }
+
+  /// Akşam antrenman başlıklarını newtraining.txt'e göre düzeltir.
+  /// Bu, eski program yapısından yeni yapıya geçiş için bir kerelik bir işlemdir.
+  Future<void> _fixEveningProgramTitles() async {
+    bool titlesFixed = false;
+    final titleMapping = {
+      'Salı': 'Üst Vücut - Yatay İtme/Çekme',
+      'Çarşamba': 'Alt Vücut & Core',
+      'Perşembe': 'Üst Vücut - Dikey İtme/Çekme',
+      'Cuma': 'Aktif Toparlanma ve Omurga Sağlığı',
+    };
+
+    for (var program in _workoutPrograms) {
+      if (titleMapping.containsKey(program.dayName)) {
+        if (program.eveningExercise.title != titleMapping[program.dayName]) {
+          program.eveningExercise.title = titleMapping[program.dayName]!;
+          titlesFixed = true;
+        }
+      }
+    }
+
+    if (titlesFixed) {
+      debugPrint(
+          "[ProgramService] Akşam antrenman başlıkları düzeltildi (migrasyon).");
+      await _saveProgram();
+    }
   }
 
   // Programı SharedPreferences'tan yükle
@@ -138,7 +204,7 @@ class ProgramService extends ChangeNotifier {
   /// Varsayılan haftalık programı oluştur
   Future<void> _createDefaultProgram(ExerciseService exerciseService) async {
     debugPrint(
-        "[ProgramService] Varsayılan program oluşturma işlemi başladı...");
+        "[ProgramService] Varsayılan program oluşturma işlemi başladı (newtraining.txt'e göre güncellendi)...");
     final List<String> weekDays = [
       'Pazartesi',
       'Salı',
@@ -162,12 +228,40 @@ class ProgramService extends ChangeNotifier {
       final id = exerciseIdMap[name.toLowerCase()];
       if (id == null) {
         debugPrint('UYARI: "$name" isimli egzersiz veritabanında bulunamadı.');
-        debugPrint('Mevcut egzersizler: ${exerciseIdMap.keys.toList()}');
-      } else {
-        debugPrint('✅ "$name" egzersizi bulundu, ID: $id');
       }
       return id;
     }
+
+    // Ortak Isınma Programı
+    final List<ProgramSet> warmUpProgram = [
+      ProgramSet(
+        exerciseId: findExerciseId('Pelvic Tilt'),
+        order: 1,
+        repsDescription: '15 tekrar',
+        setsDescription: '1',
+      ),
+      ProgramSet(
+        exerciseId: findExerciseId('Cat-Camel'),
+        order: 2,
+        repsDescription: '10 tekrar',
+        setsDescription: '1',
+      ),
+      ProgramSet(
+        exerciseId: findExerciseId('Bird-Dog'),
+        order: 3,
+        repsDescription: '10 tekrar (her taraf)',
+        setsDescription: '1',
+      ),
+      ProgramSet(
+        exerciseId: findExerciseId('Glute Bridge'),
+        order: 4,
+        repsDescription: '15 tekrar',
+        setsDescription: '1',
+      ),
+    ]
+        .where((ps) => ps.exerciseId != null)
+        .map((ps) => ps)
+        .toList(); // Null kontrolü sonrası listeyi yeniden oluştur
 
     debugPrint("[ProgramService] Haftalık program döngüsü başlıyor...");
     _workoutPrograms = List.generate(7, (index) {
@@ -184,10 +278,30 @@ class ProgramService extends ChangeNotifier {
       ProgramItem eveningActivity;
       ProgramItem dinner;
 
+      // Varsayılan yemek öğeleri
+      lunch = ProgramItem(
+        id: lunchId,
+        type: ProgramItemType.meal,
+        title: 'Öğle Yemeği',
+        description: '🥣 Dengeli beslenme',
+        icon: Icons.restaurant,
+        color: const Color(0xFFA0C334),
+        time: '12:30',
+      );
+      dinner = ProgramItem(
+        id: dinnerId,
+        type: ProgramItemType.meal,
+        title: 'Akşam Yemeği',
+        description: '🍴 Hafif ve dengeli öğün',
+        icon: Icons.dinner_dining,
+        color: Colors.blue,
+        time: '19:30',
+      );
+
       switch (index) {
         case 0: // Pazartesi (Dinlenme)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
+            id: morningId,
             type: ProgramItemType.rest,
             title: 'Sabah: Dinlenme',
             description: '🧘‍♂️ Tam dinlenme veya 20-30 dk yürüyüş',
@@ -195,17 +309,8 @@ class ProgramService extends ChangeNotifier {
             color: Colors.green,
             time: '09:00',
           );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🔄 Hafta içi prensipteki öğünler',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '13:00',
-          );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.rest,
             title: 'Akşam: Dinlenme',
             description: '💤 Tam dinlenme günü.',
@@ -213,476 +318,234 @@ class ProgramService extends ChangeNotifier {
             color: Colors.green,
             time: '18:00',
           );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
-          );
           break;
 
         case 1: // Salı (1. Gün: Üst Vücut - Yatay İtme/Çekme)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
+            id: morningId,
             type: ProgramItemType.workout,
             title: 'Isınma',
-            description: null,
-            programSets: [
-              ProgramSet(
-                exerciseId: findExerciseId('Pelvic Tilt') ?? null,
-                order: 1,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Cat-Camel') ?? null,
-                order: 2,
-                repsDescription: '10 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Bird-Dog') ?? null,
-                order: 3,
-                repsDescription: '10 tekrar (her taraf)',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Glute Bridge') ?? null,
-                order: 4,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-            ],
+            programSets: warmUpProgram,
             icon: Icons.wb_sunny,
             color: Colors.orange,
             time: '08:45',
           );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🥣 Dengeli beslenme',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '12:30',
-          );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.workout,
             title: 'Üst Vücut - Yatay İtme/Çekme',
-            description: null,
             icon: Icons.fitness_center,
             color: Colors.purple,
             time: '18:00',
             programSets: [
-              if (findExerciseId('Floor Press (Dumbbell ile)') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Floor Press (Dumbbell ile)')!,
-                    order: 1,
-                    setsDescription: '3',
-                    repsDescription: '10-12',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Chest-Supported Row') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Chest-Supported Row')!,
-                    order: 2,
-                    setsDescription: '3',
-                    repsDescription: '10-12',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Dumbbell Lateral Raise') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Dumbbell Lateral Raise')!,
-                    order: 3,
-                    setsDescription: '3',
-                    repsDescription: '12-15',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Dumbbell Alternate Curl') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Dumbbell Alternate Curl')!,
-                    order: 4,
-                    setsDescription: '3',
-                    repsDescription: '10-12',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Cable Triceps Extension') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Cable Triceps Extension')!,
-                    order: 5,
-                    setsDescription: '3',
-                    repsDescription: '12-15',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Eliptik Bisiklet') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Eliptik Bisiklet')!,
-                    order: 6,
-                    setsDescription: '1',
-                    repsDescription: '20-30 dk',
-                    restTimeDescription: null),
-            ],
-          );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
+              ProgramSet(
+                  exerciseId: findExerciseId('Floor Press (Dumbbell ile)'),
+                  order: 1,
+                  setsDescription: '3',
+                  repsDescription: '10-12',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Chest-Supported Row'),
+                  order: 2,
+                  setsDescription: '3',
+                  repsDescription: '10-12',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Dumbbell Lateral Raise'),
+                  order: 3,
+                  setsDescription: '3',
+                  repsDescription: '12-15',
+                  restTimeDescription: '60 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Dumbbell Alternate Curl'),
+                  order: 4,
+                  setsDescription: '3',
+                  repsDescription: '10-12 (her kol)',
+                  restTimeDescription: '60 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Cable Triceps Extension'),
+                  order: 5,
+                  setsDescription: '3',
+                  repsDescription: '12-15',
+                  restTimeDescription: '60 sn'),
+            ].where((ps) => ps.exerciseId != null).toList(),
           );
           break;
 
         case 2: // Çarşamba (2. Gün: Alt Vücut & Core)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
+            id: morningId,
             type: ProgramItemType.workout,
             title: 'Isınma',
-            description: null,
-            programSets: [
-              ProgramSet(
-                exerciseId: findExerciseId('Pelvic Tilt') ?? null,
-                order: 1,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Cat-Camel') ?? null,
-                order: 2,
-                repsDescription: '10 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Bird-Dog') ?? null,
-                order: 3,
-                repsDescription: '10 tekrar (her taraf)',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Glute Bridge') ?? null,
-                order: 4,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-            ],
+            programSets: warmUpProgram,
             icon: Icons.wb_sunny,
             color: Colors.orange,
             time: '08:45',
           );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🥣 Dengeli beslenme',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '12:30',
-          );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.workout,
             title: 'Alt Vücut & Core',
-            description: null,
             icon: Icons.directions_run,
             color: Colors.purple,
             time: '18:00',
             programSets: [
-              if (findExerciseId('Goblet Squat') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Goblet Squat')!,
-                    order: 1,
-                    setsDescription: '3',
-                    repsDescription: '10-12',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Dumbbell RDL') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Dumbbell RDL')!,
-                    order: 2,
-                    setsDescription: '3',
-                    repsDescription: '10-12',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Leg Curl Machine') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Leg Curl Machine')!,
-                    order: 3,
-                    setsDescription: '3',
-                    repsDescription: '12-15',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Pallof Press') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Pallof Press')!,
-                    order: 4,
-                    setsDescription: '3',
-                    repsDescription: '10 (her yön)',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Plank') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Plank')!,
-                    order: 5,
-                    setsDescription: '3',
-                    repsDescription: 'Maksimum Süre',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Kondisyon Bisikleti') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Kondisyon Bisikleti')!,
-                    order: 6,
-                    setsDescription: '1',
-                    repsDescription: '20-30 dk',
-                    restTimeDescription: null),
-            ],
-          );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
+              ProgramSet(
+                  exerciseId: findExerciseId('Goblet Squat'),
+                  order: 1,
+                  setsDescription: '3',
+                  repsDescription: '10-12',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Dumbbell RDL'),
+                  order: 2,
+                  setsDescription: '3',
+                  repsDescription: '10-12',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Leg Curl Machine'),
+                  order: 3,
+                  setsDescription: '3',
+                  repsDescription: '12-15',
+                  restTimeDescription: '60 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Pallof Press'),
+                  order: 4,
+                  setsDescription: '3',
+                  repsDescription: '10 (her yön)',
+                  restTimeDescription: '60 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Plank'),
+                  order: 5,
+                  setsDescription: '3',
+                  repsDescription: 'Maksimum Süre',
+                  restTimeDescription: '60 sn'),
+            ].where((ps) => ps.exerciseId != null).toList(),
           );
           break;
 
         case 3: // Perşembe (3. Gün: Üst Vücut - Dikey İtme/Çekme)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
+            id: morningId,
             type: ProgramItemType.workout,
             title: 'Isınma',
-            description: null,
-            programSets: [
-              ProgramSet(
-                exerciseId: findExerciseId('Pelvic Tilt') ?? null,
-                order: 1,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Cat-Camel') ?? null,
-                order: 2,
-                repsDescription: '10 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Bird-Dog') ?? null,
-                order: 3,
-                repsDescription: '10 tekrar (her taraf)',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Glute Bridge') ?? null,
-                order: 4,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-            ],
+            programSets: warmUpProgram,
             icon: Icons.wb_sunny,
             color: Colors.orange,
             time: '08:45',
           );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🥣 Dengeli beslenme',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '12:30',
-          );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.workout,
             title: 'Üst Vücut - Dikey İtme/Çekme',
-            description: null,
             icon: Icons.rowing,
             color: Colors.purple,
             time: '18:00',
             programSets: [
-              if (findExerciseId('Lat Pulldown') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Lat Pulldown')!,
-                    order: 1,
-                    setsDescription: '3',
-                    repsDescription: '10-12',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Landmine Press') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Landmine Press')!,
-                    order: 2,
-                    setsDescription: '3',
-                    repsDescription: '10 (her kol)',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Push-up') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Push-up')!,
-                    order: 3,
-                    setsDescription: '3',
-                    repsDescription: 'Maksimum Tekrar',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Unilateral Dumbbell Row') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Unilateral Dumbbell Row')!,
-                    order: 4,
-                    setsDescription: '3',
-                    repsDescription: '10 (her kol)',
-                    restTimeDescription: '90 sn'),
-              if (findExerciseId('Cable Hammer Curl') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Cable Hammer Curl')!,
-                    order: 5,
-                    setsDescription: '3',
-                    repsDescription: '12-15',
-                    restTimeDescription: '60 sn'),
-              if (findExerciseId('Tempolu Yürüyüş') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Tempolu Yürüyüş')!,
-                    order: 6,
-                    setsDescription: '1',
-                    repsDescription: '20-30 dk',
-                    restTimeDescription: null),
-            ],
-          );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
+              ProgramSet(
+                  exerciseId: findExerciseId('Lat Pulldown'),
+                  order: 1,
+                  setsDescription: '3',
+                  repsDescription: '10-12',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Landmine Press'),
+                  order: 2,
+                  setsDescription: '3',
+                  repsDescription: '10 (her kol)',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Push-up'),
+                  order: 3,
+                  setsDescription: '3',
+                  repsDescription: 'Maksimum Tekrar',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Unilateral Dumbbell Row'),
+                  order: 4,
+                  setsDescription: '3',
+                  repsDescription: '10 (her kol)',
+                  restTimeDescription: '90 sn'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Cable Hammer Curl'),
+                  order: 5,
+                  setsDescription: '3',
+                  repsDescription: '12-15',
+                  restTimeDescription: '60 sn'),
+            ].where((ps) => ps.exerciseId != null).toList(),
           );
           break;
 
         case 4: // Cuma (4. Gün: Aktif Toparlanma ve Omurga Sağlığı)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
-            type: ProgramItemType.workout,
-            title: 'Isınma',
-            description: null,
-            programSets: [
-              ProgramSet(
-                exerciseId: findExerciseId('Pelvic Tilt') ?? null,
-                order: 1,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Cat-Camel') ?? null,
-                order: 2,
-                repsDescription: '10 tekrar',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Bird-Dog') ?? null,
-                order: 3,
-                repsDescription: '10 tekrar (her taraf)',
-                setsDescription: '1',
-              ),
-              ProgramSet(
-                exerciseId: findExerciseId('Glute Bridge') ?? null,
-                order: 4,
-                repsDescription: '15 tekrar',
-                setsDescription: '1',
-              ),
-            ],
+            id: morningId,
+            type: ProgramItemType.rest,
+            title: 'Sabah: Hafif Aktivite',
+            description: 'Güne hafif bir başlangıç',
             icon: Icons.wb_sunny,
             color: Colors.orange,
-            time: '08:45',
-          );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🥣 Dengeli beslenme',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '12:30',
+            time: '09:00',
           );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.workout,
             title: 'Aktif Toparlanma ve Omurga Sağlığı',
-            description: null,
             icon: Icons.self_improvement,
             color: Colors.green,
             time: '18:00',
             programSets: [
-              if (findExerciseId('Pelvic Tilt') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Pelvic Tilt')!,
-                    order: 1,
-                    setsDescription: '2',
-                    repsDescription: '15 tekrar'),
-              if (findExerciseId('Cat-Camel') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Cat-Camel')!,
-                    order: 2,
-                    setsDescription: '2',
-                    repsDescription: '10 tekrar'),
-              if (findExerciseId('Bird-Dog') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Bird-Dog')!,
-                    order: 3,
-                    setsDescription: '2',
-                    repsDescription: '10 (her taraf)'),
-              if (findExerciseId('Dead Bug') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Dead Bug')!,
-                    order: 4,
-                    setsDescription: '2',
-                    repsDescription: '10 (her taraf)'),
-              if (findExerciseId('Side Plank') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Side Plank')!,
-                    order: 5,
-                    setsDescription: '2',
-                    repsDescription: '30 sn (her taraf)'),
-              if (findExerciseId('Yüzme') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Yüzme')!,
-                    order: 6,
-                    setsDescription: '1',
-                    repsDescription: '20-30 dk',
-                    restTimeDescription: null),
-            ],
-          );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
+              ProgramSet(
+                  exerciseId: findExerciseId('Pelvic Tilt'),
+                  order: 1,
+                  setsDescription: '2',
+                  repsDescription: '15 tekrar'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Cat-Camel'),
+                  order: 2,
+                  setsDescription: '2',
+                  repsDescription: '10 tekrar'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Bird-Dog'),
+                  order: 3,
+                  setsDescription: '2',
+                  repsDescription: '10 (her taraf)'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Dead Bug'),
+                  order: 4,
+                  setsDescription: '2',
+                  repsDescription: '10 (her taraf)'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Side Plank'),
+                  order: 5,
+                  setsDescription: '2',
+                  repsDescription: '30 sn (her taraf)'),
+              ProgramSet(
+                  exerciseId: findExerciseId('Yüzme veya Yürüyüş'),
+                  order: 6,
+                  setsDescription: '1',
+                  repsDescription: '30-40 dk'),
+            ].where((ps) => ps.exerciseId != null).toList(),
           );
           break;
 
         case 5: // Cumartesi (Dinlenme)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
+            id: morningId,
             type: ProgramItemType.workout,
-            title: 'Kardiyo',
-            description: null,
+            title: 'Hafif Kardiyo',
             programSets: [
               ProgramSet(
-                  exerciseId: findExerciseId('Yürüyüş') ?? null,
+                  exerciseId: findExerciseId('Yürüyüş'),
                   order: 1,
                   repsDescription: '30-45 dk',
                   setsDescription: '1'),
-            ],
+            ].where((ps) => ps.exerciseId != null).map((ps) => ps).toList(),
             icon: Icons.directions_walk,
             color: Colors.orange,
             time: '09:00',
           );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🥣 Dengeli beslenme',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '13:00',
-          );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.rest,
             title: 'Akşam: Dinlenme',
             description: '🚶‍♀️ Hafif aktivite veya dinlenme.',
@@ -690,20 +553,11 @@ class ProgramService extends ChangeNotifier {
             color: Colors.teal,
             time: '18:00',
           );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
-          );
           break;
 
         case 6: // Pazar (Dinlenme)
           morningActivity = ProgramItem(
-            id: morningId, // ID Ata
+            id: morningId,
             type: ProgramItemType.rest,
             title: 'Sabah: Dinlenme',
             description: '🧘‍♂️ Tam dinlenme günü',
@@ -711,17 +565,8 @@ class ProgramService extends ChangeNotifier {
             color: Colors.orange,
             time: '09:00',
           );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🥣 Dengeli beslenme',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '13:00',
-          );
           eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
+            id: eveningId,
             type: ProgramItemType.rest,
             title: 'Akşam: Dinlenme',
             description: '💤 Hafta sonu dinlenme',
@@ -729,54 +574,11 @@ class ProgramService extends ChangeNotifier {
             color: Colors.green,
             time: '18:00',
           );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
-          );
           break;
 
-        default:
-          morningActivity = ProgramItem(
-            id: morningId, // ID Ata
-            type: ProgramItemType.rest,
-            title: 'Sabah: Dinlenme',
-            description: '🧘‍♂️ Dinlenme',
-            icon: Icons.hotel,
-            color: Colors.green,
-            time: '09:00',
-          );
-          lunch = ProgramItem(
-            id: lunchId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Öğle Yemeği',
-            description: '🔄 Hafta içi prensipteki öğünler',
-            icon: Icons.restaurant,
-            color: const Color(0xFFA0C334),
-            time: '13:00',
-          );
-          eveningActivity = ProgramItem(
-            id: eveningId, // ID Ata
-            type: ProgramItemType.rest,
-            title: 'Akşam: Dinlenme',
-            description: '💤 Dinlenme.',
-            icon: Icons.hotel,
-            color: Colors.green,
-            time: '18:00',
-          );
-          dinner = ProgramItem(
-            id: dinnerId, // ID Ata
-            type: ProgramItemType.meal,
-            title: 'Akşam Yemeği',
-            description: '🍴 Hafif ve dengeli öğün',
-            icon: Icons.dinner_dining,
-            color: Colors.blue,
-            time: '19:30',
-          );
+        default: // Bu durum olmamalı
+          morningActivity = _createDefaultDailyProgram(dayName).morningExercise;
+          eveningActivity = _createDefaultDailyProgram(dayName).eveningExercise;
           break;
       }
 
@@ -796,6 +598,8 @@ class ProgramService extends ChangeNotifier {
 
     await _saveProgram();
     notifyListeners();
+    debugPrint(
+        "[ProgramService] Varsayılan program oluşturma işlemi tamamlandı.");
   }
 
   /// Yeni antrenman kategorilerini ekler (newtraining.txt'den)
@@ -868,7 +672,7 @@ class ProgramService extends ChangeNotifier {
     _unassignedCategories.add(ProgramItem(
       id: 'category_ust_vucut_yatay_new',
       type: ProgramItemType.workout,
-      title: 'Üst Vücut - Yatay İtme/Çekme',
+      title: 'Üst Vücut Yatay İtme-Çekme',
       description: 'Göğüs, sırt, omuz ve kol kaslarına odaklanan antreman',
       programSets: [
         if (findExerciseId('Floor Press (Dumbbell ile)') != null)
@@ -900,7 +704,7 @@ class ProgramService extends ChangeNotifier {
             exerciseId: findExerciseId('Dumbbell Alternate Curl')!,
             order: 4,
             setsDescription: '3',
-            repsDescription: '10-12',
+            repsDescription: '10-12 (her kol)',
             restTimeDescription: '60 sn',
           ),
         if (findExerciseId('Cable Triceps Extension') != null)
@@ -920,7 +724,7 @@ class ProgramService extends ChangeNotifier {
     _unassignedCategories.add(ProgramItem(
       id: 'category_alt_vucut_core_new',
       type: ProgramItemType.workout,
-      title: 'Alt Vücut & Core',
+      title: 'Alt Vücut-Core',
       description: 'Bacak, kalça ve karın bölgesini güçlendiren antreman',
       programSets: [
         if (findExerciseId('Goblet Squat') != null)
@@ -972,7 +776,7 @@ class ProgramService extends ChangeNotifier {
     _unassignedCategories.add(ProgramItem(
       id: 'category_ust_vucut_dikey_new',
       type: ProgramItemType.workout,
-      title: 'Üst Vücut - Dikey İtme/Çekme',
+      title: 'Üst Vücut Dikey İtme-Çekme',
       description: 'Farklı açılardan üst vücut kaslarını hedef alan antreman',
       programSets: [
         if (findExerciseId('Lat Pulldown') != null)
@@ -1024,7 +828,7 @@ class ProgramService extends ChangeNotifier {
     _unassignedCategories.add(ProgramItem(
       id: 'category_toparlanma_new',
       type: ProgramItemType.workout,
-      title: 'Aktif Toparlanma ve Omurga Sağlığı',
+      title: 'Aktif Toparlanma',
       description:
           'Omurga sağlığını destekleyen ve toparlanma odaklı hareketler',
       programSets: [
@@ -1068,46 +872,6 @@ class ProgramService extends ChangeNotifier {
       color: Colors.green,
     ));
 
-    // Kardiyo kategorisi (newtraining.txt'den)
-    _unassignedCategories.add(ProgramItem(
-      id: 'category_kardiyo_new',
-      type: ProgramItemType.workout,
-      title: 'Kardiyo',
-      description: 'Kardiyovasküler dayanıklılık geliştiren aktiviteler',
-      programSets: [
-        if (findExerciseId('Eliptik Bisiklet') != null)
-          ProgramSet(
-            exerciseId: findExerciseId('Eliptik Bisiklet')!,
-            order: 1,
-            setsDescription: '1',
-            repsDescription: '20-30 dakika orta tempo',
-          ),
-        if (findExerciseId('Kondisyon Bisikleti') != null)
-          ProgramSet(
-            exerciseId: findExerciseId('Kondisyon Bisikleti')!,
-            order: 2,
-            setsDescription: '1',
-            repsDescription: '20-30 dakika orta tempo',
-          ),
-        if (findExerciseId('Tempolu Yürüyüş') != null)
-          ProgramSet(
-            exerciseId: findExerciseId('Tempolu Yürüyüş')!,
-            order: 3,
-            setsDescription: '1',
-            repsDescription: '30 dakika sabit tempo',
-          ),
-        if (findExerciseId('Yüzme') != null)
-          ProgramSet(
-            exerciseId: findExerciseId('Yüzme')!,
-            order: 4,
-            setsDescription: '1',
-            repsDescription: '30-40 dakika',
-          ),
-      ],
-      icon: Icons.directions_bike,
-      color: Colors.cyan,
-    ));
-
     // Soğuma kategorisi (newtraining.txt'den)
     _unassignedCategories.add(ProgramItem(
       id: 'category_soguma_new',
@@ -1147,7 +911,7 @@ class ProgramService extends ChangeNotifier {
   /// Eski programları manuel olarak ekler
   Future<void> addOldProgramsManually(ExerciseService exerciseService) async {
     debugPrint("[ProgramService] Eski programlar manuel olarak ekleniyor...");
-    await _addOldTrainingCategories(exerciseService);
+    // await _addOldTrainingCategories(exerciseService);
     await _saveProgram();
     notifyListeners();
     debugPrint("[ProgramService] Eski programlar başarıyla eklendi.");
@@ -1911,34 +1675,38 @@ class ProgramService extends ChangeNotifier {
     }
     // Atanmamış kategoriler
     allItems.addAll(_unassignedCategories);
+    // Dublicate başlıkları filtrele (sadece ilkini al)
+    final seenTitles = <String>{};
+    allItems = allItems.where((item) {
+      final title = item.title ?? '';
+      if (seenTitles.contains(title)) {
+        return false;
+      } else {
+        seenTitles.add(title);
+        return true;
+      }
+    }).toList();
     return allItems;
   }
 
-  /// Her seferinde hem eski hem yeni programları yükle
+  /// Her seferinde sadece yeni programların yüklendiğinden emin olur
   Future<void> _ensureBothOldAndNewPrograms(
       ExerciseService exerciseService) async {
     try {
       debugPrint(
-          '[ProgramService] Hem eski hem yeni programları otomatik yükleme başlıyor...');
+          '[ProgramService] Sadece newtraining.txt programlarının yüklendiği kontrol ediliyor...');
 
-      // Önce unassigned kategoriler listesini kontrol et
-      bool hasOldPrograms = _unassignedCategories.any((item) =>
-          item.title?.toLowerCase().contains('göğüs') == true ||
-          item.title?.toLowerCase().contains('sırt') == true ||
-          item.title?.toLowerCase().contains('bacak') == true ||
-          item.title?.toLowerCase().contains('karın') == true);
+      // Yeni programların ID'leri ile var olup olmadığını kontrol et
+      final newProgramIds = {
+        'category_isinma_new',
+        'category_sali_ust_vucut',
+        'category_carsamba_alt_vucut',
+        'category_persembe_ust_vucut',
+        'category_cuma_toparlanma'
+      };
 
-      bool hasNewPrograms = _unassignedCategories.any((item) =>
-          item.title?.toLowerCase().contains('salı') == true ||
-          item.title?.toLowerCase().contains('çarşamba') == true ||
-          item.title?.toLowerCase().contains('perşembe') == true ||
-          item.title?.toLowerCase().contains('cuma') == true);
-
-      // Eğer eski programlar yoksa ekle
-      if (!hasOldPrograms) {
-        debugPrint('[ProgramService] Eski programlar bulunamadı, ekleniyor...');
-        await _addOldTrainingCategories(exerciseService);
-      }
+      bool hasNewPrograms =
+          _unassignedCategories.any((item) => newProgramIds.contains(item.id));
 
       // Eğer yeni programlar yoksa ekle
       if (!hasNewPrograms) {
@@ -1950,114 +1718,10 @@ class ProgramService extends ChangeNotifier {
       await _saveProgram();
       notifyListeners();
 
-      debugPrint(
-          '[ProgramService] ✅ Hem eski hem yeni programlar başarıyla yüklendi');
+      debugPrint('[ProgramService] ✅ Program kontrolü tamamlandı.');
     } catch (e) {
       debugPrint('[ProgramService] ❌ Program yükleme hatası: $e');
     }
-  }
-
-  /// Eski training kategorilerini ekler
-  Future<void> _addOldTrainingCategories(
-      ExerciseService exerciseService) async {
-    debugPrint("[ProgramService] Eski training kategorileri ekleniyor...");
-
-    // Eğer zaten eski programlar varsa ekleme
-    if (_unassignedCategories.any((cat) =>
-        cat.title?.toLowerCase().contains('göğüs') == true ||
-        cat.title?.toLowerCase().contains('sırt') == true)) {
-      debugPrint("[ProgramService] Eski programlar zaten mevcut, atlanıyor...");
-      return;
-    }
-
-    final allExercises = await exerciseService.getExercises();
-    final Map<String, String?> exerciseIdMap = {
-      for (var ex in allExercises)
-        if (ex.id != null) ex.name.toLowerCase(): ex.id
-    };
-
-    String? findExerciseId(String name) {
-      final id = exerciseIdMap[name.toLowerCase()];
-      if (id == null) {
-        debugPrint('UYARI: "$name" isimli egzersiz veritabanında bulunamadı.');
-      } else {
-        debugPrint('✅ "$name" egzersizi bulundu, ID: $id');
-      }
-      return id;
-    }
-
-    // Göğüs & Arka Kol kategorisi
-    if (!_unassignedCategories
-        .any((cat) => cat.id == 'category_gogus_arka_kol')) {
-      _unassignedCategories.add(ProgramItem(
-        id: 'category_gogus_arka_kol',
-        type: ProgramItemType.workout,
-        title: 'Göğüs & Arka Kol',
-        description: 'Göğüs ve arka kol kaslarını hedefleyen antrenman',
-        icon: Icons.fitness_center,
-        color: Colors.red,
-        programSets: [
-          if (findExerciseId('Bench Press') != null)
-            ProgramSet(
-              exerciseId: findExerciseId('Bench Press')!,
-              order: 1,
-              repsDescription: '3x8-12',
-              setsDescription: '3',
-            ),
-          if (findExerciseId('Incline Dumbbell Press') != null)
-            ProgramSet(
-              exerciseId: findExerciseId('Incline Dumbbell Press')!,
-              order: 2,
-              repsDescription: '3x10-12',
-              setsDescription: '3',
-            ),
-          if (findExerciseId('Tricep Dips') != null)
-            ProgramSet(
-              exerciseId: findExerciseId('Tricep Dips')!,
-              order: 3,
-              repsDescription: '3x8-12',
-              setsDescription: '3',
-            ),
-        ],
-      ));
-    }
-
-    // Sırt & Ön Kol kategorisi
-    if (!_unassignedCategories.any((cat) => cat.id == 'category_sirt_on_kol')) {
-      _unassignedCategories.add(ProgramItem(
-        id: 'category_sirt_on_kol',
-        type: ProgramItemType.workout,
-        title: 'Sırt & Ön Kol',
-        description: 'Sırt ve ön kol kaslarını hedefleyen antrenman',
-        icon: Icons.fitness_center,
-        color: Colors.blue,
-        programSets: [
-          if (findExerciseId('Pull-ups') != null)
-            ProgramSet(
-              exerciseId: findExerciseId('Pull-ups')!,
-              order: 1,
-              repsDescription: '3x6-10',
-              setsDescription: '3',
-            ),
-          if (findExerciseId('Barbell Row') != null)
-            ProgramSet(
-              exerciseId: findExerciseId('Barbell Row')!,
-              order: 2,
-              repsDescription: '3x8-12',
-              setsDescription: '3',
-            ),
-          if (findExerciseId('Bicep Curl') != null)
-            ProgramSet(
-              exerciseId: findExerciseId('Bicep Curl')!,
-              order: 3,
-              repsDescription: '3x10-12',
-              setsDescription: '3',
-            ),
-        ],
-      ));
-    }
-
-    debugPrint("[ProgramService] Eski training kategorileri eklendi.");
   }
 
   /// newtraining.txt'deki 4 günlük programdan kategorileri ekler
@@ -2144,42 +1808,47 @@ class ProgramService extends ChangeNotifier {
         icon: Icons.fitness_center,
         color: Colors.purple,
         programSets: [
-          if (findExerciseId('Floor Press') != null)
+          if (findExerciseId('Floor Press (Dumbbell ile)') != null)
             ProgramSet(
-              exerciseId: findExerciseId('Floor Press')!,
+              exerciseId: findExerciseId('Floor Press (Dumbbell ile)')!,
               order: 1,
-              repsDescription: '10-12 tekrar',
               setsDescription: '3',
+              repsDescription: '10-12',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Chest-Supported Row') != null)
             ProgramSet(
               exerciseId: findExerciseId('Chest-Supported Row')!,
               order: 2,
-              repsDescription: '10-12 tekrar',
               setsDescription: '3',
+              repsDescription: '10-12',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Dumbbell Lateral Raise') != null)
             ProgramSet(
               exerciseId: findExerciseId('Dumbbell Lateral Raise')!,
               order: 3,
-              repsDescription: '12-15 tekrar',
               setsDescription: '3',
+              repsDescription: '12-15',
+              restTimeDescription: '60 sn',
             ),
           if (findExerciseId('Dumbbell Alternate Curl') != null)
             ProgramSet(
               exerciseId: findExerciseId('Dumbbell Alternate Curl')!,
               order: 4,
-              repsDescription: '10-12 tekrar (her kol)',
               setsDescription: '3',
+              repsDescription: '10-12 (her kol)',
+              restTimeDescription: '60 sn',
             ),
           if (findExerciseId('Cable Triceps Extension') != null)
             ProgramSet(
               exerciseId: findExerciseId('Cable Triceps Extension')!,
               order: 5,
-              repsDescription: '12-15 tekrar',
               setsDescription: '3',
+              repsDescription: '12-15',
+              restTimeDescription: '60 sn',
             ),
-        ],
+        ].where((ps) => ps.exerciseId != null).toList(),
       ));
     }
 
@@ -2198,38 +1867,43 @@ class ProgramService extends ChangeNotifier {
             ProgramSet(
               exerciseId: findExerciseId('Goblet Squat')!,
               order: 1,
-              repsDescription: '10-12 tekrar',
               setsDescription: '3',
+              repsDescription: '10-12',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Dumbbell RDL') != null)
             ProgramSet(
               exerciseId: findExerciseId('Dumbbell RDL')!,
               order: 2,
-              repsDescription: '10-12 tekrar',
               setsDescription: '3',
+              repsDescription: '10-12',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Leg Curl Machine') != null)
             ProgramSet(
               exerciseId: findExerciseId('Leg Curl Machine')!,
               order: 3,
-              repsDescription: '12-15 tekrar',
               setsDescription: '3',
+              repsDescription: '12-15',
+              restTimeDescription: '60 sn',
             ),
           if (findExerciseId('Pallof Press') != null)
             ProgramSet(
               exerciseId: findExerciseId('Pallof Press')!,
               order: 4,
-              repsDescription: '10 tekrar (her yön)',
               setsDescription: '3',
+              repsDescription: '10 (her yön)',
+              restTimeDescription: '60 sn',
             ),
           if (findExerciseId('Plank') != null)
             ProgramSet(
               exerciseId: findExerciseId('Plank')!,
               order: 5,
-              repsDescription: 'Maksimum süre',
               setsDescription: '3',
+              repsDescription: 'Maksimum Süre',
+              restTimeDescription: '60 sn',
             ),
-        ],
+        ].where((ps) => ps.exerciseId != null).toList(),
       ));
     }
 
@@ -2248,38 +1922,43 @@ class ProgramService extends ChangeNotifier {
             ProgramSet(
               exerciseId: findExerciseId('Lat Pulldown')!,
               order: 1,
-              repsDescription: '10-12 tekrar',
               setsDescription: '3',
+              repsDescription: '10-12',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Landmine Press') != null)
             ProgramSet(
               exerciseId: findExerciseId('Landmine Press')!,
               order: 2,
-              repsDescription: '10 tekrar (her kol)',
               setsDescription: '3',
+              repsDescription: '10 (her kol)',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Push-up') != null)
             ProgramSet(
               exerciseId: findExerciseId('Push-up')!,
               order: 3,
-              repsDescription: 'Maksimum tekrar',
               setsDescription: '3',
+              repsDescription: 'Maksimum Tekrar',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Unilateral Dumbbell Row') != null)
             ProgramSet(
               exerciseId: findExerciseId('Unilateral Dumbbell Row')!,
               order: 4,
-              repsDescription: '10 tekrar (her kol)',
               setsDescription: '3',
+              repsDescription: '10 (her kol)',
+              restTimeDescription: '90 sn',
             ),
           if (findExerciseId('Cable Hammer Curl') != null)
             ProgramSet(
               exerciseId: findExerciseId('Cable Hammer Curl')!,
               order: 5,
-              repsDescription: '12-15 tekrar',
               setsDescription: '3',
+              repsDescription: '12-15',
+              restTimeDescription: '60 sn',
             ),
-        ],
+        ].where((ps) => ps.exerciseId != null).toList(),
       ));
     }
 
@@ -2312,132 +1991,35 @@ class ProgramService extends ChangeNotifier {
             ProgramSet(
               exerciseId: findExerciseId('Bird-Dog')!,
               order: 3,
-              repsDescription: '10 tekrar (her taraf)',
+              repsDescription: '10 (her taraf)',
               setsDescription: '2',
             ),
           if (findExerciseId('Dead Bug') != null)
             ProgramSet(
               exerciseId: findExerciseId('Dead Bug')!,
               order: 4,
-              repsDescription: '10 tekrar (her taraf)',
+              repsDescription: '10 (her taraf)',
               setsDescription: '2',
             ),
           if (findExerciseId('Side Plank') != null)
             ProgramSet(
               exerciseId: findExerciseId('Side Plank')!,
               order: 5,
-              repsDescription: '30 saniye (her taraf)',
+              repsDescription: '30 sn (her taraf)',
               setsDescription: '2',
             ),
-        ],
+          if (findExerciseId('Yüzme veya Yürüyüş') != null)
+            ProgramSet(
+              exerciseId: findExerciseId('Yüzme veya Yürüyüş')!,
+              order: 6,
+              repsDescription: '30-40 dk',
+              setsDescription: '1',
+            ),
+        ].where((ps) => ps.exerciseId != null).toList(),
       ));
     }
 
-    debugPrint("[ProgramService] newtraining.txt programları eklendi.");
-  }
-
-  /// Akşam antremanlarının başlıklarını ve içeriklerini newtraining.txt'e göre düzeltir
-  Future<void> _fixEveningProgramTitles() async {
-    debugPrint("[ProgramService] Akşam antrenman başlıkları ve içerikleri düzeltiliyor...");
-    
-    if (_exerciseService == null) return;
-    
-    final allExercises = await _exerciseService!.getExercises();
-    final Map<String, String?> exerciseIdMap = {
-      for (var ex in allExercises)
-        if (ex.id != null) ex.name.toLowerCase(): ex.id
-    };
-    
-    String? findExerciseId(String name) {
-      return exerciseIdMap[name.toLowerCase()];
-    }
-    
-    bool changed = false;
-    
-    for (var daily in _workoutPrograms) {
-      if (daily.dayName == 'Cuma') {
-        // Cuma akşam antrenmanını kontrol et ve düzelt
-        if (daily.eveningExercise.title != 'Aktif Toparlanma ve Omurga Sağlığı' ||
-            daily.eveningExercise.type != ProgramItemType.workout ||
-            (daily.eveningExercise.programSets?.isEmpty ?? true)) {
-          
-          debugPrint("[ProgramService] Cuma akşam antrenmanı düzeltiliyor...");
-          
-          daily.eveningExercise = ProgramItem(
-            id: daily.eveningExercise.id,
-            type: ProgramItemType.workout,
-            title: 'Aktif Toparlanma ve Omurga Sağlığı',
-            description: null,
-            icon: Icons.self_improvement,
-            color: Colors.green,
-            time: '18:00',
-            programSets: [
-              if (findExerciseId('Pelvic Tilt') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Pelvic Tilt')!,
-                    order: 1,
-                    setsDescription: '2',
-                    repsDescription: '15 tekrar'),
-              if (findExerciseId('Cat-Camel') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Cat-Camel')!,
-                    order: 2,
-                    setsDescription: '2',
-                    repsDescription: '10 tekrar'),
-              if (findExerciseId('Bird-Dog') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Bird-Dog')!,
-                    order: 3,
-                    setsDescription: '2',
-                    repsDescription: '10 (her taraf)'),
-              if (findExerciseId('Dead Bug') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Dead Bug')!,
-                    order: 4,
-                    setsDescription: '2',
-                    repsDescription: '10 (her taraf)'),
-              if (findExerciseId('Side Plank') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Side Plank')!,
-                    order: 5,
-                    setsDescription: '2',
-                    repsDescription: '30 sn (her taraf)'),
-              if (findExerciseId('Yüzme') != null)
-                ProgramSet(
-                    exerciseId: findExerciseId('Yüzme')!,
-                    order: 6,
-                    setsDescription: '1',
-                    repsDescription: '20-30 dk',
-                    restTimeDescription: null),
-            ],
-          );
-          changed = true;
-        }
-      }
-      
-      // Diğer günler için sadece başlık kontrolü
-      final correctTitles = {
-        'Salı': 'Üst Vücut - Yatay İtme/Çekme',
-        'Çarşamba': 'Alt Vücut & Core', 
-        'Perşembe': 'Üst Vücut - Dikey İtme/Çekme',
-      };
-      
-      if (correctTitles.containsKey(daily.dayName)) {
-        final correctTitle = correctTitles[daily.dayName]!;
-        if (daily.eveningExercise.title != correctTitle) {
-          debugPrint("[ProgramService] ${daily.dayName} akşam antrenmanı güncelleniyor: '${daily.eveningExercise.title}' -> '$correctTitle'");
-          daily.eveningExercise.title = correctTitle;
-          changed = true;
-        }
-      }
-    }
-    
-    if (changed) {
-      await _saveProgram();
-      notifyListeners();
-      debugPrint("[ProgramService] ✅ Akşam antrenman başlıkları ve içerikleri düzeltildi ve kaydedildi.");
-    } else {
-      debugPrint("[ProgramService] Akşam antrenman başlıkları ve içerikleri zaten doğru.");
-    }
+    debugPrint(
+        "[ProgramService] newtraining.txt'deki 4 günlük program kategorileri başarıyla eklendi.");
   }
 }

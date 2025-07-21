@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
 import '../providers/health_provider.dart';
+import '../providers/activity_provider.dart';
 import '../widgets/kaplan_appbar.dart';
 import '../theme.dart';
+import '../models/activity_record.dart';
+import '../models/task_type.dart';
 
 class HealthDashboardScreen extends StatefulWidget {
   const HealthDashboardScreen({super.key});
@@ -11,144 +16,402 @@ class HealthDashboardScreen extends StatefulWidget {
   State<HealthDashboardScreen> createState() => _HealthDashboardScreenState();
 }
 
-class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
-  bool _isRefreshing = false;
-
+class _HealthDashboardScreenState extends State<HealthDashboardScreen>
+    with TickerProviderStateMixin {
+  bool _isConnecting = false;
+  bool _isConnected = false;
+  bool _isSyncing = false;
+  Timer? _syncTimer;
+  
+  late AnimationController _pulseController;
+  late AnimationController _progressController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _progressAnimation;
+  
+  Map<String, dynamic> _todayStats = {};
+  List<Map<String, dynamic>> _recentWorkouts = [];
+  Map<String, int> _weeklyStats = {};
+  
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _refreshData();
-    });
+    _initializeAnimations();
+    _checkConnectionStatus();
+    _setupAutoSync();
   }
-
-  Future<void> _setupHealthConnect() async {
-    try {
-      final healthProvider =
-          Provider.of<HealthProvider>(context, listen: false);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Health Connect kurulumu başlatılıyor...'),
-          backgroundColor: Colors.blue,
-        ),
-      );
-      
-      await healthProvider.refreshConnection();
-      
-      if (!healthProvider.hasPermissions) {
-        await healthProvider.requestPermissions();
-      }
-      
-      if (healthProvider.hasPermissions) {
-        await healthProvider.syncHistoricalData(months: 3);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Health Connect başarıyla kuruldu!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-      
-      setState(() {});
-    } catch (e) {
-      debugPrint('Health Connect kurulum hatası: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Health Connect kurulumunda hata: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _progressController.dispose();
+    _syncTimer?.cancel();
+    super.dispose();
   }
-
-  Future<void> _cleanupDuplicateRecords() async {
-    try {
-      final healthProvider =
-          Provider.of<HealthProvider>(context, listen: false);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Tekrarlayan veriler temizleniyor...'),
-          backgroundColor: Colors.blue,
-        ),
-      );
-      
-      await healthProvider.cleanupDuplicateRecords();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Tekrarlayan veriler temizlendi!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      setState(() {});
-    } catch (e) {
-      debugPrint('Veri temizleme hatası: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veri temizlemede hata: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  
+  void _initializeAnimations() {
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat(reverse: true);
+    
+    _progressController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    
+    _pulseAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+    
+    _progressAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _progressController,
+      curve: Curves.easeOutCubic,
+    ));
   }
-
-  Future<void> _refreshData() async {
-    if (_isRefreshing) return;
-
+  
+  Future<void> _checkConnectionStatus() async {
+    final healthProvider = Provider.of<HealthProvider>(context, listen: false);
     setState(() {
-      _isRefreshing = true;
+      _isConnected = healthProvider.isConnected;
     });
-
-    try {
-      final healthProvider =
-          Provider.of<HealthProvider>(context, listen: false);
-      await healthProvider.refreshConnection();
-
-      if (healthProvider.hasPermissions) {
-        // Sync last 3 months of data
-        await healthProvider.syncHistoricalData(months: 3);
-        await healthProvider.syncAllData();
-      }
-    } catch (e) {
-      debugPrint('Veri yenileme hatası: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Veriler güncellenirken hata oluştu: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
+    
+    if (_isConnected) {
+      await _loadHealthData();
     }
   }
-
-  Widget _buildHeaderBox(bool isDarkMode) {
+  
+  void _setupAutoSync() {
+    _syncTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (_isConnected && !_isSyncing) {
+        _performBackgroundSync();
+      }
+    });
+  }
+  
+  Future<void> _connectToSamsungHealth() async {
+    setState(() {
+      _isConnecting = true;
+    });
+    
+    try {
+      final healthProvider = Provider.of<HealthProvider>(context, listen: false);
+      final success = await healthProvider.connectToSamsungHealth();
+      
+      if (success) {
+        setState(() {
+          _isConnected = true;
+        });
+        await _loadHealthData();
+        _showSuccessSnackBar('Samsung Health bağlantısı başarılı!');
+      } else {
+        _showErrorSnackBar('Samsung Health bağlantısı başarısız!');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Bağlantı hatası: $e');
+    } finally {
+      setState(() {
+        _isConnecting = false;
+      });
+    }
+  }
+  
+  Future<void> _loadHealthData() async {
+    setState(() {
+      _isSyncing = true;
+    });
+    
+    _progressController.reset();
+    _progressController.forward();
+    
+    try {
+      final healthProvider = Provider.of<HealthProvider>(context, listen: false);
+      
+      // Bugünkü istatistikleri al
+      _todayStats = await healthProvider.getTodayStats();
+      
+      // Son 7 günlük antrenmanları al
+      _recentWorkouts = await healthProvider.getRecentWorkouts(7);
+      
+      // Haftalık istatistikleri al
+      _weeklyStats = await healthProvider.getWeeklyStats();
+      
+      // Verileri aktivite provider'a da ekle
+      await _syncToActivityProvider();
+      
+      setState(() {});
+      
+    } catch (e) {
+      _showErrorSnackBar('Veri yükleme hatası: $e');
+    } finally {
+      setState(() {
+        _isSyncing = false;
+      });
+    }
+  }
+  
+  Future<void> _performBackgroundSync() async {
+    final healthProvider = Provider.of<HealthProvider>(context, listen: false);
+    try {
+      await healthProvider.syncLatestData();
+      await _syncToActivityProvider();
+    } catch (e) {
+      debugPrint('Background sync error: $e');
+    }
+  }
+  
+  Future<void> _syncToActivityProvider() async {
+    final activityProvider = Provider.of<ActivityProvider>(context, listen: false);
+    final healthProvider = Provider.of<HealthProvider>(context, listen: false);
+    
+    try {
+      // Samsung Health'ten gelen antrenman verilerini ActivityProvider'a ekle
+      for (var workout in _recentWorkouts) {
+        final activityRecord = ActivityRecord(
+          type: _mapWorkoutTypeToActivityType(workout['type']),
+          durationMinutes: workout['duration'] ?? 0,
+          date: DateTime.parse(workout['date']),
+          notes: 'Samsung Health\'ten senkronize edildi',
+          caloriesBurned: workout['calories']?.toDouble() ?? 0.0,
+          userId: null, // Bu ActivityProvider'da ayarlanacak
+        );
+        
+        await activityProvider.addOrUpdateSyncedActivity(activityRecord);
+      }
+    } catch (e) {
+      debugPrint('Activity sync error: $e');
+    }
+  }
+  
+  FitActivityType _mapWorkoutTypeToActivityType(String? workoutType) {
+    switch (workoutType?.toLowerCase()) {
+      case 'walking':
+      case 'yürüyüş':
+        return FitActivityType.walking;
+      case 'running':
+      case 'koşu':
+        return FitActivityType.running;
+      case 'cycling':
+      case 'bisiklet':
+        return FitActivityType.cycling;
+      case 'swimming':
+      case 'yüzme':
+        return FitActivityType.swimming;
+      case 'strength_training':
+      case 'ağırlık_antrenmanı':
+        return FitActivityType.weightTraining;
+      case 'yoga':
+        return FitActivityType.yoga;
+      default:
+        return FitActivityType.walking;
+    }
+  }
+  
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+  
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final healthProvider = Provider.of<HealthProvider>(context);
+    
+    return Scaffold(
+      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey[50],
+      appBar: KaplanAppBar(
+        title: 'Aktivite Entegrasyonu',
+        isDarkMode: isDarkMode,
+        showBackButton: true,
+        actions: [
+          if (_isConnected)
+            IconButton(
+              onPressed: _isSyncing ? null : _loadHealthData,
+              icon: _isSyncing
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          isDarkMode ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      Icons.refresh,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                    ),
+              tooltip: 'Verileri Yenile',
+            ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadHealthData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildConnectionCard(isDarkMode),
+              const SizedBox(height: 20),
+              
+              if (_isConnected) ...[
+                _buildSyncStatusCard(isDarkMode),
+                const SizedBox(height: 20),
+                _buildTodayStatsCard(isDarkMode),
+                const SizedBox(height: 20),
+                _buildWeeklyStatsCard(isDarkMode),
+                const SizedBox(height: 20),
+                _buildRecentWorkoutsCard(isDarkMode),
+                const SizedBox(height: 20),
+                _buildDataSourcesCard(isDarkMode),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildConnectionCard(bool isDarkMode) {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryColor,
-            AppTheme.primaryColor.withValues(alpha: 0.8),
-          ],
+          colors: _isConnected
+              ? [Colors.green.shade400, Colors.green.shade600]
+              : [Colors.blue.shade400, Colors.blue.shade600],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            color: (_isConnected ? Colors.green : Colors.blue).withOpacity(0.3),
             blurRadius: 12,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _isConnected ? _pulseAnimation.value : 1.0,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _isConnected ? Icons.health_and_safety : Icons.link,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _isConnected ? 'Samsung Health Bağlı' : 'Samsung Health',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isConnected
+                ? 'Veriler otomatik olarak senkronize ediliyor'
+                : 'Sağlık ve aktivite verilerinizi senkronize edin',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.9),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          if (!_isConnected)
+            ElevatedButton.icon(
+              onPressed: _isConnecting ? null : _connectToSamsungHealth,
+              icon: _isConnecting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.blue,
+                      ),
+                    )
+                  : const Icon(Icons.link),
+              label: Text(_isConnecting ? 'Bağlanıyor...' : 'Bağlan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.blue.shade600,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildSyncStatusCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -157,13 +420,13 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              color: _isSyncing ? Colors.orange.shade100 : Colors.green.shade100,
+              shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.health_and_safety,
-              color: Colors.white,
-              size: 28,
+            child: Icon(
+              _isSyncing ? Icons.sync : Icons.check_circle,
+              color: _isSyncing ? Colors.orange : Colors.green,
+              size: 24,
             ),
           ),
           const SizedBox(width: 16),
@@ -171,22 +434,37 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'App Entegrasyonu',
+                Text(
+                  _isSyncing ? 'Senkronize Ediliyor' : 'Senkronizasyon Tamamlandı',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Akıllı cihaz ve uygulama entegrasyonları',
+                  _isSyncing
+                      ? 'Samsung Health verileriniz güncelleniyor...'
+                      : 'Son senkronizasyon: ${DateFormat('HH:mm').format(DateTime.now())}',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white70 : Colors.grey[600],
                   ),
                 ),
+                if (_isSyncing) ...[
+                  const SizedBox(height: 8),
+                  AnimatedBuilder(
+                    animation: _progressAnimation,
+                    builder: (context, child) {
+                      return LinearProgressIndicator(
+                        value: _progressAnimation.value,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -194,1104 +472,543 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
       ),
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      appBar: KaplanAppBar(
-        title: 'App Entegrasyonu',
-        isDarkMode: isDarkMode,
-        isRequiredPage: false,
-        showBackButton: true,
-        actions: [
-          IconButton(
-            icon: _isRefreshing
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isDarkMode ? Colors.white : AppTheme.primaryColor,
-                      ),
-                    ),
-                  )
-                : Icon(
-                    Icons.refresh,
-                    color: isDarkMode ? Colors.white : AppTheme.primaryColor,
-                  ),
-            onPressed: _isRefreshing ? null : _refreshData,
-            tooltip: 'Verileri Yenile',
+  
+  Widget _buildTodayStatsCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      backgroundColor:
-          isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.backgroundColor,
-      body: Consumer<HealthProvider>(
-        builder: (context, healthProvider, child) {
-          return RefreshIndicator(
-            onRefresh: _refreshData,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Bağlantı Durumu
-                  _buildConnectionStatusCard(healthProvider, isDarkMode),
-                  const SizedBox(height: 16),
-
-                  // Cihaz Bilgileri
-                  _buildDeviceInfoCard(healthProvider, isDarkMode),
-                  const SizedBox(height: 16),
-
-                  if (healthProvider.isConnected &&
-                      healthProvider.hasPermissions) ...[
-                    // Ana Metrikler
-                    _buildMainMetricsRow(healthProvider, isDarkMode),
-                    const SizedBox(height: 16),
-
-                    // Kalp Atış Hızı
-                    _buildHeartRateCard(healthProvider, isDarkMode),
-                    const SizedBox(height: 16),
-
-                    // Antreman Verileri
-                    _buildWorkoutCard(healthProvider, isDarkMode),
-                    const SizedBox(height: 16),
-
-                    // Uyku Verileri
-                    _buildSleepCard(healthProvider, isDarkMode),
-                    const SizedBox(height: 16),
-
-                    // Samsung Watch Özel Sensörler
-                    if (healthProvider.activeProvider == 'samsungHealth') ...[
-                      _buildSamsungSensorsCard(healthProvider, isDarkMode),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Antreman Takibi
-                    _buildWorkoutTrackingCard(healthProvider, isDarkMode),
-                    const SizedBox(height: 16),
-                  ] else if (healthProvider.isConnected &&
-                      !healthProvider.hasPermissions) ...[
-                    // İzin İsteme
-                    _buildPermissionCard(healthProvider, isDarkMode),
-                    const SizedBox(height: 16),
-                  ],
-
-                  // Management Tools
-                  _buildManagementToolsCard(healthProvider, isDarkMode),
-                  const SizedBox(height: 16),
-
-                  // Debug Bilgileri
-                  _buildDebugCard(healthProvider, isDarkMode),
-                  const SizedBox(height: 80), // Alt boşluk
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildConnectionStatusCard(
-      HealthProvider healthProvider, bool isDarkMode) {
-    final isConnected = healthProvider.isConnected;
-    final statusColor = isConnected ? Colors.green : Colors.red;
-
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                isConnected
-                    ? Icons.bluetooth_connected
-                    : Icons.bluetooth_disabled,
-                color: statusColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.today,
+                color: AppTheme.primaryColor,
                 size: 24,
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Cihaz Bağlantısı',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isConnected
-                        ? '✅ Bağlı (${healthProvider.connectedDeviceType})'
-                        : '❌ Bağlantı Yok',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDarkMode ? Colors.white70 : Colors.black54,
-                    ),
-                  ),
-                  if (isConnected) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Provider: ${healthProvider.activeProvider}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDarkMode ? Colors.white60 : Colors.black45,
-                      ),
-                    ),
-                  ],
-                ],
+              const SizedBox(width: 12),
+              Text(
+                'Bugünkü İstatistikler',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeviceInfoCard(HealthProvider healthProvider, bool isDarkMode) {
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.watch,
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Cihaz Bilgileri',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(
-                'Cihaz Türü', healthProvider.connectedDeviceType, isDarkMode),
-            _buildInfoRow(
-                'Aktif Provider', healthProvider.activeProvider, isDarkMode),
-            _buildInfoRow(
-                'İzin Durumu',
-                healthProvider.hasPermissions ? 'Verildi' : 'Verilmedi',
-                isDarkMode),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: isDarkMode ? Colors.white70 : Colors.black54,
-            ),
+            ],
           ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.directions_walk,
+                  title: 'Adım',
+                  value: '${_todayStats['steps'] ?? 0}',
+                  color: Colors.blue,
+                  isDarkMode: isDarkMode,
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.local_fire_department,
+                  title: 'Kalori',
+                  value: '${_todayStats['calories'] ?? 0}',
+                  color: Colors.red,
+                  isDarkMode: isDarkMode,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.straighten,
+                  title: 'Mesafe',
+                  value: '${(_todayStats['distance'] ?? 0).toStringAsFixed(1)} km',
+                  color: Colors.green,
+                  isDarkMode: isDarkMode,
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  icon: Icons.favorite,
+                  title: 'Kalp Atışı',
+                  value: '${_todayStats['heartRate'] ?? 0} bpm',
+                  color: Colors.pink,
+                  isDarkMode: isDarkMode,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildStatItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      margin: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDarkMode ? Colors.white70 : Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
   }
-
-  Widget _buildMainMetricsRow(HealthProvider healthProvider, bool isDarkMode) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            'Adımlar',
-            '${healthProvider.todaySteps}',
-            Icons.directions_walk,
-            Colors.blue,
-            isDarkMode,
+  
+  Widget _buildWeeklyStatsCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildMetricCard(
-            'Kalori',
-            '${healthProvider.todayCalories}',
-            Icons.local_fire_department,
-            Colors.orange,
-            isDarkMode,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildMetricCard(
-            'Uyku Skoru',
-            '${healthProvider.sleepScore}',
-            Icons.bedtime,
-            Colors.purple,
-            isDarkMode,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard(
-      String title, String value, IconData icon, Color color, bool isDarkMode) {
-    return Card(
-      elevation: 3,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: 0.05),
-              color.withValues(alpha: 0.02),
-            ],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
+              Icon(
+                Icons.bar_chart,
+                color: AppTheme.primaryColor,
+                size: 24,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(width: 12),
               Text(
-                value,
+                'Haftalık İstatistikler',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: isDarkMode ? Colors.white : Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
                 ),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeartRateCard(HealthProvider healthProvider, bool isDarkMode) {
-    final latestHeartRate = healthProvider.latestHeartRate;
-
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.favorite,
-                  color: Colors.red,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Kalp Atış Hızı',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (latestHeartRate != null) ...[
-              Text(
-                '$latestHeartRate BPM',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-              Text(
-                'Son ölçüm',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                ),
-              ),
-            ] else ...[
-              Text(
-                'Veri bulunamadı',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWorkoutCard(HealthProvider healthProvider, bool isDarkMode) {
-    final workoutData = healthProvider.workoutData;
-
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.fitness_center,
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Antreman Verileri',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (workoutData.isNotEmpty) ...[
-              _buildInfoRow('Toplam Egzersiz',
-                  '${workoutData['totalExercises'] ?? 0}', isDarkMode),
-              _buildInfoRow(
-                  'Süre',
-                  '${(workoutData['totalDuration'] ?? 0) / 60000} dk',
-                  isDarkMode),
-              _buildInfoRow('Ortalama Nabız',
-                  '${workoutData['averageHeartRate'] ?? 0} BPM', isDarkMode),
-              _buildInfoRow('Yakılan Kalori',
-                  '${workoutData['caloriesBurned'] ?? 0}', isDarkMode),
-            ] else ...[
-              Text(
-                'Antreman verisi bulunamadı',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSleepCard(HealthProvider healthProvider, bool isDarkMode) {
-    final sleepData = healthProvider.sleepData;
-
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.bedtime,
-                  color: Colors.indigo,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Uyku Verileri',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (sleepData.isNotEmpty) ...[
-              _buildInfoRow(
-                  'Toplam Uyku',
-                  '${(sleepData['totalSleepMinutes'] ?? 0) / 60} saat',
-                  isDarkMode),
-              _buildInfoRow('Derin Uyku',
-                  '${sleepData['deepSleepMinutes'] ?? 0} dk', isDarkMode),
-              _buildInfoRow('REM Uyku',
-                  '${sleepData['remSleepMinutes'] ?? 0} dk', isDarkMode),
-              _buildInfoRow('Uyku Skoru', '${sleepData['sleepScore'] ?? 0}/100',
-                  isDarkMode),
-            ] else ...[
-              Text(
-                'Uyku verisi bulunamadı',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSamsungSensorsCard(
-      HealthProvider healthProvider, bool isDarkMode) {
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.sensors,
-                  color: Colors.teal,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Samsung Sensörleri',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (healthProvider.stressLevel != null)
-              _buildInfoRow(
-                  'Stres Seviyesi',
-                  '${healthProvider.stressLevel!.toStringAsFixed(1)}/100',
-                  isDarkMode),
-            if (healthProvider.bloodOxygenLevel != null)
-              _buildInfoRow(
-                  'Kan Oksijeni',
-                  '${healthProvider.bloodOxygenLevel!.toStringAsFixed(1)}%',
-                  isDarkMode),
-            if (healthProvider.bodyComposition != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Vücut Kompozisyonu:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDarkMode ? Colors.white : Colors.black87,
-                ),
-              ),
-              _buildInfoRow('Vücut Yağı',
-                  '${healthProvider.bodyComposition!['bodyFat']}%', isDarkMode),
-              _buildInfoRow(
-                  'Kas Kütlesi',
-                  '${healthProvider.bodyComposition!['muscleMass']} kg',
-                  isDarkMode),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWorkoutTrackingCard(
-      HealthProvider healthProvider, bool isDarkMode) {
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.play_circle,
-                  color: Colors.green,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Antreman Takibi',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (healthProvider.isTrackingWorkout) ...[
-              Text(
-                'Aktif: ${healthProvider.currentWorkoutType}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () async {
-                  await healthProvider.stopWorkoutTracking();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Antrenmanı Durdur'),
-              ),
-            ] else ...[
-              Text(
-                'Antreman takibi aktif değil',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () async {
-                  await healthProvider.startWorkoutTracking('Genel Antreman');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Antreman Başlat'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissionCard(HealthProvider healthProvider, bool isDarkMode) {
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.security,
-                  color: Colors.amber,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'İzin Gerekli',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Provider bilgilendirmesi
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color:
-                    (isDarkMode ? Colors.blue.shade800 : Colors.blue.shade50),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.blue.shade300,
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(7, (index) {
+              final dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+              final steps = _weeklyStats['day_${index + 1}'] ?? 0;
+              final maxSteps = _weeklyStats.values.isNotEmpty
+                  ? _weeklyStats.values.reduce((a, b) => a > b ? a : b)
+                  : 1;
+              final percentage = maxSteps > 0 ? steps / maxSteps : 0.0;
+              
+              return Column(
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        healthProvider.activeProvider == 'healthConnect'
-                            ? Icons.health_and_safety
-                            : Icons.watch,
-                        color: Colors.blue,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        healthProvider.activeProvider == 'healthConnect'
-                            ? 'Health Connect (Önerilen)'
-                            : 'Samsung Health',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? Colors.white : Colors.black87,
+                  Container(
+                    width: 30,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 800),
+                        width: 30,
+                        height: 80 * percentage,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [
+                              AppTheme.primaryColor,
+                              AppTheme.primaryColor.withOpacity(0.7),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    healthProvider.activeProvider == 'healthConnect'
-                        ? 'Android\'in yerleşik sağlık sistemi kullanılacak. Açılacak sayfada "KaplanFIT" uygulamasını bulun ve sağlık verilerine erişim izni verin.'
-                        : 'Samsung Health uygulaması açılacak. Samsung Health > Ayarlar > Veri paylaşımı menüsünden KaplanFIT\'e izin verin.',
+                    dayNames[index],
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDarkMode ? Colors.white70 : Colors.black54,
+                      fontWeight: FontWeight.w500,
+                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
                     ),
                   ),
                 ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            Text(
-              'Samsung Watch\'ınızdan sağlık verilerini almak için izin vermeniz gerekiyor.',
-              style: TextStyle(
-                fontSize: 16,
-                color: isDarkMode ? Colors.white70 : Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Ana izin verme butonu
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  await healthProvider.requestPermissions();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                icon: const Icon(Icons.shield_outlined),
-                label: Text(
-                  healthProvider.activeProvider == 'healthConnect'
-                      ? 'Health Connect İzinlerini Ver'
-                      : 'Samsung Health İzinlerini Ver',
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Alternatif permission sistemleri
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () =>
-                        _requestSamsungHealthDirect(healthProvider),
-                    icon: const Icon(Icons.favorite,
-                        size: 16, color: Colors.green),
-                    label: const Text('Samsung Health Direct',
-                        style: TextStyle(fontSize: 11)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.withValues(alpha: 0.1),
-                      foregroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.green, width: 1),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _requestGoogleFit(healthProvider),
-                    icon: const Icon(Icons.fitness_center,
-                        size: 16, color: Colors.blue),
-                    label: const Text('Google Fit',
-                        style: TextStyle(fontSize: 11)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
-                      foregroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.blue, width: 1),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Alternatif provider seçeneği
-            if (healthProvider.activeProvider != 'healthConnect')
-              TextButton(
-                onPressed: () {
-                  // Provider değiştirme seçeneği göster
-                  _showProviderSelectionDialog(healthProvider, isDarkMode);
-                },
-                child: Text(
-                  'Health Connect kullanmayı tercih ederim',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showProviderSelectionDialog(
-      HealthProvider healthProvider, bool isDarkMode) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-        title: Text(
-          'Sağlık Veri Kaynağı',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
-          ),
-        ),
-        content: Text(
-          'Health Connect Android\'in yerleşik sağlık sistemidir ve daha kullanıcı dostu izin süreci sunar. Samsung Health yerine Health Connect\'i kullanmak ister misiniz?',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white70 : Colors.black54,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // Health Connect'e geçiş yapmak için provider'ı yenile
-              await healthProvider.refreshConnection();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-            ),
-            child: const Text(
-              'Health Connect Kullan',
-              style: TextStyle(color: Colors.white),
-            ),
+              );
+            }),
           ),
         ],
       ),
     );
   }
-
-  // Alternatif permission request metodları
-  Future<void> _requestSamsungHealthDirect(
-      HealthProvider healthProvider) async {
-    try {
-      debugPrint('🔥 Samsung Health Direct permission request başlatılıyor...');
-
-      _showSnackBar(
-          'Samsung Health açılıyor... İzin verdikten sonra geri dönün',
-          Colors.blue);
-
-      final success =
-          await healthProvider.requestSamsungHealthDirectPermissions();
-
-      if (success) {
-        _showSnackBar('✅ İzinler başarıyla verildi!', Colors.green);
-        // Sayfayı yenile
-        setState(() {});
-      } else {
-        _showSnackBar(
-            'Samsung Health açılamadı. Lütfen manuel olarak izin verin.',
-            Colors.orange);
-      }
-    } catch (e) {
-      debugPrint('Samsung Health Direct error: $e');
-      _showSnackBar('Samsung Health hatası: $e', Colors.red);
-    }
-  }
-
-  Future<void> _requestGoogleFit(HealthProvider healthProvider) async {
-    try {
-      debugPrint('🔥 Google Fit permission request başlatılıyor...');
-
-      final success = await healthProvider.requestGoogleFitPermissions();
-
-      if (success) {
-        _showSnackBar(
-            'Google Fit uygulamasında KaplanFIT\'e izin verin', Colors.blue);
-      } else {
-        _showSnackBar(
-            'Google Fit açılamadı. Play Store\'dan indirin.', Colors.orange);
-      }
-    } catch (e) {
-      debugPrint('Google Fit error: $e');
-      _showSnackBar('Google Fit hatası: $e', Colors.red);
-    }
-  }
-
-  void _showSnackBar(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        duration: const Duration(seconds: 3),
+  
+  Widget _buildRecentWorkoutsCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.fitness_center,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Son Antrenmanlar',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_recentWorkouts.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.fitness_center_outlined,
+                      size: 48,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Henüz antrenman verisi bulunamadı',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...(_recentWorkouts.take(5).map((workout) => _buildWorkoutItem(workout, isDarkMode))),
+        ],
       ),
     );
   }
-
-  Widget _buildDebugCard(HealthProvider healthProvider, bool isDarkMode) {
-    final debugInfo = healthProvider.getDebugInfo();
-
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.grey.shade50,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ExpansionTile(
-        leading: Icon(
-          Icons.bug_report,
-          color: Colors.grey,
-          size: 20,
+  
+  Widget _buildWorkoutItem(Map<String, dynamic> workout, bool isDarkMode) {
+    final workoutType = workout['type'] ?? 'Bilinmiyor';
+    final duration = workout['duration'] ?? 0;
+    final calories = workout['calories'] ?? 0;
+    final date = DateTime.tryParse(workout['date'] ?? '') ?? DateTime.now();
+    
+    IconData workoutIcon;
+    Color workoutColor;
+    
+    switch (workoutType.toLowerCase()) {
+      case 'walking':
+      case 'yürüyüş':
+        workoutIcon = Icons.directions_walk;
+        workoutColor = Colors.green;
+        break;
+      case 'running':
+      case 'koşu':
+        workoutIcon = Icons.directions_run;
+        workoutColor = Colors.blue;
+        break;
+      case 'cycling':
+      case 'bisiklet':
+        workoutIcon = Icons.directions_bike;
+        workoutColor = Colors.orange;
+        break;
+      case 'swimming':
+      case 'yüzme':
+        workoutIcon = Icons.pool;
+        workoutColor = Colors.cyan;
+        break;
+      default:
+        workoutIcon = Icons.fitness_center;
+        workoutColor = Colors.purple;
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: workoutColor.withOpacity(0.2),
+          width: 1,
         ),
-        title: Text(
-          'Debug Bilgileri',
-          style: TextStyle(
-            fontSize: 14,
-            color: isDarkMode ? Colors.white70 : Colors.black54,
-          ),
-        ),
+      ),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: workoutColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(workoutIcon, color: workoutColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: debugInfo.entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Text(
-                    '${entry.key}: ${entry.value}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                      color: isDarkMode ? Colors.white60 : Colors.black45,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildManagementToolsCard(HealthProvider healthProvider, bool isDarkMode) {
-    return Card(
-      elevation: 4,
-      color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
               children: [
-                Icon(
-                  Icons.build_circle,
-                  color: AppTheme.primaryColor,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
                 Text(
-                  'Yönetim Araçları',
+                  workoutType,
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${duration}dk',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.local_fire_department,
+                      size: 16,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${calories} cal',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            
-            // Health Connect Setup Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _setupHealthConnect,
-                icon: const Icon(Icons.health_and_safety, size: 20),
-                label: const Text('Health Connect Kurulumu'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+          ),
+          Text(
+            DateFormat('dd/MM').format(date),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: isDarkMode ? Colors.white70 : Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDataSourcesCard(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppTheme.darkSurfaceColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.source,
+                color: AppTheme.primaryColor,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Veri Kaynakları',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black87,
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Cleanup Duplicate Records Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _cleanupDuplicateRecords,
-                icon: const Icon(Icons.cleaning_services, size: 20),
-                label: const Text('Tekrarlayan Verileri Temizle'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Sync Historical Data Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Son 3 ayın verileri senkronize ediliyor...'),
-                        backgroundColor: Colors.blue,
-                      ),
-                    );
-                    
-                    await healthProvider.syncHistoricalData(months: 3);
-                    
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('✅ Son 3 ayın verileri başarıyla senkronize edildi!'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    
-                    setState(() {});
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Senkronizasyon hatası: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.sync, size: 20),
-                label: const Text('Son 3 Ayın Verilerini Çek'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildDataSourceItem(
+            'Samsung Health',
+            'Adımlar, kalori, kalp atışı, antrenmanlar',
+            Icons.health_and_safety,
+            Colors.green,
+            true,
+            isDarkMode,
+          ),
+          const SizedBox(height: 12),
+          _buildDataSourceItem(
+            'Samsung Watch',
+            'Detaylı antrenman verileri, uyku, stres',
+            Icons.watch,
+            Colors.blue,
+            _todayStats.containsKey('watch_connected'),
+            isDarkMode,
+          ),
+          const SizedBox(height: 12),
+          _buildDataSourceItem(
+            'Samsung Galaxy Fit',
+            'Sürekli kalp atışı, aktivite takibi',
+            Icons.fitness_center,
+            Colors.purple,
+            _todayStats.containsKey('band_connected'),
+            isDarkMode,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDataSourceItem(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    bool isConnected,
+    bool isDarkMode,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isConnected
+            ? color.withOpacity(0.1)
+            : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isConnected ? color.withOpacity(0.3) : Colors.transparent,
+          width: 1,
         ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isConnected ? color.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: isConnected ? color : Colors.grey,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white70 : Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            isConnected ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: isConnected ? Colors.green : Colors.grey,
+            size: 20,
+          ),
+        ],
       ),
     );
   }

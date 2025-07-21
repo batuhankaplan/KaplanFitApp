@@ -220,6 +220,58 @@ class ActivityProvider with ChangeNotifier {
     return id;
   }
 
+  /// Samsung Health'ten senkronize edilen aktiviteleri ekler veya günceller
+  Future<void> addOrUpdateSyncedActivity(ActivityRecord activity) async {
+    final userId = _userProvider.user?.id;
+    if (userId == null) {
+      debugPrint('ActivityProvider: Senkronize aktivite eklenemedi, kullanıcı ID bulunamadı.');
+      return;
+    }
+
+    try {
+      // ID'nin benzersiz olduğunu kontrol et - eğer zaten varsa güncelle
+      final existingActivityIndex = _allActivities.indexWhere(
+        (existing) => existing.id == activity.id,
+      );
+
+      final activityWithUserId = activity.copyWith(userId: userId);
+
+      if (existingActivityIndex != -1) {
+        // Mevcut aktiviteyi güncelle
+        _allActivities[existingActivityIndex] = activityWithUserId;
+        
+        // Eğer seçili gündeyse görünür listeyi de güncelle
+        if (_isSameDay(activity.date, _selectedDate)) {
+          final visibleActivityIndex = _activities.indexWhere(
+            (existing) => existing.id == activity.id,
+          );
+          if (visibleActivityIndex != -1) {
+            _activities[visibleActivityIndex] = activityWithUserId;
+          }
+        }
+      } else {
+        // Yeni aktivite ekle
+        _allActivities.add(activityWithUserId);
+        _allActivities.sort((a, b) => b.date.compareTo(a.date));
+
+        // Eğer seçili gündeyse görünür listeye de ekle
+        if (_isSameDay(activity.date, _selectedDate)) {
+          _activities.add(activityWithUserId);
+          _activities.sort((a, b) => b.date.compareTo(a.date));
+        }
+      }
+
+      // Veritabanına kaydet/güncelle (Samsung Health'ten gelen veriler için ayrı tablo kullanılabilir)
+      // Bu kısım database service'te uygun metodlar eklendikten sonra aktif edilebilir
+      
+      notifyListeners();
+      debugPrint('Samsung Health aktivitesi senkronize edildi: ${activity.type}');
+      
+    } catch (e) {
+      debugPrint('Samsung Health aktivitesi senkronize edilirken hata: $e');
+    }
+  }
+
   Future<void> deleteActivity(int id) async {
     _isLoading = true;
     notifyListeners();

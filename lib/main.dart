@@ -290,6 +290,21 @@ Future<void> main() async {
   try {
     await programService.initialize(exerciseService);
 
+    // ================= ONE-TIME MIGRATION =================
+    // Bu kod, program içeriğini newtraining.txt'ye göre
+    // güncellemek için BİR KEZ çalışır.
+    const String migrationKey = 'program_content_migrated_to_v4';
+    final bool isMigrated = prefs.getBool(migrationKey) ?? false;
+
+    if (!isMigrated) {
+      debugPrint(
+          "[main] Program içeriği migrasyonu başlıyor: Eski program silinecek ve newtraining.txt'ye göre yeniden oluşturulacak.");
+      await programService.resetProgramFromScratch();
+      await prefs.setBool(migrationKey, true);
+      debugPrint("[main] Program içeriği migrasyonu başarıyla tamamlandı.");
+    }
+    // ======================================================
+
     // NotificationService'e ProgramService'i bağla
     NotificationService.instance.setProgramService(programService);
 

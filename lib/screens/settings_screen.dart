@@ -171,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             _buildSettingsOption(
               context,
-              'Sağlık Dashboard',
+              'Aktivite Entegrasyonu',
               Icons.health_and_safety,
               Colors.red,
               () {
