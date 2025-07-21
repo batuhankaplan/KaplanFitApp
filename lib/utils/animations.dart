@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' show sin, pi;
 import 'dart:math' as math;
 
 /// Öğeleri belirli bir gecikmeyle ve animasyonla gösteren widget

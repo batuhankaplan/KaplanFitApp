@@ -8,7 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-// import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart' as fln_platform_interface; // Bu importu kaldırıyoruz veya yorumluyoruz, çünkü enum doğrudan ana paketten gelebilir
+import 'program_service.dart';
+import '../models/program_model.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -29,7 +30,14 @@ class NotificationService {
 
   static bool _initialized = false;
 
+  ProgramService? _programService;
+
   NotificationService._();
+
+  /// ProgramService'i ayarla (dependency injection)
+  void setProgramService(ProgramService programService) {
+    _programService = programService;
+  }
 
   Future<void> init() async {
     if (_initialized) return;
@@ -72,16 +80,13 @@ class NotificationService {
         await _createNotificationChannels();
       }
 
-      // İzinleri kontrol et ve ister
-      final bool permissionsGranted = await _checkAndRequestPermissions();
+      // İzinleri sadece kontrol et, otomatik istek yapma
+      final bool permissionsGranted = await _checkPermissions();
       debugPrint("Bildirim izinleri durumu: $permissionsGranted");
 
       _initialized = true;
       debugPrint(
           '✅ Bildirim servisi başarıyla başlatıldı. Yerel Saat Dilimi: ${tz.local}');
-
-      // Başlatma sonrası test bildirimi gönder
-      await _sendInitializationTestNotification();
     } catch (e) {
       debugPrint('❌ Bildirim servisi başlatılırken hata: $e');
       throw Exception('Bildirim servisi başlatılamadı: $e');
@@ -144,7 +149,51 @@ class NotificationService {
   }
 
   /// Bildirim izinlerini kontrol eder ve ister
-  Future<bool> _checkAndRequestPermissions() async {
+  /// Sadece izinleri kontrol et, otomatik istek yapma
+  Future<bool> _checkPermissions() async {
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await _deviceInfoPlugin.androidInfo;
+        bool allPermissionsGranted = true;
+
+        debugPrint("Android SDK versiyon: ${androidInfo.version.sdkInt}");
+
+        // Android 13+ (SDK 33+) için bildirim izni kontrolü
+        if (androidInfo.version.sdkInt >= 33) {
+          var notificationStatus = await Permission.notification.status;
+          debugPrint("🔔 Android 13+ Bildirim İzin Durumu: $notificationStatus");
+
+          if (!notificationStatus.isGranted) {
+            allPermissionsGranted = false;
+          }
+        }
+
+        // Android 12+ (SDK 31+) için tam zamanlı alarm izni kontrolü
+        if (androidInfo.version.sdkInt >= 31) {
+          var exactAlarmStatus = await Permission.scheduleExactAlarm.status;
+          debugPrint("⏰ Android 12+ Tam Zamanlı Alarm İzin Durumu: $exactAlarmStatus");
+
+          if (!exactAlarmStatus.isGranted) {
+            debugPrint("⚠️ Tam zamanlı alarm izni yok. Bildirimler gecikebilir.");
+            allPermissionsGranted = false;
+          }
+        }
+
+        return allPermissionsGranted;
+      } else if (Platform.isIOS) {
+        debugPrint("iOS platformu için izin kontrolü");
+        return true; // iOS için otomatik granted kabul et
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('❌ İzin kontrolünde hata: $e');
+      return false;
+    }
+  }
+
+  /// Bildirim izinlerini iste (sadece ayarlar sayfasından çağrılacak)
+  Future<bool> requestPermissions() async {
     try {
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
@@ -155,14 +204,11 @@ class NotificationService {
         // Android 13+ (SDK 33+) için bildirim izni
         if (androidInfo.version.sdkInt >= 33) {
           var notificationStatus = await Permission.notification.status;
-          debugPrint(
-              "🔔 Android 13+ Bildirim İzin Durumu: $notificationStatus");
+          debugPrint("🔔 Android 13+ Bildirim İzin Durumu: $notificationStatus");
 
-          if (notificationStatus.isDenied ||
-              notificationStatus.isPermanentlyDenied) {
+          if (notificationStatus.isDenied || notificationStatus.isPermanentlyDenied) {
             if (notificationStatus.isPermanentlyDenied) {
-              debugPrint(
-                  "⚠️ Bildirim izni kalıcı olarak reddedilmiş. Ayarlar sayfasından açılması gerekiyor.");
+              debugPrint("⚠️ Bildirim izni kalıcı olarak reddedilmiş. Ayarlar sayfasından açılması gerekiyor.");
               allPermissionsGranted = false;
             } else {
               notificationStatus = await Permission.notification.request();
@@ -177,23 +223,18 @@ class NotificationService {
         // Android 12+ (SDK 31+) için tam zamanlı alarm izni
         if (androidInfo.version.sdkInt >= 31) {
           var exactAlarmStatus = await Permission.scheduleExactAlarm.status;
-          debugPrint(
-              "⏰ Android 12+ Tam Zamanlı Alarm İzin Durumu: $exactAlarmStatus");
+          debugPrint("⏰ Android 12+ Tam Zamanlı Alarm İzin Durumu: $exactAlarmStatus");
 
           if (exactAlarmStatus.isDenied) {
             exactAlarmStatus = await Permission.scheduleExactAlarm.request();
-            debugPrint(
-                "⏰ Tam Zamanlı Alarm İzin İsteği Sonucu: $exactAlarmStatus");
+            debugPrint("⏰ Tam Zamanlı Alarm İzin İsteği Sonucu: $exactAlarmStatus");
           }
 
           if (!exactAlarmStatus.isGranted) {
-            debugPrint(
-                "⚠️ Tam zamanlı alarm izni yok. Bildirimler gecikebilir.");
-            debugPrint(
-                "⚠️ Kullanıcının el ile sistem ayarlarından açması gerekebilir.");
+            debugPrint("⚠️ Tam zamanlı alarm izni yok. Bildirimler gecikebilir.");
+            debugPrint("⚠️ Kullanıcının el ile sistem ayarlarından açması gerekebilir.");
           } else {
-            debugPrint(
-                "✅ Tam zamanlı alarm izni aktif - Bildiriler zamanında gelecek");
+            debugPrint("✅ Tam zamanlı alarm izni aktif - Bildiriler zamanında gelecek");
           }
         } else {
           debugPrint("ℹ️ Android 12 altı - Exact alarm izni gerekmiyor");
@@ -226,48 +267,11 @@ class NotificationService {
     int count = 0;
 
     try {
-      // Bildirim türleri ve saatleri
-      final notifications = [
-        // Antrenman Hatırlatmaları - Sabah 08:00
-        {
-          'id': 1,
-          'hour': 8,
-          'minute': 0,
-          'title': '🏋️ Antrenman Zamanı!',
-          'body': 'Sabah antrenmanın seni bekliyor! Hazır mısın?',
-          'type': 'workout'
-        },
-        // Antrenman Hatırlatmaları - Akşam 20:00
-        {
-          'id': 11,
-          'hour': 20,
-          'minute': 0,
-          'title': '🔥 Akşam Antrenmanı!',
-          'body': 'Günün son antrenmanı! Enerji dolu bitir!',
-          'type': 'workout_evening'
-        },
-        // Beslenme Hatırlatmaları - Öğle 12:00
-        {
-          'id': 2,
-          'hour': 12,
-          'minute': 0,
-          'title': '🍽️ Öğle Yemeği Zamanı!',
-          'body': 'Günün ortasında güzel bir mola ve sağlıklı beslenme!',
-          'type': 'meal_lunch'
-        },
-        // Beslenme Hatırlatmaları - Akşam 18:00
-        {
-          'id': 12,
-          'hour': 18,
-          'minute': 0,
-          'title': '🍽️ Akşam Yemeği Zamanı!',
-          'body': 'Gününü sağlıklı ve lezzetli bir akşam yemeğiyle tamamla!',
-          'type': 'meal_dinner'
-        },
-        // Su İçme Hatırlatmaları - Birden fazla saat
+      // Su içme hatırlatmaları
+      final waterNotifications = [
         {
           'id': 3,
-          'hour': 10,
+          'hour': 11,
           'minute': 0,
           'title': '💧 Su İçme Zamanı!',
           'body': 'Hidratasyonunu koru! Su içmeyi unutma.',
@@ -275,64 +279,32 @@ class NotificationService {
         },
         {
           'id': 13,
-          'hour': 12,
+          'hour': 15,
           'minute': 0,
           'title': '💧 Su Hatırlatması!',
-          'body': 'Öğle arası su molası! Vücudun teşekkür edecek.',
+          'body': 'Öğle sonrası su molası! Vücudun teşekkür edecek.',
           'type': 'water'
         },
         {
           'id': 14,
-          'hour': 14,
+          'hour': 19,
           'minute': 0,
           'title': '💧 Su İç!',
-          'body': 'Öğleden sonra hidratasyonu! Su içmeyi unutma.',
+          'body': 'Akşam su hatırlatması! Su içmeyi unutma.',
           'type': 'water'
         },
         {
           'id': 15,
-          'hour': 16,
-          'minute': 0,
-          'title': '💧 Su Zamanı!',
-          'body': 'İkindi molası! Bir bardak su nasıl olur?',
-          'type': 'water'
-        },
-        {
-          'id': 16,
-          'hour': 18,
-          'minute': 0,
-          'title': '💧 Su Hatırlatması!',
-          'body': 'Akşam öncesi su molası! Hedefine yaklaş.',
-          'type': 'water'
-        },
-        {
-          'id': 17,
-          'hour': 20,
-          'minute': 0,
-          'title': '💧 Su İç!',
-          'body': 'Akşam saatleri! Su içmeyi unutma.',
-          'type': 'water'
-        },
-        {
-          'id': 18,
           'hour': 22,
           'minute': 0,
           'title': '💧 Gece Su Molası!',
           'body': 'Günü tamamlarken son bir su molası!',
           'type': 'water'
         },
-        {
-          'id': 19,
-          'hour': 0,
-          'minute': 0,
-          'title': '💧 Gece Yarısı Su!',
-          'body': 'Gece yarısı da hidratasyonu unutma!',
-          'type': 'water'
-        },
       ];
 
-      // Her bildirim için planla
-      for (final notification in notifications) {
+      // Su bildirimleri için planla
+      for (final notification in waterNotifications) {
         final scheduledDate = _getNextScheduledDate(
           notification['hour'] as int,
           notification['minute'] as int,
@@ -352,13 +324,217 @@ class NotificationService {
 
         count++;
         debugPrint(
-            '✅ Günlük bildirim planlandı: ID ${notification['id']} - Saat ${notification['hour']}:${notification['minute'].toString().padLeft(2, '0')} - Zaman: $scheduledDate');
+            '✅ Su içme bildirimi planlandı: ID ${notification['id']} - Saat ${notification['hour']}:${notification['minute'].toString().padLeft(2, '0')} - Zaman: $scheduledDate');
       }
+
+      // Program tabanlı bildirimler (antrenman ve yemek)
+      final programCount = await _scheduleProgramBasedNotifications();
+      count += programCount;
     } catch (e, stackTrace) {
       debugPrint('❌ Günlük bildirimler planlanırken hata: $e');
       debugPrint('Stack trace: $stackTrace');
     }
 
+    return count;
+  }
+
+  /// Program tabanlı bildirimleri planla
+  Future<int> _scheduleProgramBasedNotifications() async {
+    if (_programService == null) {
+      debugPrint(
+          '⚠️ ProgramService set edilmemiş, varsayılan bildirimler kullanılacak');
+      return await _scheduleDefaultWorkoutNotifications();
+    }
+
+    try {
+      int count = 0;
+      // Her gün için ayrı bildirimler planla
+      final weekDays = [
+        'Pazartesi',
+        'Salı',
+        'Çarşamba',
+        'Perşembe',
+        'Cuma',
+        'Cumartesi',
+        'Pazar'
+      ];
+
+      for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
+        final dailyProgram = _programService!.getDailyProgram(dayIndex);
+        if (dailyProgram == null) continue;
+
+        String dayName = weekDays[dayIndex];
+
+        // Sabah antrenman bildirimi (08:00)
+        String morningWorkoutTitle = '🏋️ Antrenman Zamanı!';
+        String morningWorkoutBody =
+            'Sabah antrenmanın seni bekliyor! Hazır mısın?';
+
+        if (dailyProgram.morningExercise.type == ProgramItemType.workout) {
+          morningWorkoutBody =
+              'Bugün ${dailyProgram.morningExercise.title} antrenman günü!';
+        } else if (dailyProgram.morningExercise.type == ProgramItemType.rest) {
+          morningWorkoutBody =
+              'Bugün dinlenme günü. Hafif aktivite yapabilirsin.';
+        }
+
+        // Akşam antrenman bildirimi (20:00)
+        String eveningWorkoutTitle = '🔥 Antrenman Zamanı!';
+        String eveningWorkoutBody =
+            'Akşam antrenmanın seni bekliyor! Başlamaya hazır mısın?';
+
+        if (dailyProgram.eveningExercise.type == ProgramItemType.workout) {
+          eveningWorkoutBody =
+              'Bugün ${dailyProgram.eveningExercise.title} antrenman günü!';
+        } else if (dailyProgram.eveningExercise.type == ProgramItemType.rest) {
+          eveningWorkoutBody = 'Akşam dinlenme zamanı. Rahatla!';
+        }
+
+        // Öğle yemeği bildirimi (12:00)
+        String lunchTitle = '🍽️ Öğle Yemeği Vakti!';
+        String lunchBody = dailyProgram.lunch.description ??
+            'Sağlıklı ve dengeli öğle yemeği zamanı!';
+
+        // Akşam yemeği bildirimi (18:00)
+        String dinnerTitle = '🍽️ Akşam Yemeği Vakti!';
+        String dinnerBody = dailyProgram.dinner.description ??
+            'Sağlıklı ve lezzetli akşam yemeği zamanı!';
+
+        // Bildirimleri planla (her gün için ayrı ID'ler)
+        await _scheduleWeeklyNotification(
+          id: 100 + dayIndex, // Sabah antrenman ID'leri 100-106
+          hour: 8,
+          minute: 0,
+          title: morningWorkoutTitle,
+          body: morningWorkoutBody,
+          weekday: dayIndex + 1,
+        );
+        count++;
+
+        await _scheduleWeeklyNotification(
+          id: 200 + dayIndex, // Öğle yemeği ID'leri 200-206
+          hour: 12,
+          minute: 0,
+          title: lunchTitle,
+          body: lunchBody,
+          weekday: dayIndex + 1,
+        );
+        count++;
+
+        await _scheduleWeeklyNotification(
+          id: 300 + dayIndex, // Akşam yemeği ID'leri 300-306
+          hour: 18,
+          minute: 0,
+          title: dinnerTitle,
+          body: dinnerBody,
+          weekday: dayIndex + 1,
+        );
+        count++;
+
+        await _scheduleWeeklyNotification(
+          id: 400 + dayIndex, // Akşam antrenman ID'leri 400-406
+          hour: 20,
+          minute: 0,
+          title: eveningWorkoutTitle,
+          body: eveningWorkoutBody,
+          weekday: dayIndex + 1,
+        );
+        count++;
+      }
+
+      debugPrint('✅ Program tabanlı bildirimler planlandı: $count adet');
+      return count;
+    } catch (e) {
+      debugPrint('❌ Program tabanlı bildirimler planlanırken hata: $e');
+      return await _scheduleDefaultWorkoutNotifications();
+    }
+  }
+
+  /// Belirli bir hafta günü için bildirim planla
+  Future<void> _scheduleWeeklyNotification({
+    required int id,
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+    required int weekday, // 1=Pazartesi, 7=Pazar
+  }) async {
+    final now = DateTime.now();
+    var scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
+
+    // Bugün hedef güne kadar gün sayısını hesapla
+    int daysUntilTarget = (weekday - now.weekday) % 7;
+    if (daysUntilTarget == 0 && scheduledDate.isBefore(now)) {
+      daysUntilTarget = 7; // Bugün geçmişse haftaya
+    }
+
+    scheduledDate = scheduledDate.add(Duration(days: daysUntilTarget));
+
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      await _createNotificationDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
+
+    debugPrint(
+        '✅ Haftalık bildirim planlandı: ID $id - $title - Hafta günü: $weekday - Saat: $hour:${minute.toString().padLeft(2, '0')}');
+  }
+
+  /// Varsayılan antrenman bildirimlerini planla (ProgramService olmadığında)
+  Future<int> _scheduleDefaultWorkoutNotifications() async {
+    final defaultNotifications = [
+      {
+        'id': 1,
+        'hour': 8,
+        'minute': 0,
+        'title': '🏋️ Antrenman Zamanı!',
+        'body': 'Sabah antrenmanın seni bekliyor! Hazır mısın?',
+      },
+      {
+        'id': 2,
+        'hour': 12,
+        'minute': 0,
+        'title': '🍽️ Öğle Yemeği Zamanı!',
+        'body': 'Sağlıklı ve dengeli öğle yemeği zamanı!',
+      },
+      {
+        'id': 12,
+        'hour': 20,
+        'minute': 0,
+        'title': '🔥 Akşam Antrenmanı!',
+        'body': 'Günün son antrenmanı! Enerji dolu bitir!',
+      },
+    ];
+
+    int count = 0;
+    for (final notification in defaultNotifications) {
+      final scheduledDate = _getNextScheduledDate(
+        notification['hour'] as int,
+        notification['minute'] as int,
+      );
+
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        notification['id'] as int,
+        notification['title'] as String,
+        notification['body'] as String,
+        tz.TZDateTime.from(scheduledDate, tz.local),
+        await _createNotificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+
+      count++;
+      debugPrint(
+          '✅ Varsayılan bildirim planlandı: ID ${notification['id']} - Saat ${notification['hour']}:${notification['minute'].toString().padLeft(2, '0')} - Zaman: $scheduledDate');
+    }
     return count;
   }
 
@@ -390,20 +566,6 @@ class NotificationService {
       );
       count++;
 
-      // Akşam yemeği bildirimi (18:00)
-      final dinnerTime = _getNextScheduledDate(18, 0);
-      await _flutterLocalNotificationsPlugin.zonedSchedule(
-        22, // Özel ID
-        '🍽️ Akşam Yemeği Zamanı!',
-        'Sağlıklı ve lezzetli akşam yemeğin hazır!',
-        tz.TZDateTime.from(dinnerTime, tz.local),
-        await _createNotificationDetails(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-      count++;
 
       debugPrint('✅ İçerik bazlı bildirimler planlandı: $count adet');
     } catch (e) {
@@ -575,19 +737,19 @@ class NotificationService {
     try {
       final int notificationId = 20000 + Random().nextInt(10000);
 
-      print('=== KAplanFit NOTIFICATION DEBUG ===');
-      print('Bildirim planlama başlıyor...');
-      print('ID: $notificationId');
-      print('Başlık: $title');
-      print('Zaman: $scheduledDateTime');
-      print('===================================');
+      debugPrint('=== KAplanFit NOTIFICATION DEBUG ===');
+      debugPrint('Bildirim planlama başlıyor...');
+      debugPrint('ID: $notificationId');
+      debugPrint('Başlık: $title');
+      debugPrint('Zaman: $scheduledDateTime');
+      debugPrint('===================================');
 
       // Eğer 1 dakikadan az ise hemen göster (test için)
       final now = DateTime.now();
       final difference = scheduledDateTime.difference(now);
 
       if (difference.inSeconds < 60) {
-        print('=== 1 DAKİKADAN AZ - HEMEN GÖSTERİLİYOR ===');
+        debugPrint('=== 1 DAKİKADAN AZ - HEMEN GÖSTERİLİYOR ===');
         await sendNowTestNotification(
           title: '⚡ $title (Hemen)',
           body: '$body - Hemen gönderildi çünkü 1dk altı',
@@ -599,13 +761,13 @@ class NotificationService {
           tz.TZDateTime.from(scheduledDateTime, tz.local);
       final tz.TZDateTime nowTz = tz.TZDateTime.now(tz.local);
 
-      print('Timezone kontrolü:');
-      print('   Hedef TZ: $scheduledTime');
-      print('   Şimdi TZ: $nowTz');
-      print('   Fark: ${difference.inMinutes} dakika');
+      debugPrint('Timezone kontrolü:');
+      debugPrint('   Hedef TZ: $scheduledTime');
+      debugPrint('   Şimdi TZ: $nowTz');
+      debugPrint('   Fark: ${difference.inMinutes} dakika');
 
       if (scheduledTime.isBefore(nowTz)) {
-        print('❌ GEÇMİŞ ZAMAN HATASI');
+        debugPrint('❌ GEÇMİŞ ZAMAN HATASI');
         throw Exception('Geçmiş bir zaman için bildirim planlanamaz.');
       }
 
@@ -615,7 +777,7 @@ class NotificationService {
 
       if (Platform.isAndroid) {
         final androidInfo = await _deviceInfoPlugin.androidInfo;
-        print('Android SDK: ${androidInfo.version.sdkInt}');
+        debugPrint('Android SDK: ${androidInfo.version.sdkInt}');
 
         // Android 12+ exact alarm kontrolü
         if (androidInfo.version.sdkInt >= 31) {
@@ -624,12 +786,12 @@ class NotificationService {
                       AndroidFlutterLocalNotificationsPlugin>()
                   ?.canScheduleExactNotifications() ??
               false;
-          print('Exact Alarm İzni: $canScheduleExact');
+          debugPrint('Exact Alarm İzni: $canScheduleExact');
 
           if (!canScheduleExact) {
             // Exact alarm izni yoksa inexact kullan
             scheduleMode = AndroidScheduleMode.inexact;
-            print('⚠️ INEXACT MODE kullanılacak');
+            debugPrint('⚠️ INEXACT MODE kullanılacak');
           }
         }
       }
@@ -662,8 +824,8 @@ class NotificationService {
         ),
       );
 
-      print('Zone schedule başlıyor...');
-      print('Schedule Mode: $scheduleMode');
+      debugPrint('Zone schedule başlıyor...');
+      debugPrint('Schedule Mode: $scheduleMode');
 
       await _flutterLocalNotificationsPlugin.zonedSchedule(
         notificationId,
@@ -677,19 +839,19 @@ class NotificationService {
         payload: payload ?? 'custom_one_time_$notificationId',
       );
 
-      print('✅ ZONEDSCHEDULE BAŞARILI!');
-      print('   ID: $notificationId');
-      print('   Başlık: "$title"');
-      print('   Zaman: $scheduledTime');
+      debugPrint('✅ ZONEDSCHEDULE BAŞARILI!');
+      debugPrint('   ID: $notificationId');
+      debugPrint('   Başlık: "$title"');
+      debugPrint('   Zaman: $scheduledTime');
 
       // Planlanmış bildirimleri kontrol et
       final pendingNotifications =
           await _flutterLocalNotificationsPlugin.pendingNotificationRequests();
-      print('   📊 PLANLANAN BİLDİRİM SAYISI: ${pendingNotifications.length}');
+      debugPrint('   📊 PLANLANAN BİLDİRİM SAYISI: ${pendingNotifications.length}');
 
       // Planlanmış bildirimleri listele
       for (final pending in pendingNotifications) {
-        print('   - ID: ${pending.id}, Başlık: ${pending.title}');
+        debugPrint('   - ID: ${pending.id}, Başlık: ${pending.title}');
       }
     } catch (e) {
       debugPrint('❌ Tek seferlik bildirim planlanırken hata: $e');

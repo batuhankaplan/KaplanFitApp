@@ -14,8 +14,6 @@ import '../models/exercise_log.dart';
 import '../models/workout_set.dart';
 import 'package:flutter/material.dart';
 // groupBy için eklendi
-import 'package:flutter/services.dart'
-    show rootBundle; // Asset okumak için eklendi
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Basit beslenme özeti modeli (isteğe bağlı, Map de kullanılabilir)
@@ -1818,6 +1816,33 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     }
   }
 
+  /// Samsung Watch'tan gelen aktiviteyi ekler
+  Future<void> addSamsungWatchActivity(Map<String, dynamic> activityData) async {
+    try {
+      final db = await database;
+      
+      // Duplicate kontrolü
+      final existing = await db.query(
+        'activities',
+        where: 'name = ? AND date = ? AND source = ?',
+        whereArgs: [
+          activityData['name'],
+          activityData['date'],
+          activityData['source']
+        ],
+      );
+      
+      if (existing.isEmpty) {
+        await db.insert('activities', activityData);
+        debugPrint('[DatabaseService] Samsung Watch aktivitesi eklendi: ${activityData['name']}');
+      } else {
+        debugPrint('[DatabaseService] Samsung Watch aktivitesi zaten mevcut: ${activityData['name']}');
+      }
+    } catch (e) {
+      debugPrint('[DatabaseService] Samsung Watch aktivitesi ekleme hatası: $e');
+    }
+  }
+
   // YENİ: Belirli bir tarih aralığındaki günlük toplam aktivite süresini (dakika) alır.
   Future<Map<DateTime, int>> getDailyActivitySummaryInRange(
       DateTime start, DateTime end, int userId) async {
@@ -2456,6 +2481,117 @@ Revani	Tatlılar	100	390.0	44.0	5.0	20.0
     } catch (e) {
       debugPrint("[DB] Veriler temizlenirken hata: $e");
       throw Exception('Veritabanı temizlenirken hata: $e');
+    }
+  }
+
+  /// Samsung Watch mock aktivitelerini temizle
+  Future<Map<String, dynamic>> clearSamsungWatchMockActivities() async {
+    try {
+      final db = await database;
+      debugPrint("[DB] 🧹 Samsung Watch mock aktiviteleri temizleniyor...");
+
+      // Samsung Watch aktivitelerini bul (notes içinde "Samsung Watch" olanlar)
+      final mockActivities = await db.query(
+        'activities',
+        where: 'notes LIKE ?',
+        whereArgs: ['%Samsung Watch%'],
+        orderBy: 'date DESC',
+      );
+
+      debugPrint(
+          "[DB] 📊 Bulunan Samsung Watch aktiviteleri: ${mockActivities.length}");
+
+      if (mockActivities.isEmpty) {
+        return {
+          'success': true,
+          'message': 'Temizlenecek Samsung Watch aktivitesi bulunamadı',
+          'deletedCount': 0,
+        };
+      }
+
+      // Mock aktiviteleri listele
+      for (var activity in mockActivities) {
+        debugPrint(
+            "[DB] 🔍 Mock aktivite: ${activity['notes']} (${activity['date']})");
+      }
+
+      // Samsung Watch aktivitelerini sil
+      final deletedCount = await db.delete(
+        'activities',
+        where: 'notes LIKE ?',
+        whereArgs: ['%Samsung Watch%'],
+      );
+
+      debugPrint("[DB] ✅ $deletedCount Samsung Watch mock aktivitesi silindi");
+
+      return {
+        'success': true,
+        'message': '$deletedCount Samsung Watch mock aktivitesi temizlendi',
+        'deletedCount': deletedCount,
+      };
+    } catch (e) {
+      debugPrint("[DB] ❌ Samsung Watch mock temizleme hatası: $e");
+      return {
+        'success': false,
+        'message': 'Temizleme sırasında hata: $e',
+        'deletedCount': 0,
+      };
+    }
+  }
+
+  /// Duplicate aktiviteleri temizle (aynı gün, aynı tip, aynı süre)
+  Future<Map<String, dynamic>> clearDuplicateActivities() async {
+    try {
+      final db = await database;
+      debugPrint("[DB] 🔍 Duplicate aktiviteler aranıyor...");
+
+      // Aynı günde aynı tip ve süreye sahip aktiviteleri bul
+      final duplicates = await db.rawQuery('''
+        SELECT type, durationMinutes, DATE(date/1000, 'unixepoch') as activity_date, 
+               COUNT(*) as count, MIN(id) as keep_id, GROUP_CONCAT(id) as all_ids
+        FROM activities 
+        GROUP BY type, durationMinutes, DATE(date/1000, 'unixepoch')
+        HAVING COUNT(*) > 1
+        ORDER BY count DESC
+      ''');
+
+      debugPrint("[DB] 📊 Bulunan duplicate grup sayısı: ${duplicates.length}");
+
+      int totalDeleted = 0;
+      for (var duplicate in duplicates) {
+        final count = duplicate['count'] as int;
+        final keepId = duplicate['keep_id'] as int;
+        final allIds = (duplicate['all_ids'] as String).split(',');
+
+        debugPrint(
+            "[DB] 🔄 Tip ${duplicate['type']}, Süre ${duplicate['durationMinutes']}dk - $count adet bulundu");
+        debugPrint("[DB] 🔒 Korunacak ID: $keepId, Tüm ID'ler: $allIds");
+
+        // En eski hariç hepsini sil
+        for (String idStr in allIds) {
+          final id = int.parse(idStr);
+          if (id != keepId) {
+            await db.delete('activities', where: 'id = ?', whereArgs: [id]);
+            totalDeleted++;
+            debugPrint("[DB] 🗑️ Aktivite silindi: ID $id");
+          }
+        }
+      }
+
+      debugPrint("[DB] ✅ Toplam $totalDeleted duplicate aktivite silindi");
+
+      return {
+        'success': true,
+        'message': '$totalDeleted duplicate aktivite temizlendi',
+        'deletedCount': totalDeleted,
+      };
+    } catch (e) {
+      debugPrint("[DB] ❌ Duplicate temizleme hatası: $e");
+      return {
+        'success': false,
+        'message': 'Duplicate temizleme hatası: $e',
+        'deletedCount': 0,
+      };
     }
   }
 } // DatabaseService sınıfının kapanış parantezi

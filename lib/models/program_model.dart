@@ -103,7 +103,7 @@ class ProgramItem {
       // programSets null değilse JSON'a çevir, değilse null bırak (WorkoutSet -> ProgramSet)
       'programSets': programSets?.map((set) => set.toJson()).toList(),
       'icon': icon.codePoint,
-      'color': color.value,
+      'color': color.toARGB32(),
       'time': time,
     };
   }

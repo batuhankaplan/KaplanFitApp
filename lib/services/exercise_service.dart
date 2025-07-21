@@ -12,14 +12,249 @@ class ExerciseService {
 
   // Constructor güncellendi - artık parametre almıyor
   ExerciseService() {
-    // initialize metodu belki dışarıdan çağrılmalı veya otomatik tetiklenmeli
-    _addDefaultExercisesIfNeeded(); // Uygulama başlarken kontrol et
+    // Firebase bağlantısı hazır olduğunda egzersizleri kontrol et
+    Future.delayed(Duration(seconds: 2), () {
+      _addDefaultExercisesIfNeeded();
+    });
   }
 
-  // Varsayılan egzersiz listesi (aynı kalabilir)
+  // Varsayılan egzersiz listesi (newtraining.txt'den güncellenmiş)
   final List<Exercise> _defaultExercises = [
-    // Örnek egzersizler... (createdAt: DateTime.now() yerine null bırakılabilir, toMap halleder)
-    // GÖĞÜS
+    // ISINMA HAREKETLERİ
+    Exercise(
+        name: 'Pelvic Tilt',
+        description: 'Pelvik Eğme hareketi. Sırtüstü yatarak, dizlerinizi büküp ayaklarınızı yere koyun. Karın kaslarınızı sıkarak belinizdeki çukurluğu yere bastırın.',
+        targetMuscleGroup: 'Isınma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '15'),
+    Exercise(
+        name: 'Cat-Camel',
+        description: 'Kedi-Deve hareketi. Dört ayak üzerinde durun, sırtınızı yukarı doğru kambur yapın (kedi), sonra aşağı doğru çukurlaştırın (deve).',
+        targetMuscleGroup: 'Isınma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '10'),
+    Exercise(
+        name: 'Bird-Dog',
+        description: 'Kuş-Köpek hareketi. Dört ayak üzerinde, karşı kol ve bacağı aynı anda kaldırın. Dengeyi koruyarak pozisyonu tutun.',
+        targetMuscleGroup: 'Isınma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '10'),
+    Exercise(
+        name: 'Glute Bridge',
+        description: 'Kalça Köprüsü. Sırtüstü yatarak dizlerinizi büküp, kalçanızı yukarı kaldırın. Kalça kaslarınızı sıkın.',
+        targetMuscleGroup: 'Isınma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '15'),
+
+    // ÜST VÜCUT - YATAY İTME/ÇEKME
+    Exercise(
+        name: 'Floor Press (Dumbbell ile)',
+        description: 'Yere sırtüstü uzanın. Bu hareket, zeminin omuzlarınızı desteklemesi ve belinizi aşırı bükmenizi engellemesi nedeniyle son derece güvenlidir.',
+        targetMuscleGroup: 'Üst Vücut - Yatay İtme/Çekme',
+        equipment: 'Dumbbell',
+        defaultSets: '3',
+        defaultReps: '10-12',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Chest-Supported Row',
+        description: 'Yüzüstü eğimli bir sehpaya yaslanarak yapın. Bu, belinizdeki tüm yükü kaldırır ve sırt kaslarınızı güvenle izole eder.',
+        targetMuscleGroup: 'Üst Vücut - Yatay İtme/Çekme',
+        equipment: 'Makine',
+        defaultSets: '3',
+        defaultReps: '10-12',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Dumbbell Lateral Raise',
+        description: 'Ayakta veya oturarak, hafif kilolarla ve kontrollü bir şekilde omuzlarınızı yana doğru kaldırın. Gövdenizi sallamayın.',
+        targetMuscleGroup: 'Üst Vücut - Yatay İtme/Çekme',
+        equipment: 'Dumbbell',
+        defaultSets: '3',
+        defaultReps: '12-15',
+        defaultRestTime: '60 sn'),
+    Exercise(
+        name: 'Dumbbell Alternate Curl',
+        description: 'Ayakta dik durun, core bölgeniz sıkı olsun. Dirseklerinizi vücudunuza yakın tutarak dumbbell\'ları sırayla kaldırın.',
+        targetMuscleGroup: 'Üst Vücut - Yatay İtme/Çekme',
+        equipment: 'Dumbbell',
+        defaultSets: '3',
+        defaultReps: '10-12',
+        defaultRestTime: '60 sn'),
+    Exercise(
+        name: 'Cable Triceps Extension',
+        description: 'Gövdenizi dik tutun, öne eğilmeyin. Karın ve kalça kaslarınızı sıkarak belinizin kavis yapmasını engelleyin.',
+        targetMuscleGroup: 'Üst Vücut - Yatay İtme/Çekme',
+        equipment: 'Kablo Makinesi',
+        defaultSets: '3',
+        defaultReps: '12-15',
+        defaultRestTime: '60 sn'),
+
+    // ALT VÜCUT & CORE
+    Exercise(
+        name: 'Goblet Squat',
+        description: 'Dumbbell\'ı göğsünüze yakın tutmak, sırtınızı dik tutmanıza yardımcı olur. Belinizi yuvarlamadan, ağrısız bir derinliğe kadar inin.',
+        targetMuscleGroup: 'Alt Vücut & Core',
+        equipment: 'Dumbbell',
+        defaultSets: '3',
+        defaultReps: '10-12',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Dumbbell RDL',
+        description: 'DİKKAT: Sırtınız tamamen düz kalmalı. Kalçanızı geriye doğru itin. Belinizde değil, arka bacaklarınızda gerginlik hissedin.',
+        targetMuscleGroup: 'Alt Vücut & Core',
+        equipment: 'Dumbbell',
+        defaultSets: '3',
+        defaultReps: '10-12',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Leg Curl Machine',
+        description: 'Arka bacak kaslarını (hamstring) bele yük bindirmeden güvenli bir şekilde izole eder.',
+        targetMuscleGroup: 'Alt Vücut & Core',
+        equipment: 'Makine',
+        defaultSets: '3',
+        defaultReps: '12-15',
+        defaultRestTime: '60 sn'),
+    Exercise(
+        name: 'Pallof Press',
+        description: 'Kablo makinesine yan durun. Kablonun sizi döndürmesine karşı direnerek core stabilitenizi geliştirin.',
+        targetMuscleGroup: 'Alt Vücut & Core',
+        equipment: 'Kablo Makinesi',
+        defaultSets: '3',
+        defaultReps: '10',
+        defaultRestTime: '60 sn'),
+    Exercise(
+        name: 'Plank',
+        description: 'Kalçanızı sıkın ve belinizin çukurlaşmasına izin vermeyin. Form bozulduğu an seti bitirin.',
+        targetMuscleGroup: 'Alt Vücut & Core',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '3',
+        defaultReps: 'Maksimum Süre',
+        defaultRestTime: '60 sn'),
+
+    // ÜST VÜCUT - DİKEY İTME/ÇEKME
+    Exercise(
+        name: 'Lat Pulldown',
+        description: 'Gövdenizi dik ve sabit tutun. Ağırlığı çekmek için geriye doğru sallanmayın. Hareketi yavaş ve kontrollü yapın.',
+        targetMuscleGroup: 'Üst Vücut - Dikey İtme/Çekme',
+        equipment: 'Makine',
+        defaultSets: '3',
+        defaultReps: '10-12',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Landmine Press',
+        description: 'Omuzları, omurgaya direkt dikey baskı uygulamadan çalıştırmanın en güvenli yoludur.',
+        targetMuscleGroup: 'Üst Vücut - Dikey İtme/Çekme',
+        equipment: 'Barbell',
+        defaultSets: '3',
+        defaultReps: '10',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Push-up',
+        description: 'Gerekirse dizlerinizin üzerinde yaparak başlayın. Vücudunuzu baştan dize (veya ayağa) kadar düz bir çizgi halinde tutun.',
+        targetMuscleGroup: 'Üst Vücut - Dikey İtme/Çekme',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '3',
+        defaultReps: 'Maksimum Tekrar',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Unilateral Dumbbell Row',
+        description: 'Bir eliniz ve diziniz sehpada destekli olsun. Sırtınız yere paralel ve dümdüz kalmalı. Gövdeyi döndürmeden çekiş yapın.',
+        targetMuscleGroup: 'Üst Vücut - Dikey İtme/Çekme',
+        equipment: 'Dumbbell',
+        defaultSets: '3',
+        defaultReps: '10',
+        defaultRestTime: '90 sn'),
+    Exercise(
+        name: 'Cable Hammer Curl',
+        description: 'Ön kol kaslarını farklı bir açıyla çalıştırır. Core bölgenizi sabit tutun.',
+        targetMuscleGroup: 'Üst Vücut - Dikey İtme/Çekme',
+        equipment: 'Kablo Makinesi',
+        defaultSets: '3',
+        defaultReps: '12-15',
+        defaultRestTime: '60 sn'),
+
+    // AKTİF TOPARLANMA VE OMURGA SAĞLIĞI
+    Exercise(
+        name: 'Dead Bug',
+        description: 'Belinizi yerden kaldırmadan, core stabilitesine odaklanın.',
+        targetMuscleGroup: 'Aktif Toparlanma ve Omurga Sağlığı',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '2',
+        defaultReps: '10',
+        defaultRestTime: '30 sn'),
+    Exercise(
+        name: 'Side Plank',
+        description: 'Kalçanızın düşmesine izin vermeyin.',
+        targetMuscleGroup: 'Aktif Toparlanma ve Omurga Sağlığı',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '2',
+        defaultReps: '30 sn',
+        defaultRestTime: '30 sn'),
+
+    // KARDİYO
+    Exercise(
+        name: 'Eliptik Bisiklet',
+        description: 'Orta tempo ile kardiyovasküler kondisyonu geliştirin.',
+        targetMuscleGroup: 'Kardiyo',
+        equipment: 'Eliptik Makine',
+        defaultSets: '1',
+        defaultReps: '20-30 dakika'),
+    Exercise(
+        name: 'Kondisyon Bisikleti',
+        description: 'Sırt destekli yatar model tercih edilir. Orta tempo ile pedal çevirin.',
+        targetMuscleGroup: 'Kardiyo',
+        equipment: 'Kondisyon Bisikleti',
+        defaultSets: '1',
+        defaultReps: '20-30 dakika'),
+    Exercise(
+        name: 'Tempolu Yürüyüş',
+        description: 'Sabit tempo ile kardiyovasküler dayanıklılığı artırın.',
+        targetMuscleGroup: 'Kardiyo',
+        equipment: 'Yürüyüş Bandı',
+        defaultSets: '1',
+        defaultReps: '30 dakika'),
+    Exercise(
+        name: 'Yürüyüş',
+        description: 'Açık havada veya kapalı alanda yapılan doğal kardiyovasküler egzersiz.',
+        targetMuscleGroup: 'Kardiyo',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '30-40 dakika'),
+    Exercise(
+        name: 'Yüzme',
+        description: 'Suyun kaldırma kuvveti sayesinde omurgaya hiç yük bindirmez ve ideal bir seçenektir.',
+        targetMuscleGroup: 'Kardiyo',
+        equipment: 'Havuz',
+        defaultSets: '1',
+        defaultReps: '30-40 dakika'),
+
+    // SOĞUMA HAREKETLERİ
+    Exercise(
+        name: 'Sırtüstü Hamstring Esnetme',
+        description: 'Sırtüstü yatarak bir bacağınızı yukarı kaldırın ve arka bacak kaslarınızı nazikçe esnetin.',
+        targetMuscleGroup: 'Soğuma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '20-30 sn'),
+    Exercise(
+        name: 'Piriformis Esnetme',
+        description: 'Kalça bölgesindeki piriformis kasını esnetmek için özel pozisyon.',
+        targetMuscleGroup: 'Soğuma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '20-30 sn'),
+    Exercise(
+        name: 'Tek Diz Göğüse Çekme',
+        description: 'Sırtüstü yatarak bir dizinizi göğsünüze çekin ve bel kaslarınızı esnetin.',
+        targetMuscleGroup: 'Soğuma',
+        equipment: 'Vücut Ağırlığı',
+        defaultSets: '1',
+        defaultReps: '20-30 sn'),
+
+    // ESKİ HAREKETLERİ KORU (Mevcut sistemle uyumluluk için)
     Exercise(
         name: 'Incline Bench Press',
         targetMuscleGroup: 'Göğüs',
@@ -36,18 +271,10 @@ class ExerciseService {
         name: 'Dumbbell Hex Press',
         targetMuscleGroup: 'Göğüs',
         equipment: 'Dumbbell'),
-    // ARKA KOL
-    Exercise(
-        name: 'Cable Triceps Extension',
-        targetMuscleGroup: 'Arka Kol',
-        equipment: 'Kablo Makinesi'),
     Exercise(
         name: 'Cable Overhead Triceps Extension',
         targetMuscleGroup: 'Arka Kol',
         equipment: 'Kablo Makinesi'),
-    // SIRT
-    Exercise(
-        name: 'Lat Pulldown', targetMuscleGroup: 'Sırt', equipment: 'Makine'),
     Exercise(
         name: 'Cable Seated Row',
         targetMuscleGroup: 'Sırt',
@@ -60,29 +287,14 @@ class ExerciseService {
         name: 'Cable Straight-Arm Pulldown',
         targetMuscleGroup: 'Sırt',
         equipment: 'Kablo Makinesi'),
-    // ÖN KOL
-    Exercise(
-        name: 'Dumbbell Alternate Curl',
-        targetMuscleGroup: 'Ön Kol',
-        equipment: 'Dumbbell'),
-    Exercise(
-        name: 'Cable Hammer Curl',
-        targetMuscleGroup: 'Ön Kol',
-        equipment: 'Kablo Makinesi'),
-    // OMUZ
     Exercise(
         name: 'Dumbbell Shoulder Press',
-        targetMuscleGroup: 'Omuz',
-        equipment: 'Dumbbell'),
-    Exercise(
-        name: 'Dumbbell Lateral Raise',
         targetMuscleGroup: 'Omuz',
         equipment: 'Dumbbell'),
     Exercise(
         name: 'Facepull',
         targetMuscleGroup: 'Omuz',
         equipment: 'Kablo Makinesi'),
-    // BACAK
     Exercise(
         name: 'Leg Extension', targetMuscleGroup: 'Bacak', equipment: 'Makine'),
     Exercise(name: 'Leg Curl', targetMuscleGroup: 'Bacak', equipment: 'Makine'),
@@ -94,9 +306,6 @@ class ExerciseService {
         name: 'Seated Calf Raise',
         targetMuscleGroup: 'Bacak',
         equipment: 'Makine/Dumbbell'),
-    // KARIN
-    Exercise(
-        name: 'Plank', targetMuscleGroup: 'Karın', equipment: 'Vücut Ağırlığı'),
     Exercise(
         name: 'Leg Raises',
         targetMuscleGroup: 'Karın',
@@ -105,25 +314,6 @@ class ExerciseService {
         name: 'Crunch',
         targetMuscleGroup: 'Karın',
         equipment: 'Vücut Ağırlığı'),
-    // BEL SAĞLIĞI
-    Exercise(
-        name: 'Pelvic Tilt',
-        targetMuscleGroup: 'Bel Sağlığı',
-        equipment: 'Vücut Ağırlığı'),
-    Exercise(
-        name: 'Cat-Camel',
-        targetMuscleGroup: 'Bel Sağlığı',
-        equipment: 'Vücut Ağırlığı'),
-    Exercise(
-        name: 'Bird-Dog',
-        targetMuscleGroup: 'Bel Sağlığı',
-        equipment: 'Vücut Ağırlığı'),
-    // DİĞER / KARDİYO
-    Exercise(
-        name: 'Yürüyüş',
-        targetMuscleGroup: 'Kardiyo',
-        equipment: 'Vücut Ağırlığı'),
-    Exercise(name: 'Yüzme', targetMuscleGroup: 'Tüm Vücut', equipment: 'Havuz'),
     Exercise(
         name: 'Esneme',
         targetMuscleGroup: 'Esneklik',
@@ -134,7 +324,34 @@ class ExerciseService {
   // initialize metodu kaldırıldı, constructor içinde kontrol ediliyor.
   // Future<void> initialize() async { ... }
 
-  /// Varsayılan egzersizleri Firestore'a ekler (eğer koleksiyon boşsa).
+  /// Manuel olarak eksik egzersizleri kontrol et ve ekle (public method)
+  Future<void> checkAndAddMissingExercises() async {
+    await _addDefaultExercisesIfNeeded();
+  }
+
+  /// Manuel olarak tüm varsayılan egzersizleri Firebase'e zorla ekler
+  Future<void> forceAddAllExercises() async {
+    try {
+      debugPrint("🔥 FORCE: Tüm egzersizler Firebase'e ekleniyor...");
+      
+      final batch = _firestore.batch();
+      int count = 0;
+      
+      for (final exercise in _defaultExercises) {
+        final docRef = _firestore.collection(_collectionPath).doc();
+        batch.set(docRef, exercise.toMap());
+        debugPrint("   + Ekleniyor: ${exercise.name}");
+        count++;
+      }
+      
+      await batch.commit();
+      debugPrint('✅ FORCE: ${count} adet egzersiz zorla Firebase\'e eklendi.');
+    } catch (e) {
+      debugPrint("❌ FORCE: Egzersizler eklenirken hata: $e");
+    }
+  }
+
+  /// Varsayılan egzersizleri Firestore'a ekler (eksik olanları).
   Future<void> _addDefaultExercisesIfNeeded() async {
     try {
       debugPrint("🔥 Firebase exercises koleksiyonu kontrol ediliyor...");
@@ -142,26 +359,43 @@ class ExerciseService {
       // İlk önce Firebase bağlantısını test et
       await _testFirebaseConnection();
 
-      // Koleksiyon boş mu diye kontrol et
-      final snapshot =
-          await _firestore.collection(_collectionPath).limit(1).get();
-      if (snapshot.docs.isEmpty) {
-        debugPrint(
-            "'$_collectionPath' koleksiyonu boş, varsayılan egzersizler ekleniyor...");
-        final batch = _firestore.batch();
-        int count = 0;
-        for (final exercise in _defaultExercises) {
-          // Otomatik ID ile ekle
-          final docRef = _firestore.collection(_collectionPath).doc();
-          // Exercise modelinin toMap metodu kullanılacak
-          batch.set(docRef, exercise.toMap()); // toMapForFirestore -> toMap
-          count++;
+      // Mevcut egzersizleri kontrol et
+      final snapshot = await _firestore.collection(_collectionPath).get();
+      final existingNames = snapshot.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['name'] as String?)
+          .where((name) => name != null)
+          .map((name) => name!.toLowerCase().trim())
+          .toSet();
+
+      debugPrint("📋 Mevcut egzersizler: ${existingNames.length} adet");
+      debugPrint("🔍 Mevcut isimler: $existingNames");
+
+      // Eksik egzersizleri bul - daha detaylı kontrol
+      final missingExercises = <Exercise>[];
+      for (final exercise in _defaultExercises) {
+        final exerciseName = exercise.name.toLowerCase().trim();
+        if (!existingNames.contains(exerciseName)) {
+          missingExercises.add(exercise);
+          debugPrint("❌ Eksik: '${exercise.name}' (normalized: '$exerciseName')");
+        } else {
+          debugPrint("✅ Mevcut: '${exercise.name}'");
         }
+      }
+
+      if (missingExercises.isNotEmpty) {
+        debugPrint("➕ ${missingExercises.length} yeni egzersiz ekleniyor...");
+        final batch = _firestore.batch();
+        
+        for (final exercise in missingExercises) {
+          final docRef = _firestore.collection(_collectionPath).doc();
+          batch.set(docRef, exercise.toMap());
+          debugPrint("   + ${exercise.name}");
+        }
+        
         await batch.commit();
-        debugPrint('$count adet varsayılan egzersiz Firestore\'a eklendi.');
+        debugPrint('✅ ${missingExercises.length} adet yeni egzersiz Firestore\'a eklendi.');
       } else {
-        debugPrint(
-            "'$_collectionPath' koleksiyonu zaten ${snapshot.docs.length} egzersiz içeriyor.");
+        debugPrint("✅ Tüm varsayılan egzersizler zaten mevcut.");
       }
     } catch (e) {
       debugPrint("❌ Varsayılan egzersizler eklenirken hata: $e");

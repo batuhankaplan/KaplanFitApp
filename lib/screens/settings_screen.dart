@@ -3,15 +3,14 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/services.dart';
 import '../providers/user_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme.dart';
 import 'profile_screen.dart';
 import 'notification_settings_screen.dart';
 import 'faq_screen.dart';
-
 import 'goal_settings_screen.dart';
+import 'health_dashboard_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -166,6 +165,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const NotificationSettingsScreen()),
+                );
+              },
+            ),
+
+            _buildSettingsOption(
+              context,
+              'Sağlık Dashboard',
+              Icons.health_and_safety,
+              Colors.red,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const HealthDashboardScreen()),
                 );
               },
             ),

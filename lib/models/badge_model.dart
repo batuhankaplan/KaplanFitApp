@@ -122,7 +122,7 @@ class BadgeModel {
       'type': typeStr,
       'rarity': rarityStr,
       'threshold': threshold,
-      'color': color.value,
+      'color': color.toARGB32(),
       'points': points,
       'unlockedAt': unlockedAt?.toIso8601String(),
     };

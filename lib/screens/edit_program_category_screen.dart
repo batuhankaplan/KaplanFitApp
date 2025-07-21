@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:provider/provider.dart'; // Provider ekleyelim
-import 'package:collection/collection.dart'; // DeepCollectionEquality için
 import '../models/program_model.dart';
 import '../models/program_set.dart'; // ProgramSet ekleyelim
 import '../models/exercise_model.dart'; // Exercise ekleyelim

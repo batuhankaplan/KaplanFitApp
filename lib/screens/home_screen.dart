@@ -9,6 +9,7 @@ import '../utils/animations.dart';
 import '../models/user_model.dart';
 import '../services/program_service.dart';
 import '../services/database_service.dart';
+import '../services/exercise_service.dart';
 import 'goal_tracking_screen.dart';
 import 'program_screen.dart';
 import 'workout_program_screen.dart';
@@ -777,6 +778,10 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     try {
+      // ExerciseService'ten eksik egzersizleri kontrol et ve ekle
+      final exerciseService = context.read<ExerciseService>();
+      await exerciseService.checkAndAddMissingExercises();
+
       await _loadSavedTaskStates();
 
       await _loadDailyTasks();

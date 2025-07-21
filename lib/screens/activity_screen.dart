@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../providers/activity_provider.dart';
 import '../providers/workout_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/health_provider.dart';
 import '../models/activity_record.dart';
 import '../models/task_type.dart';
 import '../theme.dart';
@@ -36,7 +37,6 @@ class _ActivityScreenState extends State<ActivityScreen>
   bool _isLoading = true;
 
   // Konum izleme değişkenleri
-  bool _hasLocationPermission = false;
   late Location _location;
 
   // Sabit stil tanımları
@@ -162,11 +162,6 @@ class _ActivityScreenState extends State<ActivityScreen>
           return;
         }
       }
-      if (mounted) {
-        setState(() {
-          _hasLocationPermission = true;
-        });
-      }
     } catch (e) {
       debugPrint('Konum izni hatası: $e');
     }
@@ -195,18 +190,104 @@ class _ActivityScreenState extends State<ActivityScreen>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _isLoading
-          ? const KaplanLoading()
-          : Consumer<WorkoutProvider>(
-              builder: (context, workoutProv, child) {
-                if (workoutProv.currentWorkoutLog != null) {
-                  return _buildWorkoutInProgressView(context, workoutProv);
-                } else {
-                  return _buildActivityListView(
-                      context, activityProvider.activities, isDarkMode);
-                }
-              },
+      body: Column(
+        children: [
+          // Tarih seçici header
+          KFSlideAnimation(
+            offsetBegin: const Offset(0, -0.2),
+            duration: const Duration(milliseconds: 500),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 8, 16, 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    isDarkMode
+                        ? const Color(0xFF2C2C2C)
+                        : AppTheme.primaryColor.withValues(alpha: 0.7),
+                    isDarkMode
+                        ? const Color(0xFF1F1F1F)
+                        : AppTheme.primaryColor,
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Önceki gün
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios,
+                        size: 16, color: Colors.white),
+                    onPressed: () {
+                      _changeDate(-1);
+                    },
+                  ),
+
+                  // Seçilen tarih gösterimi
+                  GestureDetector(
+                    onTap: () => _selectDate(),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat('d MMMM yyyy', 'tr_TR')
+                              .format(_selectedDate),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Sonraki gün
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios,
+                        size: 16, color: Colors.white),
+                    onPressed: () {
+                      _changeDate(1);
+                    },
+                  ),
+                ],
+              ),
             ),
+          ),
+
+          // Body content
+          Expanded(
+            child: _isLoading
+                ? const KaplanLoading()
+                : Consumer<WorkoutProvider>(
+                    builder: (context, workoutProv, child) {
+                      if (workoutProv.currentWorkoutLog != null) {
+                        return _buildWorkoutInProgressView(
+                            context, workoutProv);
+                      } else {
+                        return _buildActivityListView(
+                            context, activityProvider.activities, isDarkMode);
+                      }
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -214,72 +295,6 @@ class _ActivityScreenState extends State<ActivityScreen>
       BuildContext context, List<ActivityRecord> activities, bool isDarkMode) {
     return Column(
       children: [
-        KFSlideAnimation(
-          offsetBegin: const Offset(0, -0.2),
-          duration: const Duration(milliseconds: 500),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  isDarkMode
-                      ? const Color(0xFF2C2C2C)
-                      : AppTheme.primaryColor.withValues(alpha: 0.7),
-                  isDarkMode ? const Color(0xFF1F1F1F) : AppTheme.primaryColor,
-                ],
-              ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, size: 16),
-                  onPressed: () {
-                    _changeDate(-1);
-                  },
-                ),
-                GestureDetector(
-                  onTap: _selectDate,
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today, size: 14),
-                      const SizedBox(width: 8),
-                      Text(
-                        DateFormat('d MMMM yyyy', 'tr_TR')
-                            .format(_selectedDate),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onPressed: () {
-                    _changeDate(1);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        const Divider(),
         Expanded(
           child: activities.isEmpty && !_isLoading
               ? Center(
@@ -494,6 +509,178 @@ class _ActivityScreenState extends State<ActivityScreen>
         ),
       ),
     );
+  }
+
+  /// Duplicate kayıtları temizleme dialog'u
+  Future<void> _showClearDuplicatesDialog() async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.cleaning_services, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Duplicate Kayıtları Temizle'),
+            ],
+          ),
+          content: const Text(
+            'Samsung Watch\'tan gelen tekrarlanan ve aynı türde/sürede duplicate aktivite kayıtları temizlenecek.\n\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _clearDuplicateActivities();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Temizle'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Health Connect kurulum dialog'u
+  Future<void> _showHealthConnectSetupDialog() async {
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.health_and_safety, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Health Connect Kurulumu'),
+            ],
+          ),
+          content: const Text(
+            'Samsung Health verilerinizi KaplanFIT\'e aktarmak için Health Connect kurulumu gerekiyor.\n\nBu işlem Samsung Health ve Health Connect ayarlarını açacak. Lütfen gerekli izinleri verin.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _setupHealthConnect();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Kur'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Duplicate aktiviteleri temizle
+  Future<void> _clearDuplicateActivities() async {
+    try {
+      // Loading göster
+      if (mounted) {
+        setState(() => _isLoading = true);
+      }
+
+      // HealthProvider'dan temizleme işlemini çağır
+      final healthProvider =
+          Provider.of<HealthProvider>(context, listen: false);
+      final result = await healthProvider.clearAllDuplicateActivities();
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        // Sonucu göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'İşlem tamamlandı'),
+            backgroundColor:
+                result['success'] == true ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // Aktivite listesini yenile
+        if (result['success'] == true) {
+          final activityProvider =
+              Provider.of<ActivityProvider>(context, listen: false);
+          await activityProvider.refreshActivities();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Temizleme hatası: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      debugPrint('Duplicate temizleme hatası: $e');
+    }
+  }
+
+  /// Health Connect kurulum işlemi
+  Future<void> _setupHealthConnect() async {
+    try {
+      // Loading göster
+      if (mounted) {
+        setState(() => _isLoading = true);
+      }
+
+      // HealthProvider'dan Health Connect kurulum işlemini çağır
+      final healthProvider =
+          Provider.of<HealthProvider>(context, listen: false);
+      final result = await healthProvider.setupHealthConnectManually();
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+
+        // Sonucu göster
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'İşlem tamamlandı'),
+            backgroundColor:
+                result['success'] == true ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+
+        // Başarılıysa aktivite listesini yenile
+        if (result['success'] == true) {
+          final activityProvider =
+              Provider.of<ActivityProvider>(context, listen: false);
+          await activityProvider.refreshActivities();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Health Connect kurulum hatası: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      debugPrint('Health Connect kurulum hatası: $e');
+    }
   }
 
   void _changeDate(int days) {
@@ -1200,7 +1387,7 @@ class _ProgramSelectionScreenState extends State<ProgramSelectionScreen> {
       _workoutPrograms = allProgramItems
           .where((item) =>
               item.type == ProgramItemType.workout &&
-              (item.title?.isNotEmpty ?? false) &&
+              (item.title.isNotEmpty) &&
               (item.programSets?.isNotEmpty ?? false))
           .toList();
 
@@ -1271,7 +1458,7 @@ class _ProgramSelectionScreenState extends State<ProgramSelectionScreen> {
                     final exercisesForProgram =
                         _programExercises[program.id] ?? [];
                     return ListTile(
-                      title: Text(program.title ?? 'İsimsiz Program'),
+                      title: Text(program.title),
                       subtitle: Text(
                           '${exercisesForProgram.length} egzersiz${program.description != null && program.description!.isNotEmpty ? " - ${program.description}" : ""}'),
                       onTap: () {

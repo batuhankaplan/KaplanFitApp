@@ -72,16 +72,16 @@ class WorkoutProvider extends ChangeNotifier {
 
     final newExerciseLog = ExerciseLog(
       workoutLogId: -1, // Temporary ID, will be set during save
-      exerciseId: exercise.id!,
+      exerciseId: exercise.id,
       sortOrder:
-          _currentWorkoutLog!.exerciseLogs!.length, // Direkt erişim güvenli
+          _currentWorkoutLog!.exerciseLogs.length, // Direkt erişim güvenli
       createdAt: DateTime.now(),
       exerciseDetails: exercise, // Keep details for UI
       sets: [], // Start with empty sets - guaranteed non-null here
     );
 
     // exerciseLogs null olamayacağı için bu if/else bloğu basitleştirilebilir.
-    _currentWorkoutLog!.exerciseLogs!.add(newExerciseLog);
+    _currentWorkoutLog!.exerciseLogs.add(newExerciseLog);
 
     debugPrint("Exercise '${exercise.name}' added to current workout.");
     notifyListeners();
@@ -90,11 +90,11 @@ class WorkoutProvider extends ChangeNotifier {
   void addSetToExercise(int exerciseLogIndex, WorkoutSet set) {
     // Check currentWorkoutLog and its exerciseLogs list
     if (_currentWorkoutLog == null ||
-        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length) return;
+        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs.length) return;
 
-    final exerciseLog = _currentWorkoutLog!.exerciseLogs![exerciseLogIndex];
+    final exerciseLog = _currentWorkoutLog!.exerciseLogs[exerciseLogIndex];
     // Ensure sets list is not null before accessing length or adding
-    final setNumber = exerciseLog.sets!.length + 1; // Direkt erişim güvenli
+    final setNumber = (exerciseLog.sets?.length ?? 0) + 1; // Direkt erişim güvenli
 
     final newSet = WorkoutSet(
       exerciseLogId: -1, // Temporary ID
@@ -108,9 +108,9 @@ class WorkoutProvider extends ChangeNotifier {
     );
 
     // Create a new list with the added set
-    final updatedSets = [...exerciseLog.sets!, newSet]; // Direkt erişim güvenli
+    final updatedSets = [...?exerciseLog.sets, newSet]; // Direkt erişim güvenli
     // Update the exercise log with the new sets list
-    _currentWorkoutLog!.exerciseLogs![exerciseLogIndex] =
+    _currentWorkoutLog!.exerciseLogs[exerciseLogIndex] =
         exerciseLog.copyWith(sets: updatedSets);
 
     debugPrint(
@@ -121,14 +121,13 @@ class WorkoutProvider extends ChangeNotifier {
   void updateSetInExercise(int exerciseLogIndex, int setIndex, WorkoutSet set) {
     // Check currentWorkoutLog, its exerciseLogs list, and the specific exerciseLog's sets list
     if (_currentWorkoutLog == null ||
-        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length ||
+        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs.length ||
         setIndex >=
-            _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets!.length)
+            _currentWorkoutLog!.exerciseLogs[exerciseLogIndex].sets!.length)
       return;
 
     // Clone the sets list to make modifications safely
-    final List<WorkoutSet> currentSets = List.from(_currentWorkoutLog!
-        .exerciseLogs![exerciseLogIndex].sets!); // Non-null assertion ok
+    final List<WorkoutSet> currentSets = List.from(_currentWorkoutLog!.exerciseLogs[exerciseLogIndex].sets!); // Non-null assertion ok
     final WorkoutSet setToUpdate = currentSets[setIndex];
 
     // Create a new set object with updated completion status
@@ -143,46 +142,43 @@ class WorkoutProvider extends ChangeNotifier {
     currentSets[setIndex] = updatedSet;
 
     // Update the ExerciseLog with the modified sets list
-    _currentWorkoutLog!.exerciseLogs![exerciseLogIndex] = _currentWorkoutLog!
-        .exerciseLogs![exerciseLogIndex]
+    _currentWorkoutLog!.exerciseLogs[exerciseLogIndex] = _currentWorkoutLog!.exerciseLogs[exerciseLogIndex]
         .copyWith(sets: currentSets);
 
     debugPrint(
-        "Set $setIndex updated for exercise '${_currentWorkoutLog!.exerciseLogs![exerciseLogIndex].exerciseDetails?.name}'.");
+        "Set $setIndex updated for exercise '${_currentWorkoutLog!.exerciseLogs[exerciseLogIndex].exerciseDetails?.name}'.");
     notifyListeners();
   }
 
   void deleteSetFromExercise(int exerciseLogIndex, int setIndex) {
     // Check currentWorkoutLog and its exerciseLogs list
     if (_currentWorkoutLog == null ||
-        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length ||
+        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs.length ||
         setIndex >=
-            _currentWorkoutLog!.exerciseLogs![exerciseLogIndex].sets!.length)
+            _currentWorkoutLog!.exerciseLogs[exerciseLogIndex].sets!.length)
       return;
 
     // Clone the sets list to make modifications safely
-    final List<WorkoutSet> currentSets = List.from(_currentWorkoutLog!
-        .exerciseLogs![exerciseLogIndex].sets!); // Non-null assertion ok
+    final List<WorkoutSet> currentSets = List.from(_currentWorkoutLog!.exerciseLogs[exerciseLogIndex].sets!); // Non-null assertion ok
     currentSets.removeAt(setIndex);
 
     // Update the ExerciseLog with the modified sets list
-    _currentWorkoutLog!.exerciseLogs![exerciseLogIndex] = _currentWorkoutLog!
-        .exerciseLogs![exerciseLogIndex]
+    _currentWorkoutLog!.exerciseLogs[exerciseLogIndex] = _currentWorkoutLog!.exerciseLogs[exerciseLogIndex]
         .copyWith(sets: currentSets);
 
     debugPrint(
-        "Set $setIndex deleted from exercise '${_currentWorkoutLog!.exerciseLogs![exerciseLogIndex].exerciseDetails?.name}'.");
+        "Set $setIndex deleted from exercise '${_currentWorkoutLog!.exerciseLogs[exerciseLogIndex].exerciseDetails?.name}'.");
     notifyListeners();
   }
 
   void deleteExerciseFromWorkout(int exerciseLogIndex) {
     // Check currentWorkoutLog and its exerciseLogs list
     if (_currentWorkoutLog == null ||
-        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs!.length) return;
+        exerciseLogIndex >= _currentWorkoutLog!.exerciseLogs.length) return;
 
     // Clone the exerciseLogs list to make modifications safely
     final List<ExerciseLog> currentExerciseLogs =
-        List.from(_currentWorkoutLog!.exerciseLogs!); // Non-null assertion ok
+        List.from(_currentWorkoutLog!.exerciseLogs); // Non-null assertion ok
     currentExerciseLogs.removeAt(exerciseLogIndex);
 
     // Update the WorkoutLog with the modified exerciseLogs list
@@ -206,7 +202,7 @@ class WorkoutProvider extends ChangeNotifier {
       int? rating,
       String? feeling}) async {
     if (_currentWorkoutLog == null ||
-        _currentWorkoutLog!.exerciseLogs!.isEmpty) {
+        _currentWorkoutLog!.exerciseLogs.isEmpty) {
       debugPrint("Cannot save an empty workout.");
       _currentWorkoutLog = null; // Clear the cancelled/empty workout
       notifyListeners();
@@ -230,7 +226,7 @@ class WorkoutProvider extends ChangeNotifier {
       final int workoutLogId = await _dbService.insertWorkoutLog(workoutToSave);
 
       // 2. Insert each ExerciseLog and its Sets
-      for (final exerciseLog in workoutToSave.exerciseLogs!) {
+      for (final exerciseLog in workoutToSave.exerciseLogs) {
         // Null assertion ok after check
         // Insert ExerciseLog with the obtained workoutLogId
         final int exerciseLogId = await _dbService.insertExerciseLog(
@@ -240,7 +236,7 @@ class WorkoutProvider extends ChangeNotifier {
             );
 
         // Null check before iterating sets
-        for (final set in exerciseLog.sets!) {
+        for (final set in exerciseLog.sets ?? []) {
           // Null assertion ok after check
           // Ensure exerciseLogId is passed correctly
           await _dbService.insertWorkoutSet(

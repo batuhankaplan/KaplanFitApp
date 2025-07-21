@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
+import '../widgets/kaplan_appbar.dart';
+import '../theme.dart';
 import '../services/feedback_service.dart';
 
 class FAQScreen extends StatefulWidget {
@@ -73,13 +73,15 @@ class _FAQScreenState extends State<FAQScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Yardım ve Destek'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey.shade50,
+      appBar: KaplanAppBar(
+        title: 'Yardım ve Destek',
+        isDarkMode: isDarkMode,
+        isRequiredPage: false,
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         child: Padding(

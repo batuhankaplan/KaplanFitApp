@@ -19,19 +19,23 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kontrol edilen sayfaları güncelleyelim
+    // Sadece belirli durumda AppBar'ı gizle - aksi halde hep göster
     if (!isRequiredPage &&
         title != 'Program' &&
         title != 'İstatistikler' &&
         title != 'Egzersiz Seç' &&
-        title !=
-            'Bildirim Ayarları' && // Bildirim Ayarları sayfası için eklendi
-        title !=
-            'Antrenman Programı' && // Antrenman Programı için appbar göstermek için ekledim
+        title != 'Bildirim Ayarları' &&
+        title != 'Profil Oluştur' &&
+        title != 'Profil Düzenle' &&
+        title != 'App Entegrasyonu' &&
+        title != 'Hedef Ayarları' &&
+        title != 'Hedef Takibi' &&
+        title != 'Yardım ve Destek' &&
+        title != 'Antrenman Programı' &&
         !title.contains('Programı Düzenle') &&
         !title.contains('Yeni Kategori')) {
       return PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
+        preferredSize: const Size.fromHeight(0),
         child: SafeArea(
           child: SizedBox(height: 0),
         ),
@@ -86,10 +90,14 @@ class KaplanAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => isRequiredPage ||
           title == 'Program' ||
           title == 'İstatistikler' ||
-          title ==
-              'Bildirim Ayarları' || // Bildirim Ayarları için yükseklik ayarı
-          title ==
-              'Antrenman Programı' || // Antrenman Programı için yükseklik ayarı
+          title == 'Bildirim Ayarları' ||
+          title == 'Profil Oluştur' ||
+          title == 'Profil Düzenle' ||
+          title == 'App Entegrasyonu' ||
+          title == 'Hedef Ayarları' ||
+          title == 'Hedef Takibi' ||
+          title == 'Yardım ve Destek' ||
+          title == 'Antrenman Programı' ||
           title.contains('Programı Düzenle') ||
           title.contains('Yeni Kategori') ||
           title == 'Egzersiz Seç'

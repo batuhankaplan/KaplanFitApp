@@ -18,6 +18,7 @@ import 'providers/activity_provider.dart';
 import 'providers/nutrition_provider.dart';
 import 'providers/gamification_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/health_provider.dart';
 import 'services/program_service.dart';
 import 'services/exercise_service.dart';
 import 'services/food_service.dart';
@@ -270,21 +271,44 @@ Future<void> main() async {
   }
   await NotificationService.instance.init();
 
+  // Check if notifications are already scheduled for today
+  final prefs = await SharedPreferences.getInstance();
+  final lastNotificationDate = prefs.getString('last_notification_date');
+  final today = DateTime.now().toIso8601String().substring(0, 10); // YYYY-MM-DD format
+  
   final databaseService = DatabaseService();
   final exerciseService = ExerciseService();
   final foodService = FoodService();
   final programService = ProgramService(databaseService);
   final userProvider = UserProvider(databaseService);
   final gamificationProvider =
-      GamificationProvider(databaseService, userProvider);
+      GamificationProvider(databaseService);
   final themeProvider = ThemeProvider();
   final workoutProvider = WorkoutProvider(databaseService);
+  final healthProvider = HealthProvider();
 
   try {
     await programService.initialize(exerciseService);
 
+    // NotificationService'e ProgramService'i bağla
+    NotificationService.instance.setProgramService(programService);
+
+    // Check if notifications are enabled in settings before scheduling
+    final notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
+    
+    if (notificationsEnabled && lastNotificationDate != today) {
+      debugPrint("Scheduling notifications for today: $today");
+      await NotificationService.instance.cancelAllNotifications();
+      final count = await NotificationService.instance.scheduleDailyNotifications();
+      await prefs.setString('last_notification_date', today);
+      debugPrint("Scheduled $count notifications for today");
+    } else if (!notificationsEnabled) {
+      debugPrint("Notifications disabled in settings, skipping scheduling");
+    } else {
+      debugPrint("Notifications already scheduled for today: $today");
+    }
+
     // Onboarding tamamlanmışsa kullanıcıyı yükle, değilse yükleme
-    final prefs = await SharedPreferences.getInstance();
     final onboardingCompleted = prefs.getBool('onboarding_completed') ?? false;
 
     if (onboardingCompleted) {
@@ -295,6 +319,9 @@ Future<void> main() async {
     }
 
     await gamificationProvider.initialize();
+
+    // HealthProvider'ı başlat
+    await healthProvider.initialize();
   } catch (e) {
     debugPrint("Servisler başlatılırken genel bir hata oluştu: $e");
   }
@@ -309,6 +336,7 @@ Future<void> main() async {
       gamificationProvider: gamificationProvider,
       themeProvider: themeProvider,
       workoutProvider: workoutProvider,
+      healthProvider: healthProvider,
     ),
   );
 }
@@ -322,6 +350,7 @@ class MyApp extends StatelessWidget {
   final GamificationProvider gamificationProvider;
   final ThemeProvider themeProvider;
   final WorkoutProvider workoutProvider;
+  final HealthProvider healthProvider;
 
   const MyApp({
     super.key,
@@ -333,6 +362,7 @@ class MyApp extends StatelessWidget {
     required this.gamificationProvider,
     required this.themeProvider,
     required this.workoutProvider,
+    required this.healthProvider,
   });
 
   @override
@@ -365,6 +395,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider.value(value: workoutProvider),
+        ChangeNotifierProvider.value(value: healthProvider),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProviderInstance, child) {

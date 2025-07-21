@@ -5,6 +5,8 @@ import '../providers/user_provider.dart';
 import '../models/user_model.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/animations.dart';
+import '../widgets/kaplan_appbar.dart';
+import '../theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -172,15 +174,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(user == null ? 'Profil Oluştur' : 'Profil Düzenle'),
+      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey.shade50,
+      appBar: KaplanAppBar(
+        title: user == null ? 'Profil Oluştur' : 'Profil Düzenle',
+        isDarkMode: isDarkMode,
+        showBackButton: true,
         actions: [
           // Eğer mevcut bir kullanıcı varsa çıkış yap butonu göster
           if (user != null)
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: Icon(Icons.logout, color: isDarkMode ? Colors.white : Colors.black),
               onPressed: () => _showLogoutConfirmationDialog(context),
               tooltip: 'Çıkış Yap',
             ),

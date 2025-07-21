@@ -15,6 +15,32 @@
         android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+        
+    <!-- Sağlık veri erişimi için gerekli izinler -->
+    <uses-permission android:name="android.permission.BODY_SENSORS"/>
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    
+    <!-- Health Connect izinleri -->
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION"/>
+    <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE"/>
+    
+    <!-- Samsung Health direct access permissions -->
+    <uses-permission android:name="com.samsung.android.providers.health.permission.READ" />
+    <uses-permission android:name="com.samsung.android.providers.health.permission.WRITE" />
+    <uses-permission android:name="com.sec.android.provider.shealth.permission.READ" />
+    <uses-permission android:name="com.sec.android.provider.shealth.permission.WRITE" />
     <!-- Awesome Notifications için ek izinler kaldırıldı -->
     <!-- <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/> -->
     <!-- <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/> -->
@@ -24,6 +50,24 @@
         android:label="KaplanFIT"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        
+        <!-- Health Connect Integration Metadata -->
+        <meta-data
+            android:name="health_permissions"
+            android:value="androidx.health.permission.READ_STEPS,androidx.health.permission.READ_HEART_RATE,androidx.health.permission.READ_EXERCISE,androidx.health.permission.READ_SLEEP" />
+            
+        <meta-data
+            android:name="androidx.health.platform.HEALTH_CONNECT_CLIENT"
+            android:value="true" />
+            
+        <!-- Samsung Health Data SDK Integration Metadata -->
+        <meta-data
+            android:name="samsung.health.data.sdk.enabled"
+            android:value="true" />
+            
+        <meta-data
+            android:name="samsung.health.data.permissions"
+            android:value="com.samsung.health.permission.READ_STEP_COUNT,com.samsung.health.permission.READ_EXERCISE,com.samsung.health.permission.READ_HEART_RATE,com.samsung.health.permission.READ_SLEEP,com.samsung.health.permission.READ_BODY_COMPOSITION" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -39,7 +83,24 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Health Connect izin akışı için gerekli intent filter -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+            </intent-filter>
         </activity>
+        
+
+        <!-- Health Connect izin akışı için gerekli activity-alias (Android 14+) -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
+            </intent-filter>
+        </activity-alias>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -67,6 +128,27 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- Samsung Health paket sorgusu -->
+        <package android:name="com.sec.android.app.shealth"/>
+        
+        <!-- Health Connect paket sorgusu -->
+        <package android:name="com.google.android.apps.healthdata"/>
+        
+        <!-- Google Fit paket sorgusu -->
+        <package android:name="com.google.android.apps.fitness"/>
+        
+        <!-- Health Connect specific intent actions -->
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+            <data android:scheme="package"/>
+        </intent>
+        
+        <!-- Wear OS Health Services sorgusu -->
+        <package android:name="com.google.android.wearable.healthservices"/>
+        
         <intent>
             <action
                 android:name="android.intent.action.PROCESS_TEXT"/>

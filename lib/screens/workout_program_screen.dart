@@ -4,7 +4,6 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart'; // Youtube 
 import '../services/program_service.dart';
 import '../services/exercise_service.dart';
 import '../models/program_model.dart';
-import '../models/program_set.dart';
 import '../models/exercise_model.dart';
 import '../widgets/kaplan_appbar.dart'; // KaplanAppBar kullanacağız
 import '../theme.dart';
@@ -160,6 +159,13 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
     final groupedPrograms = _groupProgramsByCategory(workoutPrograms);
 
     final categoryOrder = [
+      'Isınma',
+      'Üst Vücut - Yatay İtme/Çekme',
+      'Alt Vücut & Core',
+      'Üst Vücut - Dikey İtme/Çekme',
+      'Aktif Toparlanma ve Omurga Sağlığı',
+      'Kardiyo',
+      'Soğuma',
       'Göğüs & Arka Kol',
       'Sırt & Ön Kol',
       'Omuz & Bacak & Karın',
@@ -388,6 +394,20 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
+      case 'Isınma':
+        return Icons.wb_sunny;
+      case 'Üst Vücut - Yatay İtme/Çekme':
+        return Icons.fitness_center;
+      case 'Alt Vücut & Core':
+        return Icons.directions_run;
+      case 'Üst Vücut - Dikey İtme/Çekme':
+        return Icons.rowing;
+      case 'Aktif Toparlanma ve Omurga Sağlığı':
+        return Icons.self_improvement;
+      case 'Kardiyo':
+        return Icons.directions_bike;
+      case 'Soğuma':
+        return Icons.nightlight_round;
       case 'Göğüs & Arka Kol':
         return Icons.fitness_center;
       case 'Sırt & Ön Kol':
@@ -411,26 +431,57 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Container(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                exercise.name,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              // Başlık
+              Row(
+                children: [
+                  Icon(Icons.fitness_center, color: AppTheme.primaryColor, size: 24),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      exercise.name,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 8),
-              Text('Kas Grubu: ${exercise.targetMuscleGroup}'),
+              
+              Divider(height: 24, thickness: 1),
+              
+              // Kas Grubu
+              _buildDetailRow(
+                icon: Icons.track_changes,
+                title: 'Kas Grubu',
+                content: exercise.targetMuscleGroup,
+              ),
+              
+              SizedBox(height: 12),
+              
+              // Ekipman
               if (exercise.equipment != null)
-                Text('Ekipman: ${exercise.equipment}'),
+                _buildDetailRow(
+                  icon: Icons.fitness_center,
+                  title: 'Ekipman',
+                  content: exercise.equipment!,
+                ),
+              
+              if (exercise.equipment != null) SizedBox(height: 12),
+              
+              // Açıklama
               if (exercise.description?.isNotEmpty ?? false)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text('Açıklama: ${exercise.description}'),
+                _buildDetailRow(
+                  icon: Icons.info_outline,
+                  title: 'Açıklama',
+                  content: exercise.description!,
+                  isLongText: true,
                 ),
               if (exercise.videoUrl != null)
                 Padding(
@@ -454,6 +505,58 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String title,
+    required String content,
+    bool isLongText = false,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: AppTheme.primaryColor, size: 20),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 4),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isDarkMode 
+                      ? Colors.grey[800] 
+                      : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  content,
+                  style: TextStyle(
+                    fontSize: isLongText ? 13 : 14,
+                    height: isLongText ? 1.4 : 1.2,
+                    color: isDarkMode 
+                        ? Colors.white 
+                        : Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -580,6 +683,241 @@ class _WorkoutProgramScreenState extends State<WorkoutProgramScreen> {
       },
     );
   }
+
+  void _showProgramResetDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Programı Sıfırla'),
+          content: Text(
+            'Bu işlem mevcut antreman programınızı siler ve newtraining.txt\'deki yeni programları yükler. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?'
+          ),
+          actions: [
+            TextButton(
+              child: Text('İptal'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            TextButton(
+              child: Text('Egzersizleri Zorla Ekle'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+                
+                try {
+                  final exerciseService = context.read<ExerciseService>();
+                  await exerciseService.forceAddAllExercises();
+                  
+                  Navigator.of(context).pop(); // Loading'i kapat
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Tüm egzersizler zorla Firebase\'e eklendi!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  Navigator.of(context).pop(); // Loading'i kapat
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Egzersizler eklenirken hata: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            TextButton(
+              child: Text('Sıfırla'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Loading göster
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+                
+                try {
+                  final programService = context.read<ProgramService>();
+                  await programService.resetProgramFromScratch();
+                  
+                  // Loading'i kapat
+                  if (mounted && Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  // Sayfayı yenile
+                  if (mounted) {
+                    setState(() {
+                      // Force rebuild
+                    });
+                    _loadInitialExerciseDetails(); // Exercise details'i yeniden yükle
+                  }
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Program başarıyla sıfırlandı ve yeni kategoriler yüklendi!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Loading'i kapat
+                  if (mounted && Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Program sıfırlanırken hata oluştu: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            TextButton(
+              child: Text('Eski Programları Ekle'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Loading göster
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+                
+                try {
+                  final programService = context.read<ProgramService>();
+                  final exerciseService = context.read<ExerciseService>();
+                  
+                  // Eski programları manuel olarak ekle
+                  await programService.addOldProgramsManually(exerciseService);
+                  
+                  // Loading'i kapat
+                  if (mounted && Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  // Sayfayı yenile
+                  if (mounted) {
+                    setState(() {
+                      // Force rebuild
+                    });
+                    _loadInitialExerciseDetails(); // Exercise details'i yeniden yükle
+                  }
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Eski program kategorileri başarıyla eklendi!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Loading'i kapat
+                  if (mounted && Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Eski programlar eklenirken hata oluştu: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            TextButton(
+              child: Text('Yeni Antrenman Programları Ekle'),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Loading göster
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+                
+                try {
+                  final programService = context.read<ProgramService>();
+                  final exerciseService = context.read<ExerciseService>();
+                  
+                  // Yeni antrenman programlarını ekle
+                  await programService.addNewTrainingPrograms(exerciseService);
+                  
+                  // Loading'i kapat
+                  if (mounted && Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  // Sayfayı yenile
+                  if (mounted) {
+                    setState(() {
+                      // Force rebuild
+                    });
+                    _loadInitialExerciseDetails(); // Exercise details'i yeniden yükle
+                  }
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Yeni antrenman programları başarıyla eklendi!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Loading'i kapat
+                  if (mounted && Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Yeni programlar eklenirken hata oluştu: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 // Yeni StatefulWidget dialog içeriği için
@@ -640,6 +978,7 @@ class _AddCategoryDialogState extends State<_AddCategoryDialog> {
       ],
     );
   }
+
 }
 
 // ProgramService'te olması gereken yardımcı metotlar (varsayılan)

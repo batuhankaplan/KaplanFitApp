@@ -5,7 +5,6 @@ import '../models/program_set.dart';
 import '../models/exercise_model.dart';
 import '../services/exercise_service.dart';
 import '../screens/exercise_library_screen.dart';
-import '../theme.dart';
 import '../services/program_service.dart';
 
 class ProgramDetailDialog extends StatefulWidget {

@@ -32,7 +32,7 @@ class ActivityProvider with ChangeNotifier {
   int get currentDailyActivityMinutes {
     if (_isLoading) return 0; // Yükleniyorsa 0 dön
     return _activities.fold<int>(
-        0, (sum, activity) => sum + (activity.durationMinutes ?? 0));
+        0, (sum, activity) => sum + activity.durationMinutes);
   }
 
   ActivityProvider(this._dbService, this._userProvider) {
@@ -202,10 +202,10 @@ class ActivityProvider with ChangeNotifier {
       _allActivities.sort((a, b) => b.date.compareTo(a.date));
 
       // Eğer aktivite bir programdan ise rozetleri kontrol et
-      if (activity.isFromProgram) {
+      if (activity.isFromProgram && context.mounted) {
         final gamificationProvider =
             Provider.of<GamificationProvider>(context, listen: false);
-        await gamificationProvider.recordProgramWorkoutCompleted(userId, id!);
+        await gamificationProvider.recordProgramWorkoutCompleted(userId, id);
         debugPrint(
             "ActivityProvider: Called recordProgramWorkoutCompleted for activity ID $id");
       }
@@ -250,10 +250,7 @@ class ActivityProvider with ChangeNotifier {
       // Silme işleminden sonra aktiviteleri yenilemek için userId gerekir.
       refreshActivities();
     } catch (e) {
-      debugPrint('Error deleting activity by taskId ' +
-          taskId.toString() +
-          ': ' +
-          e.toString());
+      debugPrint('Error deleting activity by taskId $taskId: $e');
     }
   }
 

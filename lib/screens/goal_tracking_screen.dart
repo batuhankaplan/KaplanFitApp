@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/user_model.dart'; // WeightRecord için
 import '../theme.dart'; // AppTheme'i ekledik
+import '../widgets/kaplan_appbar.dart'; // KaplanAppBar için eklendi
 import 'package:collection/collection.dart'; // lastWhereOrNull ve whereNotNull için eklendi
 // import '../providers/activity_provider.dart'; // ActivityProvider'ı dinlemek alternatif olabilir
 
@@ -240,8 +241,11 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
     final user = userProvider.user; // user'ı buradan alalım
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Hedef Takibi'),
+      backgroundColor: isDarkMode ? AppTheme.darkBackgroundColor : Colors.grey.shade50,
+      appBar: KaplanAppBar(
+        title: 'Hedef Takibi',
+        isDarkMode: isDarkMode,
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -443,11 +447,6 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
           AppTheme.eveningExerciseColor
         ];
         break;
-      default: // Fallback
-        gradientColors = [
-          AppTheme.primaryColor.withValues(alpha: 0.7),
-          AppTheme.primaryColor
-        ];
     }
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -1332,7 +1331,7 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
                         textAlign: TextAlign.center,
                       );
                     })
-                    .whereNotNull()
+                    .nonNulls
                     .toList();
               },
             ),
@@ -1388,8 +1387,6 @@ class _GoalTrackingScreenState extends State<GoalTrackingScreen>
         return AppTheme.lunchColor;
       case TrackingType.activity:
         return AppTheme.eveningExerciseColor;
-      default:
-        return AppTheme.primaryColor;
     }
   }
 

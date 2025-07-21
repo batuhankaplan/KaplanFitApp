@@ -7,8 +7,6 @@ import '../theme.dart';
 import '../services/database_service.dart';
 import '../models/chat_model.dart';
 
-import 'user_provider.dart'; // UserProvider importu
-
 class GamificationProvider with ChangeNotifier {
   final List<BadgeModel> _badges = [];
   Map<String, int> _streaks = {}; // Aktivite türüne göre seriler
@@ -22,10 +20,9 @@ class GamificationProvider with ChangeNotifier {
   bool _yearlyGoalCompleted = false;
 
   final DatabaseService _dbService; // Değiştirildi
-  final UserProvider _userProvider; // Eklendi
 
   // Constructor eklendi
-  GamificationProvider(this._dbService, this._userProvider) {
+  GamificationProvider(this._dbService) {
     // initialize(); // initialize çağrısı main.dart içinde yapılabilir veya burada kalabilir.
     // Şimdilik burada bırakalım, main.dart'taki çağrıyı kaldırırız.
     initialize();

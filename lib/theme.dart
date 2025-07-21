@@ -22,7 +22,7 @@ class AppTheme {
 
   // 🎯 MODERN BACKGROUND COLORS
   static const Color backgroundColor =
-      Color(0xFFFAFBFC); // Ultra soft background
+      Color(0xFFF8F9FE); // Ultra soft lavender background
   static const Color darkBackgroundColor = Color(0xFF0F0F23); // Deep dark
   static const Color surfaceColor = Color(0xFFFFFFFF);
   static const Color darkSurfaceColor = Color(0xFF1A1A2E);

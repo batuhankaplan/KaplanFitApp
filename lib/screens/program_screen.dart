@@ -612,23 +612,28 @@ class _ProgramScreenState extends State<ProgramScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: isWorkout
-              ? ExpansionTile(
-                  key: ValueKey(item.id ?? ''),
-                  initiallyExpanded: isExpanded,
-                  onExpansionChanged: (expanding) {
-                    setState(() {
-                      _expansionStates[item.id ?? ''] = expanding;
-                    });
-                  },
-                  title: cardContent,
-                  trailing: SizedBox.shrink(),
-                  childrenPadding: const EdgeInsets.only(
-                      left: 16.0, right: 16.0, bottom: 16.0),
-                  tilePadding: EdgeInsets.zero,
-                  children: <Widget>[
-                    const SizedBox(height: 10),
-                    _buildItemContent(context, item, isDarkMode),
-                  ],
+              ? Theme(
+                  data: Theme.of(context).copyWith(
+                    dividerColor: Colors.transparent,
+                  ),
+                  child: ExpansionTile(
+                    key: ValueKey(item.id ?? ''),
+                    initiallyExpanded: isExpanded,
+                    onExpansionChanged: (expanding) {
+                      setState(() {
+                        _expansionStates[item.id ?? ''] = expanding;
+                      });
+                    },
+                    title: cardContent,
+                    trailing: SizedBox.shrink(),
+                    childrenPadding: const EdgeInsets.only(
+                        left: 16.0, right: 16.0, bottom: 16.0),
+                    tilePadding: EdgeInsets.zero,
+                    children: <Widget>[
+                      const SizedBox(height: 10),
+                      _buildItemContent(context, item, isDarkMode),
+                    ],
+                  ),
                 )
               : InkWell(
                   borderRadius: BorderRadius.circular(12),

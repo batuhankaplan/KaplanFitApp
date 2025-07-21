@@ -300,7 +300,7 @@ class NutritionProvider with ChangeNotifier {
 
   Future<List<MealRecord>> getMealsInRange(
       DateTime startDate, DateTime endDate) async {
-    final List<MealRecord> meals = await getAllMeals();
+    final List<MealRecord> meals = getAllMeals();
     return meals.where((meal) {
       return meal.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
           meal.date.isBefore(endDate.add(const Duration(days: 1)));

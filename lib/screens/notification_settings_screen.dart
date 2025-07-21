@@ -17,11 +17,11 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   @override
   bool get wantKeepAlive => true;
 
-  bool _notificationsEnabled = true;
+  bool _notificationsEnabled = false;
   bool _permissionsGranted = false;
-  bool _workoutReminderEnabled = true;
-  bool _mealReminderEnabled = true;
-  bool _waterReminderEnabled = true;
+  bool _workoutReminderEnabled = false;
+  bool _mealReminderEnabled = false;
+  bool _waterReminderEnabled = false;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   bool _isLoading = false;
@@ -50,12 +50,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
       // Ayarları yükle
       setState(() {
-        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
         _permissionsGranted = permissions;
         _workoutReminderEnabled =
-            prefs.getBool('workout_reminder_enabled') ?? true;
-        _mealReminderEnabled = prefs.getBool('meal_reminder_enabled') ?? true;
-        _waterReminderEnabled = prefs.getBool('water_reminder_enabled') ?? true;
+            prefs.getBool('workout_reminder_enabled') ?? false;
+        _mealReminderEnabled = prefs.getBool('meal_reminder_enabled') ?? false;
+        _waterReminderEnabled = prefs.getBool('water_reminder_enabled') ?? false;
         _soundEnabled = prefs.getBool('sound_enabled') ?? true;
         _vibrationEnabled = prefs.getBool('vibration_enabled') ?? true;
       });
@@ -108,6 +108,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       appBar: KaplanAppBar(
         title: 'Bildirim Ayarları',
         isDarkMode: isDarkMode,
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -211,7 +212,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                 _buildNotificationSwitchWithTime(
                                   'Su İçme Hatırlatmaları',
                                   _waterReminderEnabled,
-                                  "10:00, 12:00, 14:00, 16:00, 18:00, 20:00, 22:00, 00:00",
+                                  "11:00, 15:00, 19:00, 22:00",
                                   Icons.water_drop,
                                   (value) {
                                     setState(() {
@@ -255,10 +256,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                 // Özel bildirim ekleme
                                 const SizedBox(height: 24),
                                 _buildCustomNotificationSection(),
-
-                                // Test butonları (en alta taşındı)
-                                const SizedBox(height: 24),
-                                _buildTestSection(),
                               ],
                             ],
                           ),
@@ -370,63 +367,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTestSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.bug_report, color: AppTheme.primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  'Test Bildirimleri',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _sendTestNotification,
-                  icon: const Icon(Icons.send, size: 16),
-                  label: const Text('Test Gönder'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentColor,
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _showPendingNotifications,
-                  icon: const Icon(Icons.schedule, size: 16),
-                  label: Text('Planlanmış ($_pendingNotificationsCount)'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -596,8 +536,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       if (value) {
         // Bildirimleri etkinleştir
         await NotificationService.instance.init();
-        final permissions =
-            await NotificationService.instance.areNotificationsEnabled();
+        
+        // İzin iste - bu kullanıcı isteği olduğu için dialog göster
+        final permissions = await NotificationService.instance.requestPermissions();
 
         if (permissions) {
           setState(() {
@@ -655,14 +596,15 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 
-  // İzinleri kontrol et
+  // İzinleri kontrol et ve iste
   Future<void> _checkPermissions() async {
     setState(() => _isLoading = true);
 
     try {
       await NotificationService.instance.init();
-      final permissions =
-          await NotificationService.instance.areNotificationsEnabled();
+      
+      // İzin iste - bu kullanıcı isteği olduğu için dialog göster  
+      final permissions = await NotificationService.instance.requestPermissions();
 
       setState(() {
         _permissionsGranted = permissions;
@@ -671,7 +613,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       if (permissions) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Bildirim izinleri aktif!'),
+            content: Text('✅ Bildirim izinleri başarıyla alındı!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -694,117 +636,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       );
     } finally {
       setState(() => _isLoading = false);
-    }
-  }
-
-  // Test bildirimi gönder
-  Future<void> _sendTestNotification() async {
-    try {
-      debugPrint('🧪 Test bildirimi gönderiliyor...');
-
-      // Önce izinleri kontrol et
-      final permissions =
-          await NotificationService.instance.areNotificationsEnabled();
-      debugPrint('🔐 Bildirim izinleri: $permissions');
-
-      if (!permissions) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Bildirim izinleri aktif değil!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      await NotificationService.instance.sendNowTestNotification(
-        title: '🔥 Test Bildirimi',
-        body:
-            'KaplanFit bildirim sistemi mükemmel çalışıyor! ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Test bildirimi gönderildi!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      debugPrint('❌ Test bildirimi hatası: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Test bildirimi gönderilemedi: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // Planlanmış bildirimleri göster
-  Future<void> _showPendingNotifications() async {
-    try {
-      final pending =
-          await NotificationService.instance.getPendingNotifications();
-
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Planlanmış Bildirimler'),
-          content: pending.isEmpty
-              ? const Text('Henüz planlanmış bildirim yok.')
-              : SizedBox(
-                  width: double.maxFinite,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                          'Toplam ${pending.length} adet bildirim planlanmış:'),
-                      const SizedBox(height: 8),
-                      ...pending.take(5).map((notification) => ListTile(
-                            dense: true,
-                            leading: CircleAvatar(
-                              backgroundColor: AppTheme.primaryColor,
-                              radius: 12,
-                              child: Text(
-                                notification.id.toString(),
-                                style: const TextStyle(
-                                    fontSize: 10, color: Colors.white),
-                              ),
-                            ),
-                            title: Text(
-                              notification.title ?? 'Başlıksız',
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            subtitle: Text(
-                              notification.body ?? '',
-                              style: const TextStyle(fontSize: 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          )),
-                      if (pending.length > 5)
-                        Text('... ve ${pending.length - 5} tane daha'),
-                    ],
-                  ),
-                ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Tamam'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint('❌ Planlanmış bildirimler alınamadı: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Hata: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
@@ -994,10 +825,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       debugPrint('   📄 İçerik: $body');
       debugPrint('   🕒 Zaman: $dateTime');
 
-      print('=== ÖZEL BİLDİRİM PLANLIYOR ===');
-      print('Başlık: $title');
-      print('Zaman: $dateTime');
-      print('==============================');
+      debugPrint('=== ÖZEL BİLDİRİM PLANLIYOR ===');
+      debugPrint('Başlık: $title');
+      debugPrint('Zaman: $dateTime');
+      debugPrint('==============================');
 
       // Eğer geçmiş tarih seçildiyse hata ver
       final now = DateTime.now();

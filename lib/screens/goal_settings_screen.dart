@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart'; // UserProvider'a erişim için eklendi
-import '../utils/animations.dart'; // Animasyonlar için eklendi (gerekirse)
 import '../models/user_model.dart'; // UserModel'i kullanmak için eklendi
 import 'package:flutter/services.dart'; // Sayısal giriş için
 import '../theme.dart'; // AppTheme renkleri için eklendi
-import '../services/database_service.dart'; // DatabaseService'e erişim için eklendi
 import '../providers/gamification_provider.dart'; // GamificationProvider importu
+import '../widgets/kaplan_appbar.dart';
 
 class GoalSettingsScreen extends StatefulWidget {
   const GoalSettingsScreen({super.key});
@@ -58,13 +57,6 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     'Çok Aktif',
     'Ekstra Aktif'
   ];
-  final List<String> _genderOptions = [
-    'Erkek',
-    'Kadın'
-  ]; // Yeni: Cinsiyet seçenekleri
-
-  double _bmi = 0;
-  String _bmiCategory = '';
   bool _isLoading = false; // Veri kaydetme/yükleme durumu için
 
   bool _autoCalculateNutrition = false; // Otomatik makro hesaplama state'i
@@ -401,15 +393,11 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Hedef Ayarları'),
-        centerTitle: true,
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 4,
-        shadowColor: Colors.black26,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-        ),
+      appBar: KaplanAppBar(
+        title: 'Hedef Ayarları',
+        isDarkMode: isDarkMode,
+        isRequiredPage: false,
+        showBackButton: true,
         actions: [
           IconButton(
             icon: _isLoading
@@ -417,9 +405,16 @@ class _GoalSettingsScreenState extends State<GoalSettingsScreen> {
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
-                    ))
-                : const Icon(Icons.save),
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDarkMode ? Colors.white : AppTheme.primaryColor,
+                      ),
+                    ),
+                  )
+                : Icon(
+                    Icons.save,
+                    color: isDarkMode ? Colors.white : AppTheme.primaryColor,
+                  ),
             tooltip: 'Hedefleri Kaydet',
             onPressed: _isLoading ? null : _saveGoals,
           ),

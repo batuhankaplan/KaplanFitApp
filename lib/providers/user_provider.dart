@@ -201,8 +201,9 @@ class UserProvider extends ChangeNotifier {
         final targetIntakeMl = targetIntakeLiters * 1000;
         final bool goalAchieved = newTotalWater >= targetIntakeMl;
 
-        final gamificationProvider =
-            Provider.of<GamificationProvider>(context, listen: false);
+        if (context.mounted) {
+          final gamificationProvider =
+              Provider.of<GamificationProvider>(context, listen: false);
         // updateStreak, günün ilk loglamasında false ile çağrılsa bile, o günkü durumu doğru yansıtacaktır.
         // Eğer o gün daha önce true ile çağrıldıysa ve sonraki loglamada hedefin altına düşülürse,
         // updateStreak mantığı seriyi kırmamalı, sadece o günkü "isCompleted" durumunu false yapmalı.
@@ -227,6 +228,7 @@ class UserProvider extends ChangeNotifier {
               "[UserProvider] Water goal NOT YET achieved for today ($newTotalWater ml / $targetIntakeMl ml).");
         }
       }
+    }
     } catch (e) {
       debugPrint("[UserProvider] Error logging water: $e");
     } finally {

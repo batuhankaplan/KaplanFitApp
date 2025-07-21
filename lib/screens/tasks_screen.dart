@@ -205,7 +205,6 @@ class TasksScreen extends StatelessWidget {
       case TaskType.dinner:
         return Icons.dinner_dining;
       case TaskType.other:
-      default:
         return Icons.task_alt;
     }
   }

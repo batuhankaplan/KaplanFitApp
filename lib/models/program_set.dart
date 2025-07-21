@@ -11,7 +11,7 @@ class ProgramSet {
   final String? notes;
   final Exercise? exerciseDetails; // Populate edilecek egzersiz bilgisi
 
-  ProgramSet({
+  const ProgramSet({
     required this.exerciseId,
     required this.order,
     this.setsDescription,
